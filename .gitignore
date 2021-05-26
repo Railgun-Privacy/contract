@@ -1,0 +1,14 @@
+node_modules
+package-lock.json
+yarn.lock
+.vscode
+
+# Private config files
+networks.config.js
+deploy.config.js
+dev.config.js
+
+#Hardhat files
+cache
+artifacts
+docs

@@ -1,0 +1,35 @@
+{
+  "name": "contract-snarks",
+  "version": "0.0.1",
+  "description": "Railgun Contract",
+  "private": true,
+  "scripts": {
+    "lint": "solhint 'contracts/**/*.sol' && eslint .",
+    "clean": "hardhat clean",
+    "compile": "npm run lint && npm run clean && hardhat compile"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "chai": "^4.3.0",
+    "chai-as-promised": "^7.1.1",
+    "circomlib": "0.5.2",
+    "eslint": "^7.20.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jsdoc": "^32.3.0",
+    "ethereum-waffle": "^3.2.2",
+    "ethers": "^5.0.31",
+    "hardhat": "^2.0.9",
+    "hardhat-artifactor": "^0.2.0",
+    "hardhat-gas-reporter": "^1.0.4",
+    "railgun-privacy.js": "git+https://github.com/Railgun-Privacy/railgun-privacy.js.git",
+    "solhint": "^3.3.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "4.1.0",
+    "@openzeppelin/contracts-upgradeable": "4.1.0",
+    "hardhat-docgen": "^1.1.1",
+    "hardhat-tracer": "*"
+  }
+}
