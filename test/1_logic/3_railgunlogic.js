@@ -1,14 +1,10 @@
 /* global describe it beforeEach overwriteArtifact ethers */
-const chai = require('chai');
-const chaiAsPromised = require('chai-as-promised');
-
-chai.use(chaiAsPromised);
 const { expect } = require('chai');
 
+const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 const {
   MerkleTree, Note, prover, utils,
 } = require('railgun-privacy.js');
-const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 
 const deployConfig = require('../../deploy.config');
 
@@ -55,13 +51,13 @@ describe('Logic/RailgunLogic', () => {
     railgunLogic = await RailgunLogic.deploy();
 
     await railgunLogic.initializeRailgunLogic(
-      deployConfig.vKeySmall,
-      deployConfig.vKeyLarge,
+      deployConfig.logic.vKeySmall,
+      deployConfig.logic.vKeyLarge,
       [testERC20.address],
       (await ethers.getSigners())[1].address,
       1000000n,
       (await ethers.getSigners())[0].address,
-      { gasLimit: 4000000 },
+      { gasLimit: 2000000 },
     );
   });
 
@@ -91,8 +87,9 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
     );
@@ -128,13 +125,14 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -177,13 +175,14 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -224,13 +223,14 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -275,13 +275,14 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -326,13 +327,14 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -369,13 +371,14 @@ describe('Logic/RailgunLogic', () => {
       proof2.publicInputs.outputTokenField,
       proof2.publicInputs.outputEthAddress,
       // Join
-      proof2.publicInputs.nullifiers,
+      proof2.publicInputs.treeNumber,
       proof2.publicInputs.merkleRoot,
+      proof2.publicInputs.nullifiers,
       // Split
       proof2.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -425,13 +428,14 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -475,13 +479,14 @@ describe('Logic/RailgunLogic', () => {
       proof2.publicInputs.outputTokenField,
       proof2.publicInputs.outputEthAddress,
       // Join
-      proof2.publicInputs.nullifiers,
+      proof2.publicInputs.treeNumber,
       proof2.publicInputs.merkleRoot,
+      proof2.publicInputs.nullifiers,
       // Split
       proof2.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -520,13 +525,14 @@ describe('Logic/RailgunLogic', () => {
       proof3.publicInputs.outputTokenField,
       proof3.publicInputs.outputEthAddress,
       // Join
-      proof3.publicInputs.nullifiers,
+      proof2.publicInputs.treeNumber,
       proof3.publicInputs.merkleRoot,
+      proof3.publicInputs.nullifiers,
       // Split
       proof3.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -555,11 +561,11 @@ describe('Logic/RailgunLogic', () => {
 
     await railgunLogic.generateDeposit(
       utils.unpackPoint(railgunAccount.publicKey),
-      note.serial,
+      note.random,
       note.amount,
       utils.bigInt2ETHAddress(note.token),
       {
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -591,11 +597,11 @@ describe('Logic/RailgunLogic', () => {
 
     await railgunLogic.generateDeposit(
       utils.unpackPoint(railgunAccount.publicKey),
-      note.serial,
+      note.random,
       note.amount,
       utils.bigInt2ETHAddress(note.token),
       {
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 
@@ -638,13 +644,14 @@ describe('Logic/RailgunLogic', () => {
       proof.publicInputs.outputTokenField,
       proof.publicInputs.outputEthAddress,
       // Join
-      proof.publicInputs.nullifiers,
+      proof.publicInputs.treeNumber,
       proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
       // Split
       proof.publicInputs.commitments,
       {
         value: 1000000n,
-        gasLimit: 12000000,
+        gasLimit: 1500000,
       },
     );
 

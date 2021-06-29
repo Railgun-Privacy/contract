@@ -11,9 +11,11 @@
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "bip39": "^3.0.4",
     "chai": "^4.3.0",
     "chai-as-promised": "^7.1.1",
     "circomlib": "0.5.2",
+    "deepclone": "^1.0.2",
     "eslint": "^7.20.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.22.1",
@@ -22,14 +24,15 @@
     "ethers": "^5.0.31",
     "hardhat": "^2.0.9",
     "hardhat-artifactor": "^0.2.0",
+    "hardhat-docgen": "^1.1.1",
     "hardhat-gas-reporter": "^1.0.4",
-    "railgun-privacy.js": "git+https://github.com/Railgun-Privacy/railgun-privacy.js.git",
+    "hardhat-tracer": "^1.0.0-alpha.6",
+    "railgun-privacy.js": "github:Railgun-Privacy/railgun-privacy.js#contract-tests",
+    "snarkjs": "^0.4.6",
     "solhint": "^3.3.2"
   },
   "dependencies": {
     "@openzeppelin/contracts": "4.1.0",
-    "@openzeppelin/contracts-upgradeable": "4.1.0",
-    "hardhat-docgen": "^1.1.1",
-    "hardhat-tracer": "*"
+    "@openzeppelin/contracts-upgradeable": "4.1.0"
   }
 }

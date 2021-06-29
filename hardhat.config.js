@@ -29,15 +29,11 @@ task('deploy:test', 'Deploy logic contract for testing purposes', async () => {
   await hre.run('run', { script: 'scripts/deploy_test.js' });
 });
 
-task('test:treerollover', 'Tests tree rollover - this test is run seperately to the mocha suite as it is long running', async () => {
-  await hre.run('run', { script: 'test-longrunning/tree_rollover.js' });
-});
-
 module.exports = {
   defaultNetwork: 'hardhat',
   networks,
   solidity: {
-    version: '0.8.4',
+    version: '0.8.6',
     settings: {
       optimizer: {
         enabled: true,
@@ -56,6 +52,6 @@ module.exports = {
   docgen: {
     path: './docs',
     clear: true,
-    runOnCompile: true,
+    runOnCompile: false,
   },
 };

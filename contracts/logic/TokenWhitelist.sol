@@ -18,8 +18,8 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 
 contract TokenWhitelist is Initializable, OwnableUpgradeable {
   // Events for offchain building of whitelist index
-  event AddToTokenWhitelist(address indexed token);
-  event RemoveFromTokenUnwhitelist(address indexed token);
+  event TokenListing(address indexed token);
+  event TokeDelisting(address indexed token);
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list and decrement the __gap
@@ -43,26 +43,20 @@ contract TokenWhitelist is Initializable, OwnableUpgradeable {
    * @dev This function will ignore tokens that are already in the whitelist
    * no events will be emitted in this case
    * @param _tokens - List of tokens to add to whitelist
-   * @return success
    */
 
-  function addToWhitelist(address[] calldata _tokens) public onlyOwner returns (bool success) {
+  function addToWhitelist(address[] calldata _tokens) public onlyOwner {
     // Loop through token array
     for (uint i = 0; i < _tokens.length; i++) {
-      // Get token
-      address token = _tokens[i];
-
       // Don't do anything if the token is already whitelisted
-      if (!tokenWhitelist[token]) {
+      if (!tokenWhitelist[_tokens[i]]) {
           // Set token address in whitelist map to true
-        tokenWhitelist[token] = true;
+        tokenWhitelist[_tokens[i]] = true;
 
         // Emit event for building index of whitelisted tokens offchain
-        emit AddToTokenWhitelist(token);
+        emit TokenListing(_tokens[i]);
       }
     }
-
-    return true;
   }
 
   /**
@@ -70,26 +64,20 @@ contract TokenWhitelist is Initializable, OwnableUpgradeable {
    * @dev This function will ignore tokens that aren't in the whitelist
    * no events will be emitted in this case
    * @param _tokens - List of tokens to remove from whitelist
-   * @return success
    */
 
-  function removeFromWhitelist(address[] calldata _tokens) external onlyOwner returns (bool success) {
+  function removeFromWhitelist(address[] calldata _tokens) external onlyOwner {
     // Loop through token array
     for (uint i = 0; i < _tokens.length; i++) {
-      // Get token
-      address token = _tokens[i];
-
       // Don't do anything if the token isn't whitelisted
-      if (tokenWhitelist[token]) {
+      if (tokenWhitelist[_tokens[i]]) {
         // Set token address in whitelist map to false (default value)
-        delete tokenWhitelist[token];
+        delete tokenWhitelist[_tokens[i]];
 
         // Emit event for building index of whitelisted tokens offchain
-        emit RemoveFromTokenUnwhitelist(token);
+        emit TokeDelisting(_tokens[i]);
       }
     }
-
-    return true;
   }
 
   uint256[50] private __gap;

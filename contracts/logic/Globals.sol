@@ -2,10 +2,15 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
+// Constants
+uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+uint256 constant CIRCUIT_OUTPUTS = 3;
+uint256 constant CIPHERTEXT_WORDS = 6;
+
 // Commitment hash and ciphertext
 struct Commitment {
   uint256 hash;
-  uint256[6] ciphertext; // Ciphertext order: iv, recipient pubkey (2 x uint256), serial, amount, token
+  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
   uint256[2] senderPubKey; // Ephemeral one time use
 }
 

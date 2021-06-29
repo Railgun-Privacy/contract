@@ -6,7 +6,7 @@ pragma abicoder v2;
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { Commitment } from "./Types.sol";
+import { Commitment, SNARK_SCALAR_FIELD, CIRCUIT_OUTPUTS, CIPHERTEXT_WORDS } from "./Globals.sol";
 
 import { PoseidonT3, PoseidonT6 } from "./Poseidon.sol";
 
@@ -29,7 +29,7 @@ contract Commitments is Initializable {
     uint256 indexed treeNumber,
     uint256 indexed position,
     uint256 hash,
-    uint256[6] ciphertext, // Ciphertext order: iv, recipient pubkey (2 x uint256), serial, amount, token
+    uint256[CIPHERTEXT_WORDS] ciphertext, // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
     uint256[2] senderPubKey
   );
 
@@ -39,7 +39,7 @@ contract Commitments is Initializable {
     uint256 indexed position,
     uint256 hash,
     uint256[2] pubkey,
-    uint256 serial,
+    uint256 random,
     uint256 amount,
     address token
   );
@@ -47,19 +47,16 @@ contract Commitments is Initializable {
   // Commitment nullifiers
   mapping(uint256 => bool) public nullifiers;
 
-  // Snark scalar field
-  uint256 private constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-
   // The tree depth
   uint256 private constant TREE_DEPTH = 16;
 
   // Max number of leaves that can be inserted in a single batch
-  uint256 internal constant MAX_BATCH_SIZE = 3;
+  uint256 internal constant MAX_BATCH_SIZE = CIRCUIT_OUTPUTS;
 
   // Tree zero value
-  uint256 private constant ZERO_VALUE = uint256(keccak256(abi.encodePacked("Railgun"))) % SNARK_SCALAR_FIELD;
+  uint256 private constant ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD;
 
-  // The number of inserted leaves
+  // Next leaf index (number of inserted leaves in the current tree)
   uint256 private nextLeafIndex = 0;
 
   // The Merkle root
@@ -81,7 +78,8 @@ contract Commitments is Initializable {
   uint256[TREE_DEPTH] private filledSubTrees;
 
   // Whether the contract has already seen a particular Merkle tree root
-  mapping (uint256 => bool) public rootHistory;
+  // treeNumber => root => seen
+  mapping(uint256 => mapping(uint256 => bool)) public rootHistory;
 
 
   /**
@@ -111,20 +109,17 @@ contract Commitments is Initializable {
     uint256 currentZero = ZERO_VALUE;
 
     // Loop through each level
-    for (uint256 i = 1; i < TREE_DEPTH; i++) {
-      // Calculate the zero value for this level
-      currentZero = hashLeftRight(currentZero, currentZero);
-
+    for (uint256 i = 0; i < TREE_DEPTH; i++) {
       // Push it to zeros array
       zeros[i] = currentZero;
+
+      // Calculate the zero value for this level
+      currentZero = hashLeftRight(currentZero, currentZero);
     }
 
-    // Calculate merkle root
-    merkleRoot = hashLeftRight(currentZero, currentZero);
-    rootHistory[merkleRoot] = true;
-
-    // Store root to quickly retrieve later
-    newTreeRoot = merkleRoot;
+    // Set merkle root and store root to quickly retrieve later
+    newTreeRoot = merkleRoot = currentZero;
+    rootHistory[treeNumber][currentZero] = true;
   }
 
   /**
@@ -134,11 +129,10 @@ contract Commitments is Initializable {
    * @return hash result
    */
   function hashLeftRight(uint256 _left, uint256 _right) private pure returns (uint256) {
-    uint256[2] memory input = [
+    return PoseidonT3.poseidon([
       _left,
       _right
-    ];
-    return PoseidonT3.poseidon(input);
+    ]);
   }
 
   /**
@@ -198,7 +192,7 @@ contract Commitments is Initializable {
 
           // We've created a new subtree at this level, update
           filledSubTrees[level] = _leafHashes[insertionElement];
-        } else {
+        } else if (levelInsertionIndex % 2 == 1) {
           // Leaf hash we're updating with is on the right
           left = filledSubTrees[level];
           right = _leafHashes[insertionElement];
@@ -208,7 +202,7 @@ contract Commitments is Initializable {
         // >> is equivilent to / 2 rounded down
         nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
 
-        // Calculate the has for the next level
+        // Calculate the hash for the next level
         _leafHashes[nextLevelHashIndex] = hashLeftRight(left, right);
 
         // Increment level insertion index
@@ -224,7 +218,24 @@ contract Commitments is Initializable {
  
     // Update the Merkle tree root
     merkleRoot = _leafHashes[0];
-    rootHistory[merkleRoot] = true;
+    rootHistory[treeNumber][merkleRoot] = true;
+  }
+
+  /**
+   * @notice Creates new merkle tree
+   */
+
+  function newTree() internal {
+    // Restore merkleRoot to newTreeRoot
+    merkleRoot = newTreeRoot;
+
+    // Existing values in filledSubtrees will never be used so overwriting them is unnecessary
+
+    // Reset next leaf index to 0
+    nextLeafIndex = 0;
+
+    // Increment tree number
+    treeNumber++;
   }
 
   /**
@@ -233,24 +244,10 @@ contract Commitments is Initializable {
    * @param _commitments - array of commitments to be added to merkle tree
    */
 
-  function addCommitments(Commitment[] memory _commitments) internal {
-    // This should never throw but guard against attempting to insert more than the MAX_BATCH_SIZE
-    require(_commitments.length <= MAX_BATCH_SIZE, "Commitments: Commitments length exceeds max batch size");
-
-    // Create new tree if current one can't contain existing tree
+  function addCommitments(Commitment[CIRCUIT_OUTPUTS] calldata _commitments) internal {
+    // Create new tree if existing tree can't contain outputs
     // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + _commitments.length) > (uint256(2) ** TREE_DEPTH)) {
-      // Restore merkleRoot to newTreeRoot
-      merkleRoot = newTreeRoot;
-
-      // Existing values in filledSubtrees will never be used so overwriting them is unnecessary
-
-      // Reset next leaf index to 0
-      nextLeafIndex = 0;
-
-      // Increment tree number
-      treeNumber++;
-    }
+    if ((nextLeafIndex + _commitments.length) > (uint256(2) ** TREE_DEPTH)) { newTree(); }
 
     // Build insertion array
     uint256[MAX_BATCH_SIZE] memory insertionLeaves;
@@ -270,7 +267,7 @@ contract Commitments is Initializable {
     }
 
     // Push the leaf hashes into the Merkle tree
-    insertLeaves(insertionLeaves, _commitments.length);
+    insertLeaves(insertionLeaves, CIRCUIT_OUTPUTS);
   }
 
   /**
@@ -278,46 +275,35 @@ contract Commitments is Initializable {
    * @dev This is for DeFi integrations where the resulting number of tokens to be added
    * can't be known in advance (eg. AMM trade where transaction ordering could cause toekn amounts to change)
    * @param _pubkey - pubkey of commitment
-   * @param _serial - serial of commitment
+   * @param _random - randomness component of commitment
    * @param _amount - amount of commitment
    * @param _token - token ID of commitment
    */
 
   function addGeneratedCommitment(
     uint256[2] memory _pubkey,
-    uint256 _serial,
+    uint256 _random,
     uint256 _amount,
     address _token
   ) internal {
     // Create new tree if current one can't contain existing tree
     // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + 1) >= (2 ** TREE_DEPTH)) {
-      // Restore merkleRoot to newTreeRoot
-      merkleRoot = newTreeRoot;
-
-      // Existing values in filledSubtrees will never be used so overwriting them is unnecessary
-
-      // Reset next leaf index to 0
-      nextLeafIndex = 0;
-
-      // Increment tree number
-      treeNumber++;
-    }
+    if ((nextLeafIndex + 1) >= (2 ** TREE_DEPTH)) { newTree(); }
 
     // Calculate commitment hash
     uint256 hash = PoseidonT6.poseidon([
       _pubkey[0],
       _pubkey[1],
-      _serial,
+      _random,
       _amount,
       uint256(uint160(_token))
     ]);
 
     // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit NewGeneratedCommitment(treeNumber, nextLeafIndex, hash, _pubkey, _serial, _amount, _token);
+    emit NewGeneratedCommitment(treeNumber, nextLeafIndex, hash, _pubkey, _random, _amount, _token);
 
     // Push the leaf hash into the Merkle tree
-    uint256[MAX_BATCH_SIZE] memory insertionLeaves;
+    uint256[CIRCUIT_OUTPUTS] memory insertionLeaves;
     insertionLeaves[0] = hash;
     insertLeaves(insertionLeaves, 1);
   }

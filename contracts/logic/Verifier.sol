@@ -6,7 +6,7 @@ pragma abicoder v2;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { SnarkProof, VerifyingKey, Commitment } from "./Types.sol";
+import { SnarkProof, VerifyingKey, Commitment, SNARK_SCALAR_FIELD, CIRCUIT_OUTPUTS } from "./Globals.sol";
 
 import { Snark } from "./Snark.sol";
 
@@ -20,9 +20,6 @@ import { Snark } from "./Snark.sol";
  */
 
 contract Verifier is Initializable, OwnableUpgradeable {
-  // Snark scalar field
-  uint256 private constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-
   // Verifying keys
   VerifyingKey private vKeySmall;
   VerifyingKey private vKeyLarge;
@@ -31,6 +28,20 @@ contract Verifier is Initializable, OwnableUpgradeable {
   event SmallVerificationKeyChange(VerifyingKey vkey);
   event LargeVerificationKeyChange(VerifyingKey vkey);
 
+
+  /**
+   * @notice Sets initial values for verification key
+   * @dev OpenZeppelin initializer ensures this can only be called once
+   * @param _vKeySmall - Initial vkey value for small circuit
+   * @param _vKeyLarge - Initial vkey value for large circuit
+   */
+
+  function initializeVerifier(VerifyingKey calldata _vKeySmall, VerifyingKey calldata _vKeyLarge) internal initializer {
+    // Set verification key
+    setVKeySmall(_vKeySmall);
+    setVKeyLarge(_vKeyLarge);
+  }
+
   /**
    * @notice Hashes inputs for small proof verification
    * @param _adaptIDcontract - contract address to this proof to (ignored if set to 0)
@@ -38,10 +49,11 @@ contract Verifier is Initializable, OwnableUpgradeable {
    * calling contract)
    * @param _depositAmount - deposit amount
    * @param _withdrawAmount - withdraw amount
-   * @param _outputTokenField - token ID to use if deposit/withdraw is requested
+   * @param _tokenField - token ID to use if deposit/withdraw is requested
    * @param _outputEthAddress - eth address to use if withdraw is requested
-   * @param _nullifiers - nullifiers of commitments
+   * @param _treeNumber - merkle tree number
    * @param _merkleRoot - merkle root to verify against
+   * @param _nullifiers - nullifiers of commitments
    * @param _commitmentsOut - output commitments
    * @return hash
    */
@@ -51,13 +63,14 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 _adaptIDparameters,
     uint256 _depositAmount,
     uint256 _withdrawAmount,
-    address _outputTokenField,
+    address _tokenField,
     address _outputEthAddress,
     // Join
-    uint256[] calldata _nullifiers,
+    uint256 _treeNumber,
     uint256 _merkleRoot,
+    uint256[] calldata _nullifiers,
     // Split
-    Commitment[] calldata _commitmentsOut
+    Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut
   ) private pure returns (uint256) {
     // Hash adaptID into single parameter
     uint256[2] memory adaptIDhashPreimage;
@@ -98,19 +111,20 @@ contract Verifier is Initializable, OwnableUpgradeable {
 
     uint256 cipherTextHash = uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
 
-    uint256[12] memory inputsHashPreimage;
+    uint256[13] memory inputsHashPreimage;
     inputsHashPreimage[0] = adaptIDhash % SNARK_SCALAR_FIELD;
     inputsHashPreimage[1] = _depositAmount;
     inputsHashPreimage[2] = _withdrawAmount;
-    inputsHashPreimage[3] = uint256(uint160(_outputTokenField));
+    inputsHashPreimage[3] = uint256(uint160(_tokenField));
     inputsHashPreimage[4] = uint256(uint160(_outputEthAddress));
-    inputsHashPreimage[5] = _merkleRoot;
-    inputsHashPreimage[6] = _nullifiers[0];
-    inputsHashPreimage[7] = _nullifiers[1];
-    inputsHashPreimage[8] = _commitmentsOut[0].hash;
-    inputsHashPreimage[9] = _commitmentsOut[1].hash;
-    inputsHashPreimage[10] = _commitmentsOut[2].hash;
-    inputsHashPreimage[11] = cipherTextHash % SNARK_SCALAR_FIELD;
+    inputsHashPreimage[5] = _treeNumber;
+    inputsHashPreimage[6] = _merkleRoot;
+    inputsHashPreimage[7] = _nullifiers[0];
+    inputsHashPreimage[8] = _nullifiers[1];
+    inputsHashPreimage[9] = _commitmentsOut[0].hash;
+    inputsHashPreimage[10] = _commitmentsOut[1].hash;
+    inputsHashPreimage[11] = _commitmentsOut[2].hash;
+    inputsHashPreimage[12] = cipherTextHash % SNARK_SCALAR_FIELD;
 
     return uint256(sha256(abi.encodePacked(inputsHashPreimage)));
   }
@@ -138,15 +152,15 @@ contract Verifier is Initializable, OwnableUpgradeable {
 
   /**
    * @notice Hashes inputs for large proof verification
-   * @param _adaptIDcontract - contract address to this proof to (ignored if set to 0)
-   * @param _adaptIDparameters - hash of the contract parameters (only used to verify proof, this is verified by the
-   * calling contract)
+   * @param _adaptIDcontract - contract address to this proof to (verified in RailgunLogic.sol)
+   * @param _adaptIDparameters - hash of the contract parameters (verified by the calling contract)
    * @param _depositAmount - deposit amount
    * @param _withdrawAmount - withdraw amount
-   * @param _outputTokenField - token ID to use if deposit/withdraw is requested
+   * @param _tokenField - token ID to use if deposit/withdraw is requested
    * @param _outputEthAddress - eth address to use if withdraw is requested
-   * @param _nullifiers - nullifiers of commitments
+   * @param _treeNumber - merkle tree number
    * @param _merkleRoot - merkle root to verify against
+   * @param _nullifiers - nullifiers of commitments
    * @param _commitmentsOut - output commitments
    * @return hash
    */
@@ -156,13 +170,14 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 _adaptIDparameters,
     uint256 _depositAmount,
     uint256 _withdrawAmount,
-    address _outputTokenField,
+    address _tokenField,
     address _outputEthAddress,
     // Join
-    uint256[] calldata _nullifiers,
+    uint256 _treeNumber,
     uint256 _merkleRoot,
+    uint256[] calldata _nullifiers,
     // Split
-    Commitment[] calldata _commitmentsOut
+    Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut
   ) private pure returns (uint256) {
     // Hash adaptID into single parameter
     uint256[2] memory adaptIDhashPreimage;
@@ -204,25 +219,28 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 cipherTextHash = uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
 
     // Hash all inputs into single parameter
-    uint256[18] memory inputsHashPreimage;
+    uint256[21] memory inputsHashPreimage;
     inputsHashPreimage[0] = adaptIDhash % SNARK_SCALAR_FIELD;
     inputsHashPreimage[1] = _depositAmount;
     inputsHashPreimage[2] = _withdrawAmount;
-    inputsHashPreimage[3] = uint256(uint160(_outputTokenField));
+    inputsHashPreimage[3] = uint256(uint160(_tokenField));
     inputsHashPreimage[4] = uint256(uint160(_outputEthAddress));
-    inputsHashPreimage[5] = _merkleRoot;
-    inputsHashPreimage[6] = _nullifiers[0];
-    inputsHashPreimage[7] = _nullifiers[1];
-    inputsHashPreimage[8] = _nullifiers[2];
-    inputsHashPreimage[9] = _nullifiers[3];
-    inputsHashPreimage[10] = _nullifiers[4];
-    inputsHashPreimage[11] = _nullifiers[5];
-    inputsHashPreimage[12] = _nullifiers[6];
-    inputsHashPreimage[13] = _nullifiers[7];
-    inputsHashPreimage[14] = _nullifiers[8];
-    inputsHashPreimage[15] = _nullifiers[9];
-    inputsHashPreimage[16] = _commitmentsOut[0].hash;
-    inputsHashPreimage[17] = cipherTextHash % SNARK_SCALAR_FIELD;
+    inputsHashPreimage[5] = _treeNumber;
+    inputsHashPreimage[6] = _merkleRoot;
+    inputsHashPreimage[7] = _nullifiers[0];
+    inputsHashPreimage[8] = _nullifiers[1];
+    inputsHashPreimage[9] = _nullifiers[2];
+    inputsHashPreimage[10] = _nullifiers[3];
+    inputsHashPreimage[11] = _nullifiers[4];
+    inputsHashPreimage[12] = _nullifiers[5];
+    inputsHashPreimage[13] = _nullifiers[6];
+    inputsHashPreimage[14] = _nullifiers[7];
+    inputsHashPreimage[15] = _nullifiers[8];
+    inputsHashPreimage[16] = _nullifiers[9];
+    inputsHashPreimage[17] = _commitmentsOut[0].hash;
+    inputsHashPreimage[18] = _commitmentsOut[0].hash;
+    inputsHashPreimage[19] = _commitmentsOut[0].hash;
+    inputsHashPreimage[20] = cipherTextHash % SNARK_SCALAR_FIELD;
 
     return uint256(sha256(abi.encodePacked(inputsHashPreimage)));
   }
@@ -255,15 +273,15 @@ contract Verifier is Initializable, OwnableUpgradeable {
    * larger than allowed. It only verifies the snark proof is valid and the ciphertext is bound to the
    * proof.
    * @param _proof - snark proof
-   * @param _adaptIDcontract - contract address to this proof to (ignored if set to 0)
-   * @param _adaptIDparameters - hash of the contract parameters (only used to verify proof, this is verified by the
-   * calling contract)
+   * @param _adaptIDcontract - contract address to this proof to (verified in RailgunLogic.sol)
+   * @param _adaptIDparameters - hash of the contract parameters (verified by the calling contract)
    * @param _depositAmount - deposit amount
    * @param _withdrawAmount - withdraw amount
-   * @param _outputTokenField - token ID to use if deposit/withdraw is requested
+   * @param _tokenField - token ID to use if deposit/withdraw is requested
    * @param _outputEthAddress - eth address to use if withdraw is requested
-   * @param _nullifiers - nullifiers of commitments
+   * @param _treeNumber - merkle tree number
    * @param _merkleRoot - merkle root to verify against
+   * @param _nullifiers - nullifiers of commitments
    * @param _commitmentsOut - output commitments
    * @return valid
    */
@@ -276,14 +294,25 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 _adaptIDparameters,
     uint256 _depositAmount,
     uint256 _withdrawAmount,
-    address _outputTokenField,
+    address _tokenField,
     address _outputEthAddress,
     // Join
-    uint256[] calldata _nullifiers,
+    uint256 _treeNumber,
     uint256 _merkleRoot,
+    uint256[] calldata _nullifiers,
     // Split
-    Commitment[] calldata _commitmentsOut
+    Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut
   ) public view returns (bool) {
+    // Check all nullifiers are valid snark field elements
+    for (uint256 i = 0; i < _nullifiers.length; i++) {
+      require(_nullifiers[i] < SNARK_SCALAR_FIELD, "Verifier: Nullifier not a valid field element");
+    }
+
+    // Check all commitment hashes are valid snark field elements
+    for (uint256 i = 0; i < _commitmentsOut.length; i++) {
+      require(_commitmentsOut[i].hash < SNARK_SCALAR_FIELD, "Verifier: Nullifier not a valid field element");
+    }
+
     if (_nullifiers.length == 2) {
       // Hash all inputs into single parameter
       uint256 inputsHash = hashSmallInputs(
@@ -291,10 +320,11 @@ contract Verifier is Initializable, OwnableUpgradeable {
         _adaptIDparameters,
         _depositAmount,
         _withdrawAmount,
-        _outputTokenField,
+        _tokenField,
         _outputEthAddress,
-        _nullifiers,
+        _treeNumber,
         _merkleRoot,
+        _nullifiers,
         _commitmentsOut
       );
 
@@ -307,40 +337,28 @@ contract Verifier is Initializable, OwnableUpgradeable {
         _adaptIDparameters,
         _depositAmount,
         _withdrawAmount,
-        _outputTokenField,
+        _tokenField,
         _outputEthAddress,
-        _nullifiers,
+        _treeNumber,
         _merkleRoot,
+        _nullifiers,
         _commitmentsOut
       );
 
       // Verify proof
       return verifyLargeProof(_proof, inputsHash % SNARK_SCALAR_FIELD);
     } else {
+      // Fail if nullifiers length doesn't match
       return false;
     }
   }
 
   /**
-   * @notice Sets initial values for verification key
-   * @dev OpenZeppelin initializer ensures this can only be called once
-   * @param _vKeySmall - Initial vkey value for small circuit
-   * @param _vKeyLarge - Initial vkey value for large circuit
-   */
-
-  function initializeVerifier(VerifyingKey calldata _vKeySmall, VerifyingKey calldata _vKeyLarge) internal initializer {
-    // Set verification key
-    setVKeySmall(_vKeySmall);
-    setVKeyLarge(_vKeyLarge);
-  }
-
-  /**
    * @notice Changes snark verification key for small transaction circuit
    * @param _vKey - verification key to change to
-   * @return success
    */
 
-  function setVKeySmall(VerifyingKey calldata _vKey) public onlyOwner returns (bool success) {
+  function setVKeySmall(VerifyingKey calldata _vKey) public onlyOwner {
     // Copy everything manually as solidity can't copy structs to storage
     // Alpha
     vKeySmall.alpha1.x = _vKey.alpha1.x;
@@ -368,17 +386,14 @@ contract Verifier is Initializable, OwnableUpgradeable {
 
     // Emit change event
     emit SmallVerificationKeyChange(_vKey);
-
-    return true;
   }
 
   /**
    * @notice Changes snark verification key for large transaction circuit
    * @param _vKey - verification key to change to
-   * @return success
    */
 
-  function setVKeyLarge(VerifyingKey calldata _vKey) public onlyOwner returns (bool success) {
+  function setVKeyLarge(VerifyingKey calldata _vKey) public onlyOwner {
     // Copy everything manually as solidity can't copy structs to storage
     // Alpha
     vKeyLarge.alpha1.x = _vKey.alpha1.x;
@@ -406,8 +421,6 @@ contract Verifier is Initializable, OwnableUpgradeable {
 
     // Emit change event
     emit LargeVerificationKeyChange(_vKey);
-
-    return true;
   }
 
   uint256[50] private __gap;

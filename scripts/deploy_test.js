@@ -1,13 +1,10 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
 /* global overwriteArtifact ethers */
-const hre = require('hardhat');
 const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 const deployConfig = require('../deploy.config');
 
 async function main() {
-  await hre.run('compile');
-
   // Deploy Poseidon library
   await overwriteArtifact(
     'PoseidonT3',
@@ -34,9 +31,15 @@ async function main() {
 
   const railgunLogic = await RailgunLogic.deploy();
 
-  await railgunLogic.initializeRailgunLogic(deployConfig.initialWhitelist, '0x0000000000000000000000000000000000000000', 0n, {
-    gasLimit: 4000000,
-  });
+  await railgunLogic.initializeRailgunLogic(
+    deployConfig.logic.vKeySmall,
+    deployConfig.logic.vKeyLarge,
+    deployConfig.logic.initialWhitelist,
+    (await ethers.getSigners())[1].address,
+    0n,
+    (await ethers.getSigners())[0].address,
+    { gasLimit: 2000000 },
+  );
 
   console.log('Testing constract:', railgunLogic.address);
 }

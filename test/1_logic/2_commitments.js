@@ -1,6 +1,5 @@
 /* global describe it beforeEach overwriteArtifact ethers */
 const { expect } = require('chai');
-const hre = require('hardhat');
 const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 const { MerkleTree, Note, utils } = require('railgun-privacy.js');
 
@@ -42,7 +41,7 @@ describe('Logic/Commitments', () => {
     commitments = await Commitments.deploy();
 
     await commitments.initializeCommitmentsStub({
-      gasLimit: 4000000,
+      gasLimit: 1000000,
     });
   });
 
@@ -65,13 +64,25 @@ describe('Logic/Commitments', () => {
       merkleTree.root,
     );
 
-    await commitments.addCommitmentsStub([{
-      hash: 1,
-      ciphertext: [1, 1, 1, 1, 1, 1],
-      senderPubKey: [1, 1],
-    }]);
+    await commitments.addCommitmentsStub([
+      {
+        hash: 1,
+        ciphertext: [1, 1, 1, 1, 1, 1],
+        senderPubKey: [1, 1],
+      },
+      {
+        hash: 2,
+        ciphertext: [1, 1, 1, 1, 1, 1],
+        senderPubKey: [1, 1],
+      },
+      {
+        hash: 3,
+        ciphertext: [1, 1, 1, 1, 1, 1],
+        senderPubKey: [1, 1],
+      },
+    ]);
 
-    merkleTree.insertLeaves([1]);
+    merkleTree.insertLeaves([1, 2, 3]);
 
     expect(
       (await commitments.merkleRoot()),
@@ -81,23 +92,23 @@ describe('Logic/Commitments', () => {
 
     await commitments.addCommitmentsStub([
       {
-        hash: 2,
-        ciphertext: [2, 2, 2, 2, 2, 2],
-        senderPubKey: [2, 2],
-      },
-      {
-        hash: 3,
-        ciphertext: [3, 3, 3, 3, 3, 3],
-        senderPubKey: [3, 3],
-      },
-      {
         hash: 4,
-        ciphertext: [4, 4, 4, 4, 4, 4],
-        senderPubKey: [4, 4],
+        ciphertext: [1, 1, 1, 1, 1, 1],
+        senderPubKey: [1, 1],
+      },
+      {
+        hash: 5,
+        ciphertext: [1, 1, 1, 1, 1, 1],
+        senderPubKey: [1, 1],
+      },
+      {
+        hash: 6,
+        ciphertext: [1, 1, 1, 1, 1, 1],
+        senderPubKey: [1, 1],
       },
     ]);
 
-    merkleTree.insertLeaves([2, 3, 4]);
+    merkleTree.insertLeaves([4, 5, 6]);
 
     expect(
       (await commitments.merkleRoot()),
@@ -119,7 +130,7 @@ describe('Logic/Commitments', () => {
 
     await commitments.addGeneratedCommitmentStub(
       utils.unpackPoint(railgunAccount.publicKey),
-      note.serial,
+      note.random,
       note.amount,
       utils.bigInt2ETHAddress(note.token),
     );
