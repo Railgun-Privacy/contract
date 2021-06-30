@@ -55,7 +55,9 @@ describe('Logic/RailgunLogic', () => {
       deployConfig.logic.vKeyLarge,
       [testERC20.address],
       (await ethers.getSigners())[1].address,
-      1000000n,
+      0n,
+      0n,
+      0n,
       (await ethers.getSigners())[0].address,
       { gasLimit: 2000000 },
     );
@@ -146,19 +148,25 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should collect treasury fees correctly', async () => {
-    const outputNote = Note.generateNote(railgunAccount.publicKey, 100n, testERC20.address);
+    await railgunLogic.changeFee(2500n, 2500n, 1000000n);
+
+    const merkleTree = new MerkleTree();
+
+    const note = Note.generateNote(railgunAccount.publicKey, 100n, testERC20.address);
 
     const initialTreasuryBalance = await ethers.provider.getBalance(
       (await ethers.getSigners())[1].address,
     );
 
     const proof = await prover.generateProof({
-      merkleTree: new MerkleTree(),
+      merkleTree,
       depositAmount: 100n,
       outputs: [
-        outputNote,
+        note,
       ],
     });
+
+    merkleTree.insertLeaves(proof.publicInputs.commitments.map((commitment) => commitment.hash));
 
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
 
@@ -191,6 +199,48 @@ describe('Logic/RailgunLogic', () => {
     );
 
     expect(BigInt(newTreasuryBalance) - BigInt(initialTreasuryBalance)).to.equal(1000000n);
+
+    expect(
+      await testERC20.balanceOf((await ethers.getSigners())[1].address),
+    ).to.equal(25n);
+
+    const proof2 = await prover.generateProof({
+      merkleTree,
+      withdrawAmount: 100n,
+      outputEthAddress: (await ethers.getSigners())[0].address,
+      spendingKeys: [
+        railgunAccount.privateKey,
+      ],
+      notes: [
+        note,
+      ],
+    });
+
+    await railgunLogic.transact(
+      // Proof
+      proof2.proof.solidity,
+      // Shared
+      proof2.publicInputs.adaptID.address,
+      proof2.publicInputs.adaptID.parameters,
+      proof2.publicInputs.depositAmount,
+      proof2.publicInputs.withdrawAmount,
+      proof2.publicInputs.outputTokenField,
+      proof2.publicInputs.outputEthAddress,
+      // Join
+      proof2.publicInputs.treeNumber,
+      proof2.publicInputs.merkleRoot,
+      proof2.publicInputs.nullifiers,
+      // Split
+      proof2.publicInputs.commitments,
+      {
+        value: 1000000n,
+        gasLimit: 1500000,
+      },
+    );
+
+    expect(
+      await testERC20.balanceOf((await ethers.getSigners())[1].address),
+    ).to.equal(50n);
   });
 
   it('Should deposit with 2 outputs correctly', async () => {

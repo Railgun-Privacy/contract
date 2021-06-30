@@ -34,11 +34,17 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
 
   // Treasury variables
   address payable public treasury; // Treasury contract
-  uint256 public fee; // Fee in wei
+  uint256 private constant BASIS_POINTS = 10000; // Number of basis points that equal 100%
+  // % fee in 10ths of a %. 100 = 1%.
+  uint256 public depositFee;
+  uint256 public withdrawFee;
+
+  // Flat fee in wei that applies to all transactions
+  uint256 public transferFee;
 
   // Treasury events
   event TreasuryChange(address treasury);
-  event FeeChange(uint256 fee);
+  event FeeChange(uint256 depositFee, uint256 withdrawFee, uint256 transferFee);
 
   /**
    * @notice Initialize Railgun contract
@@ -46,7 +52,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
    * This function also calls initializers on inherited contracts
    * @param _tokenWhitelist - Initial token whitelist to use
    * @param _treasury - address to send usage fees to
-   * @param _fee - fee per transaction (in wei)
+   * @param _depositFee - Deposit fee
+   * @param _withdrawFee - Withdraw fee
+   * @param _transferFee - Flat fee that applies to all transactions
    * @param _owner - governance contract
    */
 
@@ -55,7 +63,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     VerifyingKey calldata _vKeyLarge,
     address[] calldata _tokenWhitelist,
     address payable _treasury,
-    uint256 _fee,
+    uint256 _depositFee,
+    uint256 _withdrawFee,
+    uint256 _transferFee,
     address _owner
   ) external initializer {
     // Call initializers
@@ -66,7 +76,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
 
     // Set treasury and fee
     changeTreasury(_treasury);
-    changeFee(_fee);
+    changeFee(_depositFee, _withdrawFee, _transferFee);
 
     // Change Owner
     OwnableUpgradeable.transferOwnership(_owner);
@@ -92,16 +102,28 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
 
   /**
    * @notice Change fee rate for future transactions
-   * @param _fee - New fee (in wei)
+   * @param _depositFee - Deposit fee
+   * @param _withdrawFee - Withdraw fee
+   * @param _transferFee - Flat fee that applies to all transactions
    */
 
-  function changeFee(uint256 _fee) public onlyOwner {
-    if (fee != _fee) {
+  function changeFee(
+    uint256 _depositFee,
+    uint256 _withdrawFee,
+    uint256 _transferFee
+  ) public onlyOwner {
+    if (
+      _depositFee != depositFee
+      || _withdrawFee != withdrawFee
+      || _transferFee != transferFee
+    ) {
       // Change fee
-      fee = _fee;
+      depositFee = _depositFee;
+      withdrawFee = _withdrawFee;
+      transferFee = _transferFee;
 
       // Emit fee change event
-      emit FeeChange(_fee);
+      emit FeeChange(_depositFee, _withdrawFee, _transferFee);
     }
   }
 
@@ -141,7 +163,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut
   ) external payable {
     // Check treasury fee is paid
-    require(msg.value >= fee, "RailgunLogic: Fee not paid");
+    require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
 
     // Transfer to treasury
     // If the treasury contract fails (eg. with revert()) the tx or consumes more than 2300 gas railgun transactions will fail
@@ -203,15 +225,31 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     IERC20 token = IERC20(_tokenField);
 
     // Deposit tokens if required
+    // Fee is on top of deposit
     if (_depositAmount > 0) {
+      // Calculate fee
+      uint256 feeAmount = _depositAmount * depositFee / BASIS_POINTS;
+
       // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
+      // Transfer deposit
       token.safeTransferFrom(msg.sender, address(this), _depositAmount);
+
+      // Transfer fee
+      token.safeTransferFrom(msg.sender, treasury, feeAmount);
     }
 
     // Withdraw tokens if required
+    // Fee is subtracted from withdraw
     if (_withdrawAmount > 0) {
+      // Calculate fee
+      uint256 feeAmount = _withdrawAmount * withdrawFee / BASIS_POINTS;
+
       // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
-      token.safeTransfer(_outputEthAddress, _withdrawAmount);
+      // Transfer withdraw
+      token.safeTransfer(_outputEthAddress, _withdrawAmount - feeAmount);
+
+      // Transfer fee
+      token.safeTransfer(treasury, feeAmount);
     }
   }
 
@@ -230,7 +268,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     uint256 _random,
     uint256 _amount,
     address _tokenField
-  ) external {
+  ) external payable {
+    // Check treasury fee is paid
+    require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
+
+    // Transfer to treasury
+    // If the treasury contract fails (eg. with revert()) the tx or consumes more than 2300 gas railgun transactions will fail
+    // If this is ever the case, changeTreasury() will neeed to be called to change to a good contract
+    treasury.transfer(msg.value);
+
     // Check deposit amount is not 0
     require(_amount > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
@@ -247,12 +293,20 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     require(_pubkey[0] < SNARK_SCALAR_FIELD, "RailgunLogic: pubkey[0] out of range");
     require(_pubkey[1] < SNARK_SCALAR_FIELD, "RailgunLogic: pubkey[1] out of range");
 
+    // Calculate fee
+    // Fee is subtracted from deposit
+    uint256 feeAmount = _amount * depositFee / BASIS_POINTS;
+    uint256 depositAmount = _amount - feeAmount;
+
     // Generate and add commmitment
-    Commitments.addGeneratedCommitment(_pubkey, _random, _amount, _tokenField);
+    Commitments.addGeneratedCommitment(_pubkey, _random, depositAmount, _tokenField);
 
     IERC20 token = IERC20(_tokenField);
 
     // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
-    token.safeTransferFrom(msg.sender, address(this), _amount);
+    token.safeTransferFrom(msg.sender, address(this), depositAmount);
+
+    // Transfer fee
+    token.safeTransferFrom(msg.sender, treasury, feeAmount);
   }
 }
