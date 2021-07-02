@@ -598,6 +598,160 @@ describe('Logic/RailgunLogic', () => {
       .to.equal(initialtestERC20Balance);
   });
 
+  it('Should transact with large circuit', async () => {
+    const merkleTree = new MerkleTree();
+
+    const outputNote1a = Note.generateNote(railgunAccount.publicKey, 100n, testERC20.address);
+    const outputNote1b = Note.generateNote(railgunAccount.publicKey, 50n, testERC20.address);
+
+    const initialtestERC20Balance = await testERC20.balanceOf(
+      (await ethers.getSigners())[0].address,
+    );
+
+    await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
+
+    const proof = await prover.generateProof({
+      merkleTree,
+      depositAmount: 150n,
+      outputs: [
+        outputNote1a,
+        outputNote1b,
+      ],
+    }, true);
+
+    expect(await prover.verifyProof(proof, true)).to.equal(true);
+
+    await railgunLogic.transact(
+      // Proof
+      proof.proof.solidity,
+      // Shared
+      proof.publicInputs.adaptID.address,
+      proof.publicInputs.adaptID.parameters,
+      proof.publicInputs.depositAmount,
+      proof.publicInputs.withdrawAmount,
+      proof.publicInputs.outputTokenField,
+      proof.publicInputs.outputEthAddress,
+      // Join
+      proof.publicInputs.treeNumber,
+      proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
+      // Split
+      proof.publicInputs.commitments,
+      {
+        value: 1000000n,
+        gasLimit: 12000000,
+      },
+    );
+
+    merkleTree.insertLeaves(proof.publicInputs.commitments.map((commitment) => commitment.hash));
+
+    expect(
+      (await railgunLogic.merkleRoot()),
+    ).to.equal(
+      merkleTree.root,
+    );
+
+    const outputNote2a = Note.generateNote(railgunAccount.publicKey, 70n, testERC20.address);
+    const outputNote2b = Note.generateNote(railgunAccount.publicKey, 80n, testERC20.address);
+
+    const proof2 = await prover.generateProof({
+      merkleTree,
+      notes: [
+        outputNote1a,
+        outputNote1b,
+      ],
+      spendingKeys: [
+        railgunAccount.privateKey,
+        railgunAccount.privateKey,
+      ],
+      outputs: [
+        outputNote2a,
+        outputNote2b,
+      ],
+    }, true);
+
+    expect(await prover.verifyProof(proof2, true)).to.equal(true);
+
+    await railgunLogic.transact(
+      // Proof
+      proof2.proof.solidity,
+      // Shared
+      proof2.publicInputs.adaptID.address,
+      proof2.publicInputs.adaptID.parameters,
+      proof2.publicInputs.depositAmount,
+      proof2.publicInputs.withdrawAmount,
+      proof2.publicInputs.outputTokenField,
+      proof2.publicInputs.outputEthAddress,
+      // Join
+      proof2.publicInputs.treeNumber,
+      proof2.publicInputs.merkleRoot,
+      proof2.publicInputs.nullifiers,
+      // Split
+      proof2.publicInputs.commitments,
+      {
+        value: 1000000n,
+        gasLimit: 12000000,
+      },
+    );
+
+    merkleTree.insertLeaves(proof2.publicInputs.commitments.map((commitment) => commitment.hash));
+
+    expect(
+      (await railgunLogic.merkleRoot()),
+    ).to.equal(
+      merkleTree.root,
+    );
+
+    const proof3 = await prover.generateProof({
+      merkleTree,
+      notes: [
+        outputNote2a,
+        outputNote2b,
+      ],
+      spendingKeys: [
+        railgunAccount.privateKey,
+        railgunAccount.privateKey,
+      ],
+      withdrawAmount: 150n,
+      outputEthAddress: (await ethers.getSigners())[0].address,
+    }, true);
+
+    expect(await prover.verifyProof(proof3, true)).to.equal(true);
+
+    await railgunLogic.transact(
+      // Proof
+      proof3.proof.solidity,
+      // Shared
+      proof3.publicInputs.adaptID.address,
+      proof3.publicInputs.adaptID.parameters,
+      proof3.publicInputs.depositAmount,
+      proof3.publicInputs.withdrawAmount,
+      proof3.publicInputs.outputTokenField,
+      proof3.publicInputs.outputEthAddress,
+      // Join
+      proof2.publicInputs.treeNumber,
+      proof3.publicInputs.merkleRoot,
+      proof3.publicInputs.nullifiers,
+      // Split
+      proof3.publicInputs.commitments,
+      {
+        value: 1000000n,
+        gasLimit: 12000000,
+      },
+    );
+
+    merkleTree.insertLeaves(proof3.publicInputs.commitments.map((commitment) => commitment.hash));
+
+    expect(
+      (await railgunLogic.merkleRoot()),
+    ).to.equal(
+      merkleTree.root,
+    );
+
+    expect(await testERC20.balanceOf((await ethers.getSigners())[0].address))
+      .to.equal(initialtestERC20Balance);
+  });
+
   it('Should deposit and generate commitments correctly', async () => {
     const merkleTree = new MerkleTree();
 

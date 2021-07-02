@@ -192,7 +192,7 @@ contract Commitments is Initializable {
 
           // We've created a new subtree at this level, update
           filledSubTrees[level] = _leafHashes[insertionElement];
-        } else if (levelInsertionIndex % 2 == 1) {
+        } else {
           // Leaf hash we're updating with is on the right
           left = filledSubTrees[level];
           right = _leafHashes[insertionElement];

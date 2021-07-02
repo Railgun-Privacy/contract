@@ -21,8 +21,8 @@ import { Snark } from "./Snark.sol";
 
 contract Verifier is Initializable, OwnableUpgradeable {
   // Verifying keys
-  VerifyingKey private vKeySmall;
-  VerifyingKey private vKeyLarge;
+  VerifyingKey public vKeySmall;
+  VerifyingKey public vKeyLarge;
 
   // Verification key changed events
   event SmallVerificationKeyChange(VerifyingKey vkey);
@@ -238,8 +238,8 @@ contract Verifier is Initializable, OwnableUpgradeable {
     inputsHashPreimage[15] = _nullifiers[8];
     inputsHashPreimage[16] = _nullifiers[9];
     inputsHashPreimage[17] = _commitmentsOut[0].hash;
-    inputsHashPreimage[18] = _commitmentsOut[0].hash;
-    inputsHashPreimage[19] = _commitmentsOut[0].hash;
+    inputsHashPreimage[18] = _commitmentsOut[1].hash;
+    inputsHashPreimage[19] = _commitmentsOut[2].hash;
     inputsHashPreimage[20] = cipherTextHash % SNARK_SCALAR_FIELD;
 
     return uint256(sha256(abi.encodePacked(inputsHashPreimage)));
