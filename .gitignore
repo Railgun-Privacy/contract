@@ -5,10 +5,10 @@ yarn.lock
 
 # Private config files
 networks.config.js
-deploy.config.js
 dev.config.js
 
 #Hardhat files
 cache
+circuit_artifacts
 artifacts
 docs

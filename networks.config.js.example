@@ -2,50 +2,26 @@ module.exports = {
   hardhat: {},
   localhost: {
     url: 'http://127.0.0.1:8545',
+    accounts: {
+      mnemonic: '12 words',
+    },
   },
   rinkeby: {
-    url: 'https://rinkeby.infura.io/v3/projectkey',
-    accounts: [
-      'Private Key 1',
-      'Private Key 2',
-      'Private Key 3',
-      'Private Key 4',
-      'Private Key 5',
-      'Private Key 6',
-      'Private Key 7',
-      'Private Key 8',
-      'Private Key 9',
-      'Private Key 10',
-    ],
+    url: 'https://rinkeby.infura.io/v3/<apikey>',
+    accounts: {
+      mnemonic: '12 words',
+    },
   },
   kovan: {
-    url: 'https://kovan.infura.io/v3/projectkey',
-    accounts: [
-      'Private Key 1',
-      'Private Key 2',
-      'Private Key 3',
-      'Private Key 4',
-      'Private Key 5',
-      'Private Key 6',
-      'Private Key 7',
-      'Private Key 8',
-      'Private Key 9',
-      'Private Key 10',
-    ],
+    url: 'https://kovan.infura.io/v3/<apikey>',
+    accounts: {
+      mnemonic: '12 words',
+    },
   },
   goerli: {
-    url: 'https://goerli.infura.io/v3/projectkey',
-    accounts: [
-      'Private Key 1',
-      'Private Key 2',
-      'Private Key 3',
-      'Private Key 4',
-      'Private Key 5',
-      'Private Key 6',
-      'Private Key 7',
-      'Private Key 8',
-      'Private Key 9',
-      'Private Key 10',
-    ],
+    url: 'https://rpc.slock.it/goerli',
+    accounts: {
+      mnemonic: '12 words',
+    },
   },
 };

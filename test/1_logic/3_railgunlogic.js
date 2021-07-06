@@ -6,7 +6,7 @@ const {
   MerkleTree, Note, prover, utils,
 } = require('railgun-privacy.js');
 
-const deployConfig = require('../../deploy.config');
+const verificationKey = require('../../verificationKey');
 
 const privateKey = utils.genRandomPrivateKey();
 const publicKey = utils.genPublicKey(privateKey);
@@ -51,8 +51,8 @@ describe('Logic/RailgunLogic', () => {
     railgunLogic = await RailgunLogic.deploy();
 
     await railgunLogic.initializeRailgunLogic(
-      deployConfig.logic.vKeySmall,
-      deployConfig.logic.vKeyLarge,
+      verificationKey.vKeySmall,
+      verificationKey.vKeyLarge,
       [testERC20.address],
       (await ethers.getSigners())[1].address,
       0n,

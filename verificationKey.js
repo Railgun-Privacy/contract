@@ -56,13 +56,6 @@ function formatVKey(vkey) {
 }
 
 module.exports = {
-  logic: {
-    initialWhitelist: [
-      '0x0000000000000000000000000000000000000000',
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-    ],
-    vKeySmall: formatVKey(artifacts.small.vkey),
-    vKeyLarge: formatVKey(artifacts.small.vkey),
-  },
+  vKeySmall: formatVKey(artifacts.small.vkey),
+  vKeyLarge: formatVKey(artifacts.large.vkey),
 };

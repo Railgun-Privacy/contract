@@ -2,7 +2,7 @@
 /* eslint-disable jsdoc/require-jsdoc */
 /* global overwriteArtifact ethers */
 const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
-const deployConfig = require('../deploy.config');
+const verificationKey = require('../verificationKey');
 
 async function main() {
   // Deploy Poseidon library
@@ -21,6 +21,9 @@ async function main() {
   const PoseidonT6 = await ethers.getContractFactory('PoseidonT6');
   const poseidonT6 = await PoseidonT6.deploy();
 
+  const TestERC20 = await ethers.getContractFactory('TestERC20');
+  const testERC20 = await TestERC20.deploy();
+
   // Deploy Railgun Logic
   const RailgunLogic = await ethers.getContractFactory('RailgunLogic', {
     libraries: {
@@ -32,16 +35,21 @@ async function main() {
   const railgunLogic = await RailgunLogic.deploy();
 
   await railgunLogic.initializeRailgunLogic(
-    deployConfig.logic.vKeySmall,
-    deployConfig.logic.vKeyLarge,
-    deployConfig.logic.initialWhitelist,
+    verificationKey.vKeySmall,
+    verificationKey.vKeyLarge,
+    [testERC20.address],
     (await ethers.getSigners())[1].address,
+    0n,
+    0n,
     0n,
     (await ethers.getSigners())[0].address,
     { gasLimit: 2000000 },
   );
+  
+  await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
 
-  console.log('Testing constract:', railgunLogic.address);
+  console.log('ERC20 Token:', testERC20.address);
+  console.log('Railgun:', railgunLogic.address);
 }
 
 main().then(() => process.exit(0)).catch((error) => {
