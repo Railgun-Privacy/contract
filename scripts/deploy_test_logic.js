@@ -37,15 +37,15 @@ async function main() {
   await railgunLogic.initializeRailgunLogic(
     verificationKey.vKeySmall,
     verificationKey.vKeyLarge,
-    [testERC20.address],
+    ['0x0000000000000000000000000000000000000000'],
     (await ethers.getSigners())[1].address,
-    0n,
-    0n,
+    25n,
+    25n,
     0n,
     (await ethers.getSigners())[0].address,
     { gasLimit: 2000000 },
   );
-  
+
   await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
 
   console.log('ERC20 Token:', testERC20.address);

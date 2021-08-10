@@ -12,10 +12,6 @@ import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
  * delegates permissions to other contracts (voter, role)
  */
 contract Delegator is Ownable {
-  bytes4 private constant SETPERMISSION_SELECTOR = bytes4(keccak256("setPermission(address,address,bytes4,bool)"));
-  bytes4 private constant TRANSFEROWNERSHIP_SELECTOR = bytes4(keccak256("transferOwnership(address)"));
-  bytes4 private constant RENOUNCEOWNERSHIP_SELECTOR = bytes4(keccak256("renounceOwnership()"));
-
   /*
   Mapping structure is calling address => contract => function signature
   0 is used as a wildcard, so permission for contract 0 is permission for
@@ -34,7 +30,8 @@ contract Delegator is Ownable {
     )
   ) public permissions;
 
-  event PermissionSet(address caller, address contractAddress, bytes4 selector, bool permission);
+  event GrantPermission(address indexed caller, address indexed contractAddress, bytes4 indexed selector);
+  event RevokePermission(address indexed caller, address indexed contractAddress, bytes4 indexed selector);
 
   /**
    * @notice Sets initial admin
@@ -63,7 +60,11 @@ contract Delegator is Ownable {
       permissions[_caller][_contract][_selector] = _permission;
 
       // Emit event
-      emit PermissionSet(_caller, _contract, _selector, _permission);
+      if (_permission) {
+        emit GrantPermission(_caller, _contract, _selector);
+      } else {
+        emit RevokePermission(_caller, _contract, _selector);
+      }
     }
   }
 
@@ -79,25 +80,13 @@ contract Delegator is Ownable {
     See comment on permissions mapping for structure
     Comments below use * to signify wildcard and . notation to seperate contract/function
     */
-    if (_caller == Ownable.owner()) {
-      // Owner always has global permissions
-      return true;
-    } else if (permissions[_caller][_contract][_selector]) {
-      // Permission for function is given
-      return true;
-    } else if (permissions[_caller][_contract][0x0]) {
-      // Permission for _contract.* is given
-      return true;
-    } else if (permissions[_caller][address(0)][_selector]) {
-      // Permission for *._selector is given
-      return true;
-    } else if (permissions[_caller][address(0)][0x0]) {
-      // Global permission is given
-      return true;
-    } else {
-      // No permissions
-      return false;
-    }
+    return (
+      _caller == Ownable.owner()
+      || permissions[_caller][_contract][_selector] // Owner always has global permissions
+      || permissions[_caller][_contract][0x0] // Permission for function is given
+      || permissions[_caller][address(0)][_selector] // Permission for _contract.* is given
+      || permissions[_caller][address(0)][0x0] // Global permission is given
+    );
   }
 
   /**
@@ -106,40 +95,36 @@ contract Delegator is Ownable {
    * this is so the voting contract doesn't need to have special cases for calling
    * functions other than this one.
    * @param _contract - contract to call
-   * @param _selector - function signature to call
-   * @param _data - data to pass to function
+   * @param _data - calldata to pass to contract
    * @return success - whether call succeeded
    * @return returnData - return data from function call
    */
-  function callContract(address _contract, bytes4 _selector, bytes calldata _data) public returns (bool success, bytes memory returnData) {
-    // Example selector for ERC20 transfer function:
-    // bytes4(keccak256("transfer(address,uint256)")) = 0xa9059cbb
-
-    // Check permissions
-    require(checkPermission(msg.sender, _contract, _selector), "Delegator: Caller doesn't have permission");
+  function callContract(address _contract, bytes calldata _data, uint256 _value) public returns (bool success, bytes memory returnData) {
+    // Get selector
+    bytes4 selector = bytes4(_data);
 
     // Intercept calls to this contract
     if (_contract == address(this)) {
-      if (_selector == SETPERMISSION_SELECTOR) {
+      if (selector == this.setPermission.selector) {
         // Decode call data
         (
           address caller,
           address calledContract,
-          bytes4 selector,
+          bytes4 _permissionSelector,
           bool permission
-        ) = abi.decode(_data, (address, address, bytes4, bool));
+        ) = abi.decode(abi.encodePacked(_data[4:]), (address, address, bytes4, bool));
 
         // Call setPermission
-        setPermission(caller, calledContract, selector, permission);
+        setPermission(caller, calledContract, _permissionSelector, permission);
 
         // Return success with empty returndata bytes
         bytes memory empty;
         return (true, empty);
-      } else if (_selector == TRANSFEROWNERSHIP_SELECTOR) {
+      } else if (selector == this.transferOwnership.selector) {
         // Decode call data
         (
           address newOwner
-        ) = abi.decode(_data, (address));
+        ) = abi.decode(abi.encodePacked(_data[4:]), (address));
 
         // Call transferOwnership
         Ownable.transferOwnership(newOwner);
@@ -147,7 +132,7 @@ contract Delegator is Ownable {
         // Return success with empty returndata bytes
         bytes memory empty;
         return (true, empty);
-      } else if (_selector == RENOUNCEOWNERSHIP_SELECTOR) {
+      } else if (selector == this.renounceOwnership.selector) {
         // Call renounceOwnership
         Ownable.renounceOwnership();
 
@@ -161,13 +146,11 @@ contract Delegator is Ownable {
       }
     }
 
+    // Check permissions
+    require(checkPermission(msg.sender, _contract, selector), "Delegator: Caller doesn't have permission");
+
     // Call external contract and return
     // solhint-disable-next-line avoid-low-level-calls
-    return _contract.call(
-      abi.encodePacked(
-        _selector,
-        _data
-      )
-    );
+    return _contract.call{value: _value}(_data);
   }
 }

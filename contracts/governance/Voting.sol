@@ -21,36 +21,36 @@ contract Voting {
   uint256 public constant EXECUTION_END_OFFSET = 14 days;
 
   // Threshold constants
-  uint256 public constant QUORUM = 8000000 * 10 ** 18; // 8 million, 18 decimal places
-  uint256 public constant PROPOSAL_SPONSOR_THRESHOLD = 2000000 * 10 ** 18; // 2 million, 18 decimal places
+  uint256 public constant QUORUM = 4000000e18; // 4 million, 18 decimal places
+  uint256 public constant PROPOSAL_SPONSOR_THRESHOLD = 1000000e18; // 1 million, 18 decimal places
 
   // Proposal has been created
-  event CreateProposal(uint256 indexed id, address indexed proposer);
+  event Proposal(uint256 indexed id, address indexed proposer);
 
   // Proposal has been sponsored
-  event SponsorProposal(uint256 indexed id, address indexed sponsor, uint256 amount);
+  event Sponsorship(uint256 indexed id, address indexed sponsor, uint256 amount);
 
   // Proposal has been unsponsored
-  event UnsponsorProposal(uint256 indexed id, address indexed sponsor, uint256 amount);
+  event SponsorshipRevocation(uint256 indexed id, address indexed sponsor, uint256 amount);
 
   // Proposal vote called
-  event CallVote(uint256 indexed id);
+  event VoteCall(uint256 indexed id);
 
   // Vote cast on proposal
-  event CastVote(uint256 indexed id, address indexed voter, bool affirmative, uint256 votes);
+  event VoteCast(uint256 indexed id, address indexed voter, bool affirmative, uint256 votes);
 
   // Proposal executed
-  event ExecuteProposal(uint256 indexed id);
+  event Execution(uint256 indexed id);
 
   // Function call
   struct Call {
     address callContract;
-    bytes4 selector;
     bytes data;
+    uint256 value;
   }
 
   // Governance proposals
-  struct Proposal {
+  struct ProposalStruct {
     // Proposal Data
     address proposer;
     string proposalDocument; // IPFS hash
@@ -79,10 +79,7 @@ contract Voting {
   }
 
   // Proposals id => proposal data
-  mapping(uint256 => Proposal) public proposals;
-
-  // Counter of proposal IDs
-  uint256 public proposalCounter = 0;
+  ProposalStruct[] public proposals;
 
   /* solhint-disable var-name-mixedcase */
   Staking public immutable STAKING_CONTRACT;
@@ -92,9 +89,19 @@ contract Voting {
   /**
    * @notice Sets governance token ID and delegator contract
    */
+
   constructor(Staking _stakingContract, Delegator _delegator) {
     STAKING_CONTRACT = _stakingContract;
     DELEGATOR_CONTRACT = _delegator;
+  }
+
+  /**
+   * @notice Gets length of proposals array
+   * @return length
+   */
+
+  function proposalsLength() external view returns (uint256) {
+    return proposals.length;
   }
 
   /**
@@ -126,33 +133,39 @@ contract Voting {
    * @param _actions - actions to take
    */
 
-  function createProposal(string calldata _proposalDocument, Call[] calldata _actions) external {
+  function createProposal(string calldata _proposalDocument, Call[] calldata _actions) external returns (uint256) {
+    // Don't allow proposals with no actions
+    require(_actions.length > 0, "Voting: No actions specified");
+
+    uint256 proposalID = proposals.length;
+
+    ProposalStruct storage proposal = proposals.push();
+
     // Store proposer
-    proposals[proposalCounter].proposer = msg.sender;
+    proposal.proposer = msg.sender;
 
     // Store proposal document
-    proposals[proposalCounter].proposalDocument = _proposalDocument;
+    proposal.proposalDocument = _proposalDocument;
 
     // Store published time
-    proposals[proposalCounter].publishTime = block.timestamp;
+    proposal.publishTime = block.timestamp;
 
     // Store sponsor voting snapshot interval
-    proposals[proposalCounter].sponsorInterval = STAKING_CONTRACT.currentInterval();
+    proposal.sponsorInterval = STAKING_CONTRACT.currentInterval();
 
     // Loop over actions and copy manually as solidity doesn't support copying structs
     for (uint256 i = 0; i < _actions.length; i++) {
-      proposals[proposalCounter].actions.push(Call(
+      proposal.actions.push(Call(
         _actions[i].callContract,
-        _actions[i].selector,
-        _actions[i].data
+        _actions[i].data,
+        _actions[i].value
       ));
     }
 
     // Emit event
-    emit CreateProposal(proposalCounter, msg.sender);
+    emit Proposal(proposalID, msg.sender);
 
-    // Increment proposal counter
-    proposalCounter ++;
+    return proposalID;
   }
 
   /**
@@ -163,30 +176,32 @@ contract Voting {
    */
 
   function sponsorProposal(uint256 _id, uint256 _amount, uint256 _hint) external {
+    ProposalStruct storage proposal = proposals[_id];
+
     // Check proposal hasn't already gone to vote
-    require(proposals[_id].voteCallTime == 0, "Voting: Gone to vote");
+    require(proposal.voteCallTime == 0, "Voting: Gone to vote");
 
     // Check proposal is still in sponsor window
-    require(block.timestamp < proposals[_id].publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
+    require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
 
     // Get address sponsor voting power
     Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
       msg.sender,
-      proposals[_id].sponsorInterval,
+      proposal.sponsorInterval,
       _hint
     );
 
     // Can't sponsor with more than voting power
-    require(proposals[_id].sponsors[msg.sender] + _amount <= snapshot.votingPower, "Voting: Not enough voting power");
+    require(proposal.sponsors[msg.sender] + _amount <= snapshot.votingPower, "Voting: Not enough voting power");
 
     // Update address sponsorship amount on proposal
-    proposals[_id].sponsors[msg.sender] += _amount;
+    proposal.sponsors[msg.sender] += _amount;
 
     // Update sponsor total
-    proposals[_id].sponsorship += _amount;
+    proposal.sponsorship += _amount;
 
     // Emit event
-    emit SponsorProposal(_id, msg.sender, _amount);
+    emit Sponsorship(_id, msg.sender, _amount);
   }
 
   /**
@@ -196,23 +211,25 @@ contract Voting {
    */
 
   function unsponsorProposal(uint256 _id, uint256 _amount) external {
+    ProposalStruct storage proposal = proposals[_id];
+
     // Check proposal hasn't already gone to vote
-    require(proposals[_id].voteCallTime == 0, "Voting: Gone to vote");
+    require(proposal.voteCallTime == 0, "Voting: Gone to vote");
 
     // Check proposal is still in sponsor window
-    require(block.timestamp < proposals[_id].publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
+    require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
 
     // Can't unsponsor more than sponsored
-    require(_amount <= proposals[_id].sponsors[msg.sender], "Voting: Amount greater than sponsored");
+    require(_amount <= proposal.sponsors[msg.sender], "Voting: Amount greater than sponsored");
 
     // Update address sponsorship amount on proposal
-    proposals[_id].sponsors[msg.sender] -= _amount;
+    proposal.sponsors[msg.sender] -= _amount;
 
     // Update sponsor total
-    proposals[_id].sponsorship -= _amount;
+    proposal.sponsorship -= _amount;
 
     // Emit event
-    emit UnsponsorProposal(_id, msg.sender, _amount);
+    emit SponsorshipRevocation(_id, msg.sender, _amount);
   }
 
   /**
@@ -221,24 +238,26 @@ contract Voting {
    */
 
   function callVote(uint256 _id) external {
+    ProposalStruct storage proposal = proposals[_id];
+
     // Check proposal hasn't exceeded sponsor window
-    require(block.timestamp < proposals[_id].publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
+    require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
 
     // Check proposal hasn't already gone to vote
-    require(proposals[_id].voteCallTime == 0, "Voting: Proposal already gone to vote");
+    require(proposal.voteCallTime == 0, "Voting: Proposal already gone to vote");
 
     // Proposal must meet sponsorship threshold
-    require(proposals[_id].sponsorship >= PROPOSAL_SPONSOR_THRESHOLD, "Voting: Sponsor threshold not met");
+    require(proposal.sponsorship >= PROPOSAL_SPONSOR_THRESHOLD, "Voting: Sponsor threshold not met");
 
     // Log vote time (also marks proposal as ready to vote)
-    proposals[_id].voteCallTime = block.timestamp;
+    proposal.voteCallTime = block.timestamp;
 
     // Log governance token snapshot interval
     // VOTING_START_OFFSET must be greater than snapshot interval of governance token for this to work correctly
-    proposals[_id].votingInterval = STAKING_CONTRACT.currentInterval();
+    proposal.votingInterval = STAKING_CONTRACT.currentInterval();
 
     // Emit event
-    emit CallVote(_id);
+    emit VoteCall(_id);
   }
 
   /**
@@ -250,41 +269,43 @@ contract Voting {
    */
 
   function vote(uint256 _id, uint256 _amount, bool _affirmative, uint256 _hint) external {
+    ProposalStruct storage proposal = proposals[_id];
+
     // Check vote has been called
-    require(proposals[_id].voteCallTime > 0, "Voting: Vote hasn't been called for this proposal");
+    require(proposal.voteCallTime > 0, "Voting: Vote hasn't been called for this proposal");
 
     // Check Voting window has opened
-    require(block.timestamp > proposals[_id].voteCallTime + VOTING_START_OFFSET, "Voting: Voting window hasn't opened");
+    require(block.timestamp > proposal.voteCallTime + VOTING_START_OFFSET, "Voting: Voting window hasn't opened");
 
     // Check voting window hasn't closed (voting window length conditional on )
     if(_affirmative) {
-      require(block.timestamp < proposals[_id].voteCallTime + VOTING_YAY_END_OFFSET, "Voting: Affirmative voting window has closed");
+      require(block.timestamp < proposal.voteCallTime + VOTING_YAY_END_OFFSET, "Voting: Affirmative voting window has closed");
     } else {
-      require(block.timestamp < proposals[_id].voteCallTime + VOTING_NAY_END_OFFSET, "Voting: Negative voting window has closed");
+      require(block.timestamp < proposal.voteCallTime + VOTING_NAY_END_OFFSET, "Voting: Negative voting window has closed");
     }
 
     // Get address voting power
     Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
       msg.sender,
-      proposals[_id].votingInterval,
+      proposal.votingInterval,
       _hint
     );
 
     // Check address isn't voting with more voting power than it has
-    require(proposals[_id].voted[msg.sender] + _amount <= snapshot.votingPower, "Voting: Not enough voting power to cast this vote");
+    require(proposal.voted[msg.sender] + _amount <= snapshot.votingPower, "Voting: Not enough voting power to cast this vote");
 
     // Update account voted amount
-    proposals[_id].voted[msg.sender] += _amount;
+    proposal.voted[msg.sender] += _amount;
 
     // Update voting totals
     if (_affirmative) {
-      proposals[_id].yayVotes += _amount;
+      proposal.yayVotes += _amount;
     } else {
-      proposals[_id].nayVotes += _amount;
+      proposal.nayVotes += _amount;
     }
 
     // Emit event
-    emit CastVote(_id, msg.sender, _affirmative, _amount);
+    emit VoteCast(_id, msg.sender, _affirmative, _amount);
   }
 
   /**
@@ -293,45 +314,49 @@ contract Voting {
    */
 
   function executeProposal(uint256 _id) external {
+    ProposalStruct storage proposal = proposals[_id];
+  
     // Check proposal has been called to vote
-    require(proposals[_id].voteCallTime > 0, "Voting: Vote hasn't been called for this proposal");
+    require(proposal.voteCallTime > 0, "Voting: Vote hasn't been called for this proposal");
 
     // Check quorum has been reached
-    require(proposals[_id].yayVotes + proposals[_id].nayVotes >= QUORUM, "Voting: Quorum hasn't been reached");
+    require(proposal.yayVotes + proposal.nayVotes >= QUORUM, "Voting: Quorum hasn't been reached");
 
     // Check vote passed
-    require(proposals[_id].yayVotes > proposals[_id].nayVotes, "Voting: Proposal hasn't passed vote");
+    require(proposal.yayVotes > proposal.nayVotes, "Voting: Proposal hasn't passed vote");
 
     // Check we're in execution window
-    require(block.timestamp > proposals[_id].voteCallTime + EXECUTION_START_OFFSET, "Voting: Execution window hasn't opened");
-    require(block.timestamp < proposals[_id].voteCallTime + EXECUTION_END_OFFSET, "Voting: Execution window has closed");
+    require(block.timestamp > proposal.voteCallTime + EXECUTION_START_OFFSET, "Voting: Execution window hasn't opened");
+    require(block.timestamp < proposal.voteCallTime + EXECUTION_END_OFFSET, "Voting: Execution window has closed");
 
     // Check proposal hasn't been executed before
-    require(!proposals[_id].executed, "Voting: Proposal has already been executed");
+    require(!proposal.executed, "Voting: Proposal has already been executed");
 
     // Mark proposal as executed
-    proposals[_id].executed = true;
+    proposal.executed = true;
+
+    Call[] storage actions = proposal.actions;
 
     // Loop over actions and execute
-    for (uint256 i = 0; i < proposals[_id].actions.length; i++) {
+    for (uint256 i = 0; i < actions.length; i++) {
       // Execute action
       (bool successful, bytes memory returnData) = DELEGATOR_CONTRACT.callContract(
-        proposals[_id].actions[i].callContract,
-        proposals[_id].actions[i].selector,
-        proposals[_id].actions[i].data
+        actions[i].callContract,
+        actions[i].data,
+        actions[i].value
       );
 
       // If an action fails to execute, catch and bubble up reason with revert
       if (!successful) {
+        bytes memory revertData = abi.encode(i, returnData);
         // solhint-disable-next-line no-inline-assembly
         assembly {
-          let returndata_size := mload(returnData)
-          revert(add(32, returnData), returndata_size)
+          revert (add (32, revertData), mload (revertData))
         }
       }
     }
 
     // Emit event
-    emit ExecuteProposal(_id);
+    emit Execution(_id);
   }
 }

@@ -2,17 +2,15 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import "hardhat/console.sol";
-
 // OpenZeppelin v4
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title Voting
+ * @title Snapshot
  * @author Railgun Contributors
- * @notice Governance contract for railgun, handles voting.
+ * @notice Governance contract for railgun, handles staking, voting power, and snapshotting
  * @dev Snapshots cannot be taken during interval 0
  * wait till interval 1 before utilising snapshots
  */
@@ -28,22 +26,19 @@ contract Staking {
 
   // Time of deployment
   // solhint-disable-next-line var-name-mixedcase
-  uint256 public DEPLOY_TIME = block.timestamp;
+  uint256 public immutable DEPLOY_TIME = block.timestamp;
 
   // New stake screated
-  event Stake(address indexed account, uint256 stakeID, uint256 amount);
+  event Stake(address indexed account, uint256 indexed stakeID, uint256 amount);
 
   // Stake unlocked (coins removed from voting pool, 30 day delay before claiming is allowed)
-  event Unlock(address indexed account, uint256 stakeID);
+  event Unlock(address indexed account, uint256 indexed stakeID);
 
   // Stake claimed
-  event Claim(address indexed account, uint256 stakeID);
+  event Claim(address indexed account, uint256 indexed stakeID);
 
   // Delegate claimed
   event Delegate(address indexed owner, address indexed _from, address indexed to, uint256 stakeID, uint256 amount);
-
-  // Total voting power
-  uint256 public totalVotingPower = 0;
 
   // Total staked
   uint256 public totalStaked = 0;
@@ -67,10 +62,7 @@ contract Staking {
 
   // Stake mapping
   // address => stakeID => stake
-  mapping(address => mapping(uint256 => StakeStruct)) public stakes;
-
-  // StakeID height for each account
-  mapping(address => uint256) public nextStake;
+  mapping(address => StakeStruct[]) public stakes;
 
   // Voting power for each account
   mapping(address => uint256) public votingPower;
@@ -89,6 +81,28 @@ contract Staking {
 
   constructor(IERC20 _stakingToken) {
     stakingToken = _stakingToken;
+
+    // Use address 0 to store inverted totalVotingPower
+    votingPower[address(0)] = type(uint256).max;
+  }
+
+  /**
+   * @notice Gets total voting power in system
+   * @return totalVotingPower
+   */
+
+  function totalVotingPower() public view returns (uint256) {
+    return ~votingPower[address(0)];
+  }
+
+  /**
+   * @notice Gets length of stakes array for address
+   * @param _account - address to retrieve stakes array of
+   * @return length
+   */
+
+  function stakesLength(address _account) external view returns (uint256) {
+    return stakes[_account].length;
   }
 
   /**
@@ -168,7 +182,6 @@ contract Staking {
    */
 
   function globalsSnapshot(uint256 _index) external view returns (GlobalsSnapshot memory) {
-    require(_index < globalsSnapshots.length, "Staking: Index out of bounds");
     return globalsSnapshots[_index];
   }
 
@@ -179,7 +192,6 @@ contract Staking {
    * @return Account snapshot
    */
   function accountSnapshot(address _account, uint256 _index) external view returns (AccountSnapshot memory) {
-    require(_index < accountSnapshots[_account].length, "Staking: Index out of bounds");
     return accountSnapshots[_account][_index];
   }
 
@@ -194,7 +206,7 @@ contract Staking {
     if(latestGlobalsSnapshotInterval() < _currentInterval) {
       globalsSnapshots.push(GlobalsSnapshot(
         _currentInterval,
-        totalVotingPower,
+        totalVotingPower(),
         totalStaked
       ));
     }
@@ -216,23 +228,8 @@ contract Staking {
    * @param _amount - amount of voting power to move
    */
   function moveVotingPower(address _from, address _to, uint256 _amount) internal {
-    // Don't process decrement operations if from address is 0
-    if(_from != address(0)) {
-      // Decrement voting power of from address
-      votingPower[_from] -= _amount;
-
-      // Decrement total voting power
-      totalVotingPower -= _amount;
-    }
-
-    // Don't process increment operations if to address is 0
-    if(_to != address(0)) {
-      // Increment voting power
-      votingPower[_to] += _amount;
-
-      // Increment total voting power
-      totalVotingPower += _amount;
-    }
+    votingPower[_from] -= _amount;
+    votingPower[_to] += _amount;
   }
 
   /**
@@ -242,32 +239,41 @@ contract Staking {
    */
 
   function delegate(uint256 _stakeID, address _to) public {
+    StakeStruct storage _stake = stakes[msg.sender][_stakeID];
+
     require(
-      stakes[msg.sender][_stakeID].staketime != 0,
+      _stake.staketime != 0,
       "Staking: Stake doesn't exist"
     );
 
     require(
-      stakes[msg.sender][_stakeID].locktime == 0,
+      _stake.locktime == 0,
       "Staking: Stake unlocked"
     );
 
-    // Check if snapshot needs to be taken
-    snapshot(stakes[msg.sender][_stakeID].delegate); // From
-    snapshot(_to); // To
-
-    // Move voting power to delegatee
-    moveVotingPower(
-      stakes[msg.sender][_stakeID].delegate,
-      _to,
-      stakes[msg.sender][_stakeID].amount
+    require(
+      _to != address(0),
+      "Staking: Can't delegate to 0 address"
     );
 
-    // Emit event
-    emit Delegate(msg.sender, stakes[msg.sender][_stakeID].delegate, _to, _stakeID, stakes[msg.sender][_stakeID].amount);
+    if (_stake.delegate != _to) {
+      // Check if snapshot needs to be taken
+      snapshot(_stake.delegate); // From
+      snapshot(_to); // To
 
-    // Update delegation
-    stakes[msg.sender][_stakeID].delegate = _to;
+      // Move voting power to delegatee
+      moveVotingPower(
+        _stake.delegate,
+        _to,
+        _stake.amount
+      );
+
+      // Emit event
+      emit Delegate(msg.sender, _stake.delegate, _to, _stakeID, _stake.amount);
+
+      // Update delegation
+      _stake.delegate = _to;
+    }
   }
 
   /**
@@ -310,7 +316,7 @@ contract Staking {
 
     // At this point `low` is the exclusive upper bound. Find the inclusive upper bounds and set to index
     if (low > 0 && globalsSnapshots[low - 1].interval == _interval) {
-      index = low - 1;
+      return globalsSnapshots[low - 1];
     } else {
       index = low;
     }
@@ -320,7 +326,7 @@ contract Staking {
     if (index == globalsSnapshots.length) {
       return GlobalsSnapshot(
         _interval,
-        totalVotingPower,
+        totalVotingPower(),
         totalStaked
       );
     } else {
@@ -338,59 +344,18 @@ contract Staking {
   function globalsSnapshotAt(uint256 _interval, uint256 _hint) external view returns (GlobalsSnapshot memory) {
     require(_interval <= currentInterval(), "Staking: Interval out of bounds");
 
-    // If no snapshot is taken return the current state
-    if (globalsSnapshots.length== 0) {
-      return GlobalsSnapshot(
-        _interval,
-        totalVotingPower,
-        totalStaked
-      );
-    }
-
-    // If hint is 0 (the first element in snapshot array)
-    // The first element should be great than or equal to the interval requested
+    // Check if hint is correct, else fall back to binary search
     if (
-      _hint == 0
-      && globalsSnapshots[_hint].interval >= _interval
+      _hint <= globalsSnapshots.length
+      && (_hint == 0 || globalsSnapshots[_hint - 1].interval < _interval)
+      && (_hint == globalsSnapshots.length || globalsSnapshots[_hint].interval >= _interval)
     ) {
-      return globalsSnapshots[_hint];
-    }
-
-    // If Hint is the last element in the snapshot array and interval is equal to what is requested, return
-    if (
-      _hint == globalsSnapshots.length - 1
-      && globalsSnapshots[_hint].interval == _interval
-    ) {
-      return globalsSnapshots[_hint];
-    }
-
-    // If Hint in the last element in the snapshot array and interval is less than what is requested, generate snapshot
-    if (
-      _hint == globalsSnapshots.length - 1
-      && globalsSnapshots[_hint].interval < _interval
-    ) {
-      return GlobalsSnapshot(
-        _interval,
-        totalVotingPower,
-        totalStaked
-      );
-    }
-
-    // If Hint is an element not at the ends of the array
-    // First two lines files out cases where _hint is at either end of array
-    // Hint interval should be greater than or equal to requested interval
-    // Hint interval minus 1 should be less than requested interval
-    if (
-      _hint != 0
-      && _hint != globalsSnapshots.length - 1
-      && globalsSnapshots[_hint].interval >= _interval
-      && globalsSnapshots[_hint - 1].interval < _interval
-    ) {
-      return globalsSnapshots[_hint];
-    }
-
-    // Fallback to binary search
-    return globalsSnapshotAtSearch(_interval);
+    // The hint is correct
+      if (_hint < globalsSnapshots.length)
+        return globalsSnapshots[_hint];
+      else
+        return GlobalsSnapshot (_interval, totalVotingPower(), totalStaked);
+    } else return globalsSnapshotAtSearch (_interval);
   }
 
 
@@ -403,20 +368,23 @@ contract Staking {
   function accountSnapshotAtSearch(address _account, uint256 _interval) internal view returns (AccountSnapshot memory) {
     require(_interval <= currentInterval(), "Staking: Interval out of bounds");
 
+    // Get account snapshots array
+    AccountSnapshot[] storage snapshots = accountSnapshots[_account];
+
     // Index of element
     uint256 index;
 
     // High/low for binary serach to find index
     // https://en.wikipedia.org/wiki/Binary_search_algorithm
     uint256 low = 0;
-    uint256 high = accountSnapshots[_account].length;
+    uint256 high = snapshots.length;
 
     while (low < high) {
       uint256 mid = Math.average(low, high);
 
       // Note that mid will always be strictly less than high (i.e. it will be a valid array index)
       // because Math.average rounds down (it does integer division with truncation).
-      if (accountSnapshots[_account][mid].interval > _interval) {
+      if (snapshots[mid].interval > _interval) {
         high = mid;
       } else {
         low = mid + 1;
@@ -424,21 +392,21 @@ contract Staking {
     }
 
     // At this point `low` is the exclusive upper bound. Find the inclusive upper bounds and set to index
-    if (low > 0 && accountSnapshots[_account][low - 1].interval == _interval) {
-      index = low - 1;
+    if (low > 0 && snapshots[low - 1].interval == _interval) {
+      return snapshots[low - 1];
     } else {
       index = low;
     }
 
     // If index is equal to snapshot array length, then no update was made after the requested
     // snapshot interval. This means the latest value is the right one.
-    if (index == accountSnapshots[_account].length) {
+    if (index == snapshots.length) {
       return AccountSnapshot(
         _interval,
         votingPower[_account]
       );
     } else {
-      return accountSnapshots[_account][index];
+      return snapshots[index];
     }
   }
 
@@ -453,57 +421,21 @@ contract Staking {
   function accountSnapshotAt(address _account, uint256 _interval, uint256 _hint) external view returns (AccountSnapshot memory) {
     require(_interval <= currentInterval(), "Staking: Interval out of bounds");
 
-    // If no snapshot is taken return the current state
-    if (accountSnapshots[_account].length == 0) {
-      return AccountSnapshot(
-        _interval,
-        votingPower[_account]
-      );
-    }
+    // Get account snapshots array
+    AccountSnapshot[] storage snapshots = accountSnapshots[_account];
 
-    // If hint is 0 (the first element in snapshot array)
-    // The first element should be great than or equal to the interval requested
+    // Check if hint is correct, else fall back to binary search
     if (
-      _hint == 0
-      && accountSnapshots[_account][_hint].interval >= _interval
+      _hint <= snapshots.length
+      && (_hint == 0 || snapshots[_hint - 1].interval < _interval)
+      && (_hint == snapshots.length || snapshots[_hint].interval >= _interval)
     ) {
-      return accountSnapshots[_account][_hint];
-    }
-
-    // If Hint is the last element in the snapshot array and interval is equal to what is requested, return
-    if (
-      _hint == accountSnapshots[_account].length - 1
-      && accountSnapshots[_account][_hint].interval == _interval
-    ) {
-      return accountSnapshots[_account][_hint];
-    }
-
-    // If Hint in the last element in the snapshot array and interval is less than what is requested, generate snapshot
-    if (
-      _hint == accountSnapshots[_account].length - 1
-      && accountSnapshots[_account][_hint].interval < _interval
-    ) {
-      return AccountSnapshot(
-        _interval,
-        votingPower[_account]
-      );
-    }
-
-    // If Hint is an element not at the ends of the array
-    // First two lines files out cases where _hint is at either end of array
-    // Hint interval should be greater than or equal to requested interval
-    // Hint interval minus 1 should be less than requested interval
-    if (
-      _hint > 0
-      && _hint < accountSnapshots[_account].length - 1
-      && accountSnapshots[_account][_hint].interval >= _interval
-      && accountSnapshots[_account][_hint - 1].interval < _interval
-    ) {
-      return accountSnapshots[_account][_hint];
-    }
-
-    // Fallback to binary search
-    return accountSnapshotAtSearch(_account, _interval);
+      // The hint is correct
+      if (_hint < snapshots.length)
+        return snapshots[_hint];
+      else
+        return AccountSnapshot(_interval, votingPower[_account]);
+    } else return accountSnapshotAtSearch(_account, _interval);
   }
 
   /**
@@ -521,17 +453,16 @@ contract Staking {
     snapshot(msg.sender);
 
     // Get stakeID
-    uint256 stakeID = nextStake[msg.sender];
-
-    // Increment nextStake;
-    nextStake[msg.sender]++;
+    uint256 stakeID = stakes[msg.sender].length;
 
     // Set stake values
-    stakes[msg.sender][stakeID].delegate = msg.sender;
-    stakes[msg.sender][stakeID].amount = _amount;
-    stakes[msg.sender][stakeID].staketime = block.timestamp;
-    stakes[msg.sender][stakeID].locktime = 0;
-    stakes[msg.sender][stakeID].claimedTime = 0;
+    stakes[msg.sender].push(StakeStruct(
+      msg.sender,
+      _amount,
+      block.timestamp,
+      0,
+      0
+    ));
 
     // Increment global staked
     totalStaked += _amount;

@@ -40,3 +40,11 @@ contract GovernanceTargetConstructorArgumentStub {
     greeting = _greeing;
   }
 }
+
+
+contract GovernanceStateChangeTargetStub {
+  string public greeting = "hello";
+  function changeGreeting(string calldata _newGreeting) external {
+    greeting = _newGreeting;
+  }
+}

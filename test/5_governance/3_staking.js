@@ -91,8 +91,7 @@ describe('Governance/Staking', () => {
           hint,
         );
 
-        const globalsSnapshot = await staking.accountSnapshotAt(
-          (await ethers.getSigners())[0].address,
+        const globalsSnapshot = await staking.globalsSnapshotAt(
           i,
           hint,
         );

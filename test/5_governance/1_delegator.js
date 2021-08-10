@@ -60,7 +60,7 @@ describe('Governance/Delegator', () => {
 
     // eslint-disable-next-line no-unused-expressions
     await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.getSighash('a()'), []),
+      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a()', []), 0),
     ).to.eventually.be.fulfilled;
   });
 
@@ -74,12 +74,12 @@ describe('Governance/Delegator', () => {
 
     // eslint-disable-next-line no-unused-expressions
     await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.getSighash('a()'), []),
+      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a()', []), 0),
     ).to.eventually.be.fulfilled;
 
     // eslint-disable-next-line no-unused-expressions
     await expect(
-      delegator.callContract(targetNumber.address, targetAlpha.interface.getSighash('a()'), []),
+      delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('a()', []), 0),
     ).to.eventually.be.fulfilled;
   });
 
@@ -93,37 +93,30 @@ describe('Governance/Delegator', () => {
 
     // eslint-disable-next-line no-unused-expressions
     await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.getSighash('a()'), []),
+      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a()', []), 0),
     ).to.eventually.be.fulfilled;
 
     // eslint-disable-next-line no-unused-expressions
     await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.getSighash('b()'), []),
+      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b()', []), 0),
     ).to.eventually.be.fulfilled;
   });
 
   it('Should intercept calls to self correctly', async () => {
-    const callData = abiCoder.encode([
-      'address',
-      'address',
-      'bytes4',
-      'bool',
-    ], [
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a()'),
-      true,
-    ]);
-
     await delegatorAdmin.callContract(
       delegator.address,
-      delegator.interface.getSighash('setPermission(address,address,bytes4,bool)'),
-      callData,
+      delegator.interface.encodeFunctionData('setPermission(address,address,bytes4,bool)', [
+        (await ethers.getSigners())[0].address,
+        targetAlpha.address,
+        targetAlpha.interface.getSighash('a()'),
+        true,
+      ]),
+      0,
     );
 
     // eslint-disable-next-line no-unused-expressions
     await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.getSighash('a()'), []),
+      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a()', []), 0),
     ).to.eventually.be.fulfilled;
   });
 });

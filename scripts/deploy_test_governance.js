@@ -18,13 +18,15 @@ async function main() {
   const target = await Target.deploy();
 
   // Transfer ownership of delegator to voting
-  delegator.transferOwnership(voting.address);
+  await delegator.transferOwnership(voting.address);
 
   console.log('TestERC20:', testERC20.address);
   console.log('Staking:', staking.address);
   console.log('Voting:', voting.address);
   console.log('Delegator:', delegator.address);
   console.log('Target:', target.address);
+
+  console.log('Example Target Function Call:', target.interface.encodeFunctionData('a()', []));
 }
 
 main().then(() => process.exit(0)).catch((error) => {

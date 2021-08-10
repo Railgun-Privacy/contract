@@ -1,3 +1,4 @@
+# Node/Editors
 node_modules
 package-lock.json
 yarn.lock
@@ -5,10 +6,12 @@ yarn.lock
 
 # Private config files
 networks.config.js
-dev.config.js
 
-#Hardhat files
+# Hardhat files
 cache
 circuit_artifacts
 artifacts
 docs
+
+# Temporary Files
+ephemeral

@@ -54,6 +54,20 @@ task('deploy:test', 'Deploy logic contract for testing purposes', async () => {
   await hre.run('deploy:test:logic');
 });
 
+task('forktoken', 'Gives 100m balance to address[0] when running in fork mode', async () => {
+  await hre.run('run', { script: 'scripts/grant_balance.js' });
+});
+
+task('fastforward', 'Fast forwards time')
+  .addParam('days', 'Days to fast forward (accepts decimal values)')
+  .setAction(async (taskArguments, hre) => {
+    await hre.ethers.provider.send('evm_increaseTime', [
+      Math.round(86400 * taskArguments.days),
+    ]);
+    console.log(`Fast forwarded ${Math.round(86400 * taskArguments.days)} seconds`);
+    await hre.ethers.provider.send('evm_mine');
+  });
+
 module.exports = {
   defaultNetwork: 'hardhat',
   networks,

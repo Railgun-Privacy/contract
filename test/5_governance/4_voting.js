@@ -14,6 +14,7 @@ let staking;
 let delegator;
 let voting;
 let target;
+let target2;
 
 // Contract parameters
 let sponsorWindow;
@@ -33,6 +34,7 @@ describe('Governance/Voting', () => {
     const Voting = await ethers.getContractFactory('Voting');
     const Delegator = await ethers.getContractFactory('Delegator');
     const Target = await ethers.getContractFactory('GovernanceTargetAlphaStub');
+    const Target2 = await ethers.getContractFactory('GovernanceStateChangeTargetStub');
 
     // Deploy contracts
     testERC20 = await TestERC20.deploy();
@@ -40,6 +42,7 @@ describe('Governance/Voting', () => {
     delegator = await Delegator.deploy((await ethers.getSigners())[0].address);
     voting = await Voting.deploy(staking.address, delegator.address);
     target = await Target.deploy();
+    target2 = await Target2.deploy();
 
     // Transfer ownership of delegator to voting
     delegator.transferOwnership(voting.address);
@@ -85,8 +88,8 @@ describe('Governance/Voting', () => {
     await voting.createProposal(proposalDocument, [
       {
         callContract: target.address,
-        selector: target.interface.getSighash('a()'),
-        data: [],
+        data: target.interface.encodeFunctionData('a()', []),
+        value: 0,
       },
     ]);
 
@@ -244,8 +247,8 @@ describe('Governance/Voting', () => {
     await voting.createProposal(proposalDocument, [
       {
         callContract: target.address,
-        selector: target.interface.getSighash('a()'),
-        data: [],
+        data: target.interface.encodeFunctionData('a()', []),
+        value: 0,
       },
     ]);
 
@@ -268,8 +271,8 @@ describe('Governance/Voting', () => {
     await voting.createProposal(proposalDocument, [
       {
         callContract: target.address,
-        selector: target.interface.getSighash('a()'),
-        data: [],
+        data: target.interface.encodeFunctionData('a()', []),
+        value: 0,
       },
     ]);
 
@@ -297,5 +300,45 @@ describe('Governance/Voting', () => {
     await expect(voting.executeProposal(0n)).to.eventually.be.rejectedWith(
       'Voting: Proposal hasn\'t passed vote',
     );
+  });
+
+  it('Should execute proposals correctly', async () => {
+    // Create proposal
+    await voting.createProposal(proposalDocument, [
+      {
+        callContract: target2.address,
+        data: target2.interface.encodeFunctionData('changeGreeting(string)', ['hi']),
+        value: 0,
+      },
+    ]);
+
+    // Sponsor proposal
+    await voting.sponsorProposal(0n, proposalSponsorThreshold, 0n);
+
+    // Send to vote
+    await voting.callVote(0n);
+
+    // Increase time to voting window
+    await ethers.provider.send('evm_increaseTime', [Number(votingStartOffset.toString())]);
+    await ethers.provider.send('evm_mine');
+
+    // Cast vote
+    await voting.vote(0n, quorum, true, 0n);
+
+    // Increase time to execution window start
+    await ethers.provider.send('evm_increaseTime', [
+      Number(executionStartOffset.toString())
+      - Number(votingStartOffset.toString()),
+    ]);
+    await ethers.provider.send('evm_mine');
+
+    // Check greeter before
+    expect(await target2.greeting()).to.equal('hello');
+
+    // Execute proposal
+    await voting.executeProposal(0n);
+
+    // Check greeter has changed
+    expect(await target2.greeting()).to.equal('hi');
   });
 });

@@ -35,7 +35,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
   // Treasury variables
   address payable public treasury; // Treasury contract
   uint256 private constant BASIS_POINTS = 10000; // Number of basis points that equal 100%
-  // % fee in 10ths of a %. 100 = 1%.
+  // % fee in 100ths of a %. 100 = 1%.
   uint256 public depositFee;
   uint256 public withdrawFee;
 
@@ -45,6 +45,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
   // Treasury events
   event TreasuryChange(address treasury);
   event FeeChange(uint256 depositFee, uint256 withdrawFee, uint256 transferFee);
+
+  // Transaction events
+  event Nullifier(uint256 indexed nullifier);
 
   /**
    * @notice Initialize Railgun contract
@@ -181,9 +184,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     require(_withdrawAmount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: withdrawAmount too high");
 
     // If deposit amount is not 0, token should be on whitelist
+    // address(0) is wildcard (disables whitelist)
     require(
       _depositAmount == 0 ||
-      TokenWhitelist.tokenWhitelist[_tokenField],
+      TokenWhitelist.tokenWhitelist[_tokenField] ||
+      TokenWhitelist.tokenWhitelist[address(0)],
       "RailgunLogic: Token isn't whitelisted for deposit"
     );
 
@@ -195,6 +200,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
 
       // Push to seen nullifiers
       Commitments.nullifiers[nullifier] = true;
+
+      // Emit event
+      emit Nullifier(nullifier);
     }
 
     // Verify proof
@@ -281,7 +289,12 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     require(_amount > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
     // Check token is on the whitelist
-    require(TokenWhitelist.tokenWhitelist[_tokenField], "RailgunLogic: Token isn't whitelisted for deposit");
+    // address(0) is wildcard (disables whitelist)
+    require(
+      TokenWhitelist.tokenWhitelist[_tokenField] ||
+      TokenWhitelist.tokenWhitelist[address(0)],
+      "RailgunLogic: Token isn't whitelisted for deposit"
+    );
 
     // Check deposit amount isn't greater than max deposit amount
     require(_amount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: depositAmount too high");
