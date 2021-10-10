@@ -34,20 +34,16 @@ task('accounts', 'Prints the list of accounts', async () => {
   });
 });
 
-task('deploy:new', 'Deploy fresh instance', async () => {
-  await hre.run('run', { script: 'scripts/deploy_new.js' });
-});
-
-task('deploy:update', 'Deploy logic contract for contract update', async () => {
-  await hre.run('run', { script: 'scripts/deploy_update.js' });
-});
-
 task('deploy:test:logic', 'Deploy logic contract for testing purposes', async () => {
   await hre.run('run', { script: 'scripts/deploy_test_logic.js' });
 });
 
 task('deploy:test:governance', 'Deploy governance contract for testing purposes', async () => {
   await hre.run('run', { script: 'scripts/deploy_test_governance.js' });
+});
+
+task('deploy:test:all', 'Deploy full deployment for testing purposes', async () => {
+  await hre.run('run', { script: 'scripts/deploy_test_all.js' });
 });
 
 task('deploy:test', 'Deploy logic contract for testing purposes', async () => {

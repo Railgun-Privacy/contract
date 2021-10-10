@@ -10,16 +10,7 @@ contract CommitmentsStub is Commitments {
     Commitments.initializeCommitments();
   }
 
-  function addCommitmentsStub(Commitment[CIRCUIT_OUTPUTS] calldata _commitments) external {
-    addCommitments(_commitments);
-  }
-
-  function addGeneratedCommitmentStub(
-    uint256[2] calldata pubkey,
-    uint256 random,
-    uint256 amount,
-    address token
-  ) external {
-    addGeneratedCommitment(pubkey, random, amount, token);
+  function insertLeavesStub(uint256[] memory _leafHashes) external {
+    Commitments.insertLeaves(_leafHashes);
   }
 }

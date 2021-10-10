@@ -6,6 +6,7 @@ pragma abicoder v2;
 import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 
+import { Staking } from "../governance/Staking.sol";
 import { VestLock } from "./VestLock.sol";
 
 /**
@@ -15,18 +16,23 @@ import { VestLock } from "./VestLock.sol";
  */
 contract Distributor is Ownable {
   address public vestLockImplementation;
+  Staking public staking;
 
   mapping(address => VestLock) public vestLocks;
 
   /**
    * @notice Sets initial admin
    * @param _admin - address to accept vesting calls from
+   * @param _staking - Staking contract address
    * @param _vestLockImplementation - implementation address for vestlock contract
    */
 
-  constructor(address _admin, address _vestLockImplementation) {
+  constructor(address _admin, address _staking, address _vestLockImplementation) {
     // Set initial admin
     Ownable.transferOwnership(_admin);
+
+    // Set the stacking contract
+    staking = Staking(_staking);
 
     // Set vestlock implementation
     vestLockImplementation = _vestLockImplementation;
@@ -48,6 +54,6 @@ contract Distributor is Ownable {
     vestLocks[_beneficiary] = vestLock;
 
     // Initialize clone
-    vestLock.initialize(_beneficiary, _releaseTime);
+    vestLock.initialize(Ownable.owner(), _beneficiary, staking, _releaseTime);
   }
 }

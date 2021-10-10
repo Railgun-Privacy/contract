@@ -7,8 +7,7 @@ pragma abicoder v2;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { Commitment, SNARK_SCALAR_FIELD, CIRCUIT_OUTPUTS, CIPHERTEXT_WORDS } from "./Globals.sol";
-
-import { PoseidonT3, PoseidonT6 } from "./Poseidon.sol";
+import { PoseidonT3 } from "./Poseidon.sol";
 
 /**
  * @title Commitments
@@ -23,6 +22,9 @@ contract Commitments is Initializable {
   // add new variables to the bottom of the list and decrement the __gap
   // variable at the end of this file
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
+
+  // Leaving events here so they will be available in the ABI for historical purposes.
+  // These will not be used in future.
 
   // Commitment added event
   event NewCommitment(
@@ -48,16 +50,13 @@ contract Commitments is Initializable {
   mapping(uint256 => bool) public nullifiers;
 
   // The tree depth
-  uint256 private constant TREE_DEPTH = 16;
-
-  // Max number of leaves that can be inserted in a single batch
-  uint256 internal constant MAX_BATCH_SIZE = CIRCUIT_OUTPUTS;
+  uint256 internal constant TREE_DEPTH = 16;
 
   // Tree zero value
   uint256 private constant ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD;
 
   // Next leaf index (number of inserted leaves in the current tree)
-  uint256 private nextLeafIndex = 0;
+  uint256 internal nextLeafIndex = 0;
 
   // The Merkle root
   uint256 public merkleRoot;
@@ -66,7 +65,7 @@ contract Commitments is Initializable {
   uint256 private newTreeRoot;
 
   // Tree number
-  uint256 private treeNumber;
+  uint256 internal treeNumber;
 
   // The Merkle path to the leftmost leaf upon initialisation. It *should
   // not* be modified after it has been set by the initialize function.
@@ -141,10 +140,9 @@ contract Commitments is Initializable {
    * Note: this function INTENTIONALLY causes side effects to save on gas.
    * _leafHashes and _count should never be reused.
    * @param _leafHashes - array of leaf hashes to be added to the merkle tree
-   * @param _count - number of leaf hashes to be added to the merkle tree
    */
 
-  function insertLeaves(uint256[MAX_BATCH_SIZE] memory _leafHashes, uint256 _count) private {
+  function insertLeaves(uint256[] memory _leafHashes) internal {
     /*
     Loop through leafHashes at each level, if the leaf is on the left (index is even)
     then hash with zeros value and update subtree on this level, if the leaf is on the
@@ -164,11 +162,14 @@ contract Commitments is Initializable {
     {} = count variable
     */
 
+    // Get initial count
+    uint256 count = _leafHashes.length;
+
     // Current index is the index at each level to insert the hash
     uint256 levelInsertionIndex = nextLeafIndex;
 
     // Update nextLeafIndex
-    nextLeafIndex += _count;
+    nextLeafIndex += count;
 
     // Variables for starting point at next tree level
     uint256 nextLevelHashIndex;
@@ -180,7 +181,7 @@ contract Commitments is Initializable {
       // >> is equivilent to / 2 rounded down
       nextLevelStartIndex = levelInsertionIndex >> 1;
 
-      for (uint256 insertionElement = 0; insertionElement < _count; insertionElement++) {
+      for (uint256 insertionElement = 0; insertionElement < count; insertionElement++) {
         uint256 left;
         uint256 right;
 
@@ -213,7 +214,7 @@ contract Commitments is Initializable {
       levelInsertionIndex = nextLevelStartIndex;
 
       // Get count of elements for next level
-      _count = nextLevelHashIndex + 1;
+      count = nextLevelHashIndex + 1;
     }
  
     // Update the Merkle tree root
@@ -236,76 +237,6 @@ contract Commitments is Initializable {
 
     // Increment tree number
     treeNumber++;
-  }
-
-  /**
-   * @notice Adds commitments to tree and emits events
-   * @dev MAX_BATCH_SIZE trades off gas cost and batch size
-   * @param _commitments - array of commitments to be added to merkle tree
-   */
-
-  function addCommitments(Commitment[CIRCUIT_OUTPUTS] calldata _commitments) internal {
-    // Create new tree if existing tree can't contain outputs
-    // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + _commitments.length) > (uint256(2) ** TREE_DEPTH)) { newTree(); }
-
-    // Build insertion array
-    uint256[MAX_BATCH_SIZE] memory insertionLeaves;
-
-    for (uint256 i = 0; i < _commitments.length; i++) {
-      // Throw if leaf is invalid
-      require(
-        _commitments[i].hash < SNARK_SCALAR_FIELD,
-        "Commitments: context.leafHash[] entries must be < SNARK_SCALAR_FIELD"
-      );
-
-      // Push hash to insertion array
-      insertionLeaves[i] =  _commitments[i].hash;
-
-      // Emit CommitmentAdded events (for wallets) for all the commitments
-      emit NewCommitment(treeNumber, nextLeafIndex + i, _commitments[i].hash, _commitments[i].ciphertext, _commitments[i].senderPubKey);
-    }
-
-    // Push the leaf hashes into the Merkle tree
-    insertLeaves(insertionLeaves, CIRCUIT_OUTPUTS);
-  }
-
-  /**
-   * @notice Creates a commitment hash from supplied values and adds to tree
-   * @dev This is for DeFi integrations where the resulting number of tokens to be added
-   * can't be known in advance (eg. AMM trade where transaction ordering could cause toekn amounts to change)
-   * @param _pubkey - pubkey of commitment
-   * @param _random - randomness component of commitment
-   * @param _amount - amount of commitment
-   * @param _token - token ID of commitment
-   */
-
-  function addGeneratedCommitment(
-    uint256[2] memory _pubkey,
-    uint256 _random,
-    uint256 _amount,
-    address _token
-  ) internal {
-    // Create new tree if current one can't contain existing tree
-    // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + 1) >= (2 ** TREE_DEPTH)) { newTree(); }
-
-    // Calculate commitment hash
-    uint256 hash = PoseidonT6.poseidon([
-      _pubkey[0],
-      _pubkey[1],
-      _random,
-      _amount,
-      uint256(uint160(_token))
-    ]);
-
-    // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit NewGeneratedCommitment(treeNumber, nextLeafIndex, hash, _pubkey, _random, _amount, _token);
-
-    // Push the leaf hash into the Merkle tree
-    uint256[CIRCUIT_OUTPUTS] memory insertionLeaves;
-    insertionLeaves[0] = hash;
-    insertLeaves(insertionLeaves, 1);
   }
 
   uint256[50] private __gap;

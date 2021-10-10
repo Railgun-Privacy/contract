@@ -47,7 +47,7 @@ contract TokenWhitelist is Initializable, OwnableUpgradeable {
 
   function addToWhitelist(address[] calldata _tokens) public onlyOwner {
     // Loop through token array
-    for (uint i = 0; i < _tokens.length; i++) {
+    for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token is already whitelisted
       if (!tokenWhitelist[_tokens[i]]) {
           // Set token address in whitelist map to true
@@ -68,7 +68,7 @@ contract TokenWhitelist is Initializable, OwnableUpgradeable {
 
   function removeFromWhitelist(address[] calldata _tokens) external onlyOwner {
     // Loop through token array
-    for (uint i = 0; i < _tokens.length; i++) {
+    for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token isn't whitelisted
       if (tokenWhitelist[_tokens[i]]) {
         // Set token address in whitelist map to false (default value)

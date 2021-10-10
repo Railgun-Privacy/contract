@@ -7,6 +7,25 @@ uint256 constant SNARK_SCALAR_FIELD = 218882428718392752222464057452572750885483
 uint256 constant CIRCUIT_OUTPUTS = 3;
 uint256 constant CIPHERTEXT_WORDS = 6;
 
+// Transaction struct
+struct Transaction{
+    // Proof
+    SnarkProof _proof;
+    // Shared
+    address _adaptIDcontract;
+    uint256 _adaptIDparameters;
+    uint256 _depositAmount;
+    uint256 _withdrawAmount;
+    address _tokenField;
+    address _outputEthAddress;
+    // Join
+    uint256 _treeNumber;
+    uint256 _merkleRoot;
+    uint256[] _nullifiers;
+    // Split
+    Commitment[CIRCUIT_OUTPUTS] _commitmentsOut;
+  }
+
 // Commitment hash and ciphertext
 struct Commitment {
   uint256 hash;
