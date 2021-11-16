@@ -19,7 +19,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 contract TokenWhitelist is Initializable, OwnableUpgradeable {
   // Events for offchain building of whitelist index
   event TokenListing(address indexed token);
-  event TokeDelisting(address indexed token);
+  event TokenDelisting(address indexed token);
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list and decrement the __gap
@@ -75,7 +75,7 @@ contract TokenWhitelist is Initializable, OwnableUpgradeable {
         delete tokenWhitelist[_tokens[i]];
 
         // Emit event for building index of whitelisted tokens offchain
-        emit TokeDelisting(_tokens[i]);
+        emit TokenDelisting(_tokens[i]);
       }
     }
   }
