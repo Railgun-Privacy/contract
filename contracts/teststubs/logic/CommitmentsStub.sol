@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import { Commitment, CIRCUIT_OUTPUTS } from "../../logic/Globals.sol";
 import { Commitments } from "../../logic/Commitments.sol";
 
 contract CommitmentsStub is Commitments {

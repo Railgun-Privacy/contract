@@ -789,15 +789,14 @@ describe('Logic/RailgunLogic', () => {
       (await ethers.getSigners())[0].address,
     );
 
-    await railgunLogic.generateDeposit(
-      utils.unpackPoint(railgunAccount.publicKey),
-      note.random,
-      note.amount,
-      utils.bigInt2ETHAddress(note.token),
-      {
-        gasLimit: 1500000,
-      },
-    );
+    await railgunLogic.generateDeposit([{
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }], {
+      gasLimit: 1500000,
+    });
 
     const newBalance = await testERC20.balanceOf(
       (await ethers.getSigners())[0].address,
@@ -806,6 +805,34 @@ describe('Logic/RailgunLogic', () => {
     expect(BigInt(initialBalance) - BigInt(newBalance)).to.equal(note.amount);
 
     merkleTree.insertLeaves([note.hash]);
+
+    expect(
+      (await railgunLogic.merkleRoot()),
+    ).to.equal(
+      merkleTree.root,
+    );
+
+    await railgunLogic.generateDeposit([{
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }, {
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }], {
+      gasLimit: 1500000,
+    });
+
+    const newBalance2 = await testERC20.balanceOf(
+      (await ethers.getSigners())[0].address,
+    );
+
+    expect(BigInt(initialBalance) - BigInt(newBalance2)).to.equal(note.amount * 3n);
+
+    merkleTree.insertLeaves([note.hash, note.hash]);
 
     expect(
       (await railgunLogic.merkleRoot()),
@@ -825,15 +852,14 @@ describe('Logic/RailgunLogic', () => {
       (await ethers.getSigners())[0].address,
     );
 
-    await railgunLogic.generateDeposit(
-      utils.unpackPoint(railgunAccount.publicKey),
-      note.random,
-      note.amount,
-      utils.bigInt2ETHAddress(note.token),
-      {
-        gasLimit: 1500000,
-      },
-    );
+    await railgunLogic.generateDeposit([{
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }], {
+      gasLimit: 1500000,
+    });
 
     const newBalance = await testERC20.balanceOf(
       (await ethers.getSigners())[0].address,

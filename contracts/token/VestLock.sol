@@ -112,11 +112,12 @@ contract VestLock is Initializable, OwnableUpgradeable {
    * @param _amount - Amount of ETH to transfer
    */
   function transferETH(address payable _to, uint256 _amount) external locked onlyOwner {
-    _to.transfer(_amount);
+    (bool sent,) = _to.call{value: _amount}("");
+    require(sent, "Failed to send Ether");
   }
 
   /**
-   * @notice Transfers ETH to specified address
+   * @notice Transfers ERC20 to specified address
    * @param _token - ERC20 token address to transfer
    * @param _to - Address to transfer tokens to
    * @param _amount - Amount of tokens to transfer

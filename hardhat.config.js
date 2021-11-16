@@ -34,20 +34,8 @@ task('accounts', 'Prints the list of accounts', async () => {
   });
 });
 
-task('deploy:test:logic', 'Deploy logic contract for testing purposes', async () => {
-  await hre.run('run', { script: 'scripts/deploy_test_logic.js' });
-});
-
-task('deploy:test:governance', 'Deploy governance contract for testing purposes', async () => {
-  await hre.run('run', { script: 'scripts/deploy_test_governance.js' });
-});
-
-task('deploy:test:all', 'Deploy full deployment for testing purposes', async () => {
-  await hre.run('run', { script: 'scripts/deploy_test_all.js' });
-});
-
-task('deploy:test', 'Deploy logic contract for testing purposes', async () => {
-  await hre.run('deploy:test:logic');
+task('deploy:test', 'Deploy full deployment for testing purposes', async () => {
+  await hre.run('run', { script: 'scripts/deploy_test.js' });
 });
 
 task('forktoken', 'Gives 100m balance to address[0] when running in fork mode', async () => {

@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { Transaction, VerifyingKey, SnarkProof, Commitment, SNARK_SCALAR_FIELD, CIPHERTEXT_WORDS, CIRCUIT_OUTPUTS } from "./Globals.sol";
+import { Transaction, VerifyingKey, SnarkProof, Commitment, GeneratedCommitment, SNARK_SCALAR_FIELD, CIPHERTEXT_WORDS, CIRCUIT_OUTPUTS } from "./Globals.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
@@ -43,35 +43,21 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
   // Flat fee in wei that applies to all transactions
   uint256 public transferFee;
 
-  // Transaction Struct
-  // _proof - snark proof
-  // _adaptIDcontract - contract address to this proof to (ignored if set to 0)
-  // _adaptIDparameters - hash of the contract parameters (only used to verify proof, this is verified by the
-  // calling contract)
-  // _depositAmount - deposit amount
-  // _withdrawAmount - withdraw amount
-  // _tokenField - token to use if deposit/withdraw is requested
-  // _outputEthAddress - eth address to use if withdraw is requested
-  // _treeNumber - merkle tree number
-  // _merkleRoot - merkle root to verify against
-  // _nullifiers - nullifiers of commitments
-  // _commitmentsOut - output commitments
-
   // Treasury events
   event TreasuryChange(address treasury);
   event FeeChange(uint256 depositFee, uint256 withdrawFee, uint256 transferFee);
-
-  struct CommitmentEntry {
-    uint256 hash;
-    uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
-    uint256[2] senderPubKey;
-  }
 
   // Transaction events
   event CommitmentBatch(
     uint256 indexed treeNumber,
     uint256 indexed startPosition,
-    CommitmentEntry[] commitments
+    Commitment[] commitments
+  );
+
+  event GeneratedCommitmentBatch(
+    uint256 indexed treeNumber,
+    uint256 indexed startPosition,
+    GeneratedCommitment[] commitments
   );
 
   event Nullifier(uint256 indexed nullifier);
@@ -162,15 +148,14 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
 
     // Transfer to treasury
-    // If the treasury contract fails (eg. with revert()) the tx or consumes more than 2300 gas railgun transactions will fail
-    // If this is ever the case, changeTreasury() will neeed to be called to change to a good contract
-    treasury.transfer(msg.value);
+    (bool sent,) = treasury.call{value: msg.value}("");
+    require(sent, "Failed to send Ether");
 
     // Insertion array
     uint256[] memory insertionLeaves = new uint256[](_transactions.length * CIRCUIT_OUTPUTS);
 
     // Commitment event
-    CommitmentEntry[] memory newCommitments = new CommitmentEntry[](_transactions.length * CIRCUIT_OUTPUTS);
+    Commitment[] memory newCommitments = new Commitment[](_transactions.length * CIRCUIT_OUTPUTS);
 
     // Track count of commitments
     uint256 commitments = 0;
@@ -278,7 +263,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
         insertionLeaves[commitments] =  transaction._commitmentsOut[commitmientsIter].hash;
 
         // Push commitment to event array
-        newCommitments[commitments] = CommitmentEntry(
+        newCommitments[commitments] = Commitment(
           transaction._commitmentsOut[commitmientsIter].hash,
           transaction._commitmentsOut[commitmientsIter].ciphertext,
           transaction._commitmentsOut[commitmientsIter].senderPubKey
@@ -290,7 +275,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     }
 
     // Create new tree if current tree can't contain entries
-    if ((nextLeafIndex + (commitments)) > (uint256(2) ** TREE_DEPTH)) { Commitments.newTree(); }
+    if ((nextLeafIndex + commitments) > (2 ** TREE_DEPTH)) { Commitments.newTree(); }
 
     // Emit commitment state update
     emit CommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, newCommitments);
@@ -302,81 +287,80 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
   /**
    * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @dev This is for DeFi integrations where the resulting number of tokens to be added
-   * can't be known in advance (eg. AMM trade where transaction ordering could cause toekn amounts to change)
-   * @param _pubkey - pubkey of commitment
-   * @param _random - randomness field of commitment
-   * @param _amount - amount of commitment
-   * @param _tokenField - token ID of commitment
+   * can't be known in advance (eg. AMM trade where transaction ordering could cause token amounts to change)
+   * @param _transactions - list of commitments to generate
    */
 
-  function generateDeposit(
-    uint256[2] calldata _pubkey,
-    uint256 _random,
-    uint256 _amount,
-    address _tokenField
-  ) external payable {
+  function generateDeposit(GeneratedCommitment[] calldata _transactions) external payable {
     // Check treasury fee is paid
     require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
 
     // Transfer to treasury
-    // If the treasury contract fails (eg. with revert()) the tx or consumes more than 2300 gas railgun transactions will fail
-    // If this is ever the case, changeTreasury() will neeed to be called to change to a good contract
-    treasury.transfer(msg.value);
+    (bool sent,) = treasury.call{value: msg.value}("");
+    require(sent, "Failed to send Ether");
 
-    // Check deposit amount is not 0
-    require(_amount > 0, "RailgunLogic: Cannot deposit 0 tokens");
+    // Insertion array
+    uint256[] memory insertionLeaves = new uint256[](_transactions.length);
 
-    // Check token is on the whitelist
-    // address(0) is wildcard (disables whitelist)
-    require(
-      TokenWhitelist.tokenWhitelist[_tokenField] ||
-      TokenWhitelist.tokenWhitelist[address(0)],
-      "RailgunLogic: Token isn't whitelisted for deposit"
-    );
+    for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++) {
+      GeneratedCommitment calldata transaction = _transactions[transactionIter];
 
-    // Check deposit amount isn't greater than max deposit amount
-    require(_amount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: depositAmount too high");
+      // Check deposit amount is not 0
+      require(transaction.amount > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
-    // Check _random is in snark scalar field
-    require(_random < SNARK_SCALAR_FIELD, "RailgunLogic: random out of range");
+      // Check token is on the whitelist
+      // address(0) is wildcard (disables whitelist)
+      require(
+        TokenWhitelist.tokenWhitelist[transaction.token] ||
+        TokenWhitelist.tokenWhitelist[address(0)],
+        "RailgunLogic: Token isn't whitelisted for deposit"
+      );
 
-    // Check pubkey points are in snark scalar field
-    require(_pubkey[0] < SNARK_SCALAR_FIELD, "RailgunLogic: pubkey[0] out of range");
-    require(_pubkey[1] < SNARK_SCALAR_FIELD, "RailgunLogic: pubkey[1] out of range");
+      // Check deposit amount isn't greater than max deposit amount
+      require(transaction.amount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: depositAmount too high");
 
-    // Calculate fee
-    // Fee is subtracted from deposit
-    uint256 feeAmount = _amount * depositFee / BASIS_POINTS;
-    uint256 depositAmount = _amount - feeAmount;
+      // Check _random is in snark scalar field
+      require(transaction.random < SNARK_SCALAR_FIELD, "RailgunLogic: random out of range");
+
+      // Check pubkey points are in snark scalar field
+      require(transaction.pubkey[0] < SNARK_SCALAR_FIELD, "RailgunLogic: pubkey[0] out of range");
+      require(transaction.pubkey[1] < SNARK_SCALAR_FIELD, "RailgunLogic: pubkey[1] out of range");
+
+      // Calculate fee
+      // Fee is subtracted from deposit
+      uint256 feeAmount = transaction.amount * depositFee / BASIS_POINTS;
+      uint256 depositAmount = transaction.amount - feeAmount;
+
+      // Calculate commitment hash
+      uint256 hash = PoseidonT6.poseidon([
+        transaction.pubkey[0],
+        transaction.pubkey[1],
+        transaction.random,
+        transaction.amount,
+        uint256(uint160(transaction.token))
+      ]);
+
+      // Add to insertion array
+      insertionLeaves[transactionIter] = hash;
+
+      // Get ERC20 interface
+      IERC20 token = IERC20(transaction.token);
+
+      // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
+      token.safeTransferFrom(msg.sender, address(this), depositAmount);
+
+      // Transfer fee
+      token.safeTransferFrom(msg.sender, treasury, feeAmount);
+    }
 
     // Create new tree if current one can't contain existing tree
     // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + 1) >= (2 ** TREE_DEPTH)) { Commitments.newTree(); }
-
-    // Calculate commitment hash
-    uint256 hash = PoseidonT6.poseidon([
-      _pubkey[0],
-      _pubkey[1],
-      _random,
-      _amount,
-      uint256(uint160(_tokenField))
-    ]);
+    if ((nextLeafIndex + _transactions.length) >= (2 ** TREE_DEPTH)) { Commitments.newTree(); }
 
     // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit NewGeneratedCommitment(treeNumber, nextLeafIndex, hash, _pubkey, _random, _amount, _tokenField);
+    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, _transactions);
 
-    // Push the leaf hash into the Merkle tree
-    uint256[] memory insertionLeaves = new uint256[](1);
-    insertionLeaves[0] = hash;
+    // Push new commitments to merkle free
     Commitments.insertLeaves(insertionLeaves);
-
-    // Get ERC20 interface
-    IERC20 token = IERC20(_tokenField);
-
-    // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
-    token.safeTransferFrom(msg.sender, address(this), depositAmount);
-
-    // Transfer fee
-    token.safeTransferFrom(msg.sender, treasury, feeAmount);
   }
 }

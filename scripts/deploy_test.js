@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
 /* global overwriteArtifact ethers */
-const hre = require('hardhat');
 const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 const verificationKey = require('../verificationKey');
 
@@ -61,7 +60,7 @@ async function main() {
   const poseidonT6 = await PoseidonT6.deploy();
 
   // Get Railgun Logic
-  const RailgunLogic = await ethers.getContractFactory('RailgunLogic', {
+  const RailgunLogic = await ethers.getContractFactory('RailgunLogicStub', {
     libraries: {
       PoseidonT3: poseidonT3.address,
       PoseidonT6: poseidonT6.address,
@@ -113,64 +112,15 @@ async function main() {
   console.log('Proxy Admin:', proxyAdmin.address);
   console.log('Proxy:', proxy.address);
 
-  // Verify contracts
-  await hre.run('verify:verify', {
-    address: rail.address,
-    constructorArguments: [
-      (await ethers.getSigners())[0].address,
-      50000000n * 10n ** 18n,
-      100000000n * 10n ** 18n,
-      (await ethers.getSigners())[0].address,
-      'Rail',
-      'RAIL',
-    ],
-  });
-
-  await hre.run('verify:verify', {
-    address: staking.address,
-    constructorArguments: [
-      rail.address,
-    ],
-  });
-
-  await hre.run('verify:verify', {
-    address: delegator.address,
-    constructorArguments: [
-      (await ethers.getSigners())[0].address,
-    ],
-  });
-
-  await hre.run('verify:verify', {
-    address: voting.address,
-    constructorArguments: [
-      staking.address,
-      delegator.address,
-    ],
-  });
-
-  await hre.run('verify:verify', {
-    address: treasury.address,
-    constructorArguments: [
-      delegator.address,
-    ],
-  });
-
-  await hre.run('verify:verify', {
-    address: railgunLogic.address,
-  });
-
-  await hre.run('verify:verify', {
-    address: proxyAdmin.address,
-    constructorArguments: [
-      delegator.address,
-    ],
-  });
-
-  await hre.run('verify:verify', {
-    address: proxy.address,
-    constructorArguments: [
-      (await ethers.getSigners())[0].address,
-    ],
+  console.log({
+    rail: rail.address,
+    staking: staking.address,
+    delegator: delegator.address,
+    voting: voting.address,
+    treasury: treasury.address,
+    implementation: railgunLogic.address,
+    proxyAdmin: proxyAdmin.address,
+    proxy: proxy.address,
   });
 }
 

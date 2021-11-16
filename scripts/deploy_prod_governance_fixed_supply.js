@@ -53,7 +53,6 @@ async function main() {
 
   // Transfer ownerships
   await delegator.transferOwnership(voting.address);
-  await rail.transferOwnership(delegator.address);
 
   // Transfer proxy ownership
   await (await proxy.transferOwnership(proxyAdmin.address)).wait();

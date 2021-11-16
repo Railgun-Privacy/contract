@@ -33,6 +33,14 @@ struct Commitment {
   uint256[2] senderPubKey; // Ephemeral one time use
 }
 
+// Commitment hash preimage
+struct GeneratedCommitment {
+  uint256[2] pubkey;
+  uint256 random;
+  uint256 amount;
+  address token;
+}
+
 struct G1Point {
   uint256 x;
   uint256 y;
@@ -53,6 +61,7 @@ struct VerifyingKey {
   G1Point[2] ic;
 }
 
+// Snark proof for transaction
 struct SnarkProof {
   G1Point a;
   G2Point b;

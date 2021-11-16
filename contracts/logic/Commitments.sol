@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
+// import "hardhat/console.sol";
+
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -165,6 +167,8 @@ contract Commitments is Initializable {
     // Get initial count
     uint256 count = _leafHashes.length;
 
+    // console.log(count);
+
     // Current index is the index at each level to insert the hash
     uint256 levelInsertionIndex = nextLeafIndex;
 
@@ -181,22 +185,36 @@ contract Commitments is Initializable {
       // >> is equivilent to / 2 rounded down
       nextLevelStartIndex = levelInsertionIndex >> 1;
 
-      for (uint256 insertionElement = 0; insertionElement < count; insertionElement++) {
-        uint256 left;
+      uint256 insertionElement = 0;
+
+      // If we're on the right, hash and increment to get on the left
+      if (levelInsertionIndex % 2 == 1) {
+        // Calculate index to insert hash into leafHashes[]
+        // >> is equivilent to / 2 rounded down
+        nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
+
+        // Calculate the hash for the next level
+        _leafHashes[nextLevelHashIndex] = hashLeftRight(filledSubTrees[level], _leafHashes[insertionElement]);
+
+        // Increment
+        insertionElement += 1;
+        levelInsertionIndex += 1;
+      }
+
+      // We'll always be on the left side now
+      for (insertionElement; insertionElement < count; insertionElement += 2) {
         uint256 right;
 
-        // Calculate left/right values
-        if (levelInsertionIndex % 2 == 0) {
-          // Leaf hash we're updating with is on the left
-          left = _leafHashes[insertionElement];
-          right = zeros[level];
-
-          // We've created a new subtree at this level, update
-          filledSubTrees[level] = _leafHashes[insertionElement];
+        // Calculate right value
+        if (insertionElement < count - 1) {
+          right = _leafHashes[insertionElement + 1];
         } else {
-          // Leaf hash we're updating with is on the right
-          left = filledSubTrees[level];
-          right = _leafHashes[insertionElement];
+          right = zeros[level];
+        }
+
+        // If we've created a new subtree at this level, update
+        if (insertionElement == count - 1 || insertionElement == count - 2) {
+          filledSubTrees[level] = _leafHashes[insertionElement];
         }
 
         // Calculate index to insert hash into leafHashes[]
@@ -204,10 +222,10 @@ contract Commitments is Initializable {
         nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
 
         // Calculate the hash for the next level
-        _leafHashes[nextLevelHashIndex] = hashLeftRight(left, right);
+        _leafHashes[nextLevelHashIndex] = hashLeftRight(_leafHashes[insertionElement], right);
 
         // Increment level insertion index
-        levelInsertionIndex++;
+        levelInsertionIndex += 2;
       }
 
       // Get starting levelInsertionIndex value for next level
