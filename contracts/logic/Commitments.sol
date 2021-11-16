@@ -3,8 +3,6 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-// import "hardhat/console.sol";
-
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -166,8 +164,6 @@ contract Commitments is Initializable {
 
     // Get initial count
     uint256 count = _leafHashes.length;
-
-    // console.log(count);
 
     // Current index is the index at each level to insert the hash
     uint256 levelInsertionIndex = nextLeafIndex;
