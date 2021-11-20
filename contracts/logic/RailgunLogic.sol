@@ -144,12 +144,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
   }
 
   function transact(Transaction[] calldata _transactions) external payable {
-    // Check treasury fee is paid
-    require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
+    // Skip fee transfer if no fee is required
+    if (transferFee > 0) {
+      // Check treasury fee is paid
+      require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
 
-    // Transfer to treasury
-    (bool sent,) = treasury.call{value: msg.value}("");
-    require(sent, "Failed to send Ether");
+      // Transfer to treasury
+      (bool sent,) = treasury.call{value: msg.value}("");
+      require(sent, "Failed to send Ether");
+    }
 
     // Insertion array
     uint256[] memory insertionLeaves = new uint256[](_transactions.length * CIRCUIT_OUTPUTS);
@@ -292,12 +295,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
    */
 
   function generateDeposit(GeneratedCommitment[] calldata _transactions) external payable {
-    // Check treasury fee is paid
-    require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
+    // Skip fee transfer if no fee is required
+    if (transferFee > 0) {
+      // Check treasury fee is paid
+      require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
 
-    // Transfer to treasury
-    (bool sent,) = treasury.call{value: msg.value}("");
-    require(sent, "Failed to send Ether");
+      // Transfer to treasury
+      (bool sent,) = treasury.call{value: msg.value}("");
+      require(sent, "Failed to send Ether");
+    }
 
     // Insertion array
     uint256[] memory insertionLeaves = new uint256[](_transactions.length);

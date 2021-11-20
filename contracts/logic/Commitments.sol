@@ -136,7 +136,7 @@ contract Commitments is Initializable {
 
   /**
    * @notice Calculates initial values for Merkle Tree
-   * @dev OpenZeppelin initializer ensures this can only be called once.
+   * @dev Insert leaves into the current merkle tree
    * Note: this function INTENTIONALLY causes side effects to save on gas.
    * _leafHashes and _count should never be reused.
    * @param _leafHashes - array of leaf hashes to be added to the merkle tree
