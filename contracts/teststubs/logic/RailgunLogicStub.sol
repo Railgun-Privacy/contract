@@ -8,24 +8,24 @@ import { Commitments } from "../../logic/Commitments.sol";
 import { PoseidonT6 } from "../../logic/Poseidon.sol";
 
 contract RailgunLogicStub is RailgunLogic {
-  function insertGeneratedCommitment(GeneratedCommitment calldata _transaction) external {
+  function insertGeneratedCommitment(GeneratedCommitment calldata _commitment) external {
     // Insert commitments using the old events pattern for testing purposes
     uint256 hash = PoseidonT6.poseidon([
-      _transaction.pubkey[0],
-      _transaction.pubkey[1],
-      _transaction.random,
-      _transaction.amount,
-      uint256(uint160(_transaction.token))
+      _commitment.pubkey[0],
+      _commitment.pubkey[1],
+      _commitment.random,
+      _commitment.amount,
+      uint256(uint160(_commitment.token))
     ]);
 
     emit NewGeneratedCommitment({
       treeNumber: Commitments.treeNumber,
       position: Commitments.nextLeafIndex,
       hash: hash,
-      pubkey: _transaction.pubkey,
-      random: _transaction.random,
-      amount: _transaction.amount,
-      token: _transaction.token
+      pubkey: _commitment.pubkey,
+      random: _commitment.random,
+      amount: _commitment.amount,
+      token: _commitment.token
     });
 
     uint256[] memory insertionLeaves = new uint256[](1);
