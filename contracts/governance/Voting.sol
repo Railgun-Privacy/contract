@@ -21,8 +21,8 @@ contract Voting {
   uint256 public constant EXECUTION_END_OFFSET = 14 days;
 
   // Threshold constants
-  uint256 public constant QUORUM = 4000000e18; // 4 million, 18 decimal places
-  uint256 public constant PROPOSAL_SPONSOR_THRESHOLD = 1000000e18; // 1 million, 18 decimal places
+  uint256 public constant QUORUM = 2000000e18; // 2 million, 18 decimal places
+  uint256 public constant PROPOSAL_SPONSOR_THRESHOLD = 500000e18; // 500 thousand, 18 decimal places
 
   // Proposal has been created
   event Proposal(uint256 indexed id, address indexed proposer);
@@ -115,7 +115,7 @@ contract Voting {
     return proposals[_id].actions;
   }
 
-   /**
+  /**
    * @notice Gets sponsor amount an account has given to a proposal
    * @dev Gets actions from proposal as mappings wont be returned on public getter
    * @param _id - Proposal to get sponsor amount of
@@ -125,6 +125,18 @@ contract Voting {
 
   function getSponsored(uint256 _id, address _account) external view returns (uint256) {
     return proposals[_id].sponsors[_account];
+  }
+
+  /**
+   * @notice Gets votes cast by an account on a particular proposal
+   * @dev Gets votes from proposal as mappings wont be returned on public getter
+   * @param _id - Proposal to get votes for
+   * @param _account - Account to get votes for
+   * @return votes amount
+   */
+
+  function getVotes(uint256 _id, address _account) external view returns (uint256) {
+    return proposals[_id].voted[_account];
   }
 
   /**

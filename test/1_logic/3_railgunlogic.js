@@ -117,21 +117,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof)).to.equal(true);
 
     await railgunLogic.transact(
+      [{
       // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -173,21 +175,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -217,21 +221,23 @@ describe('Logic/RailgunLogic', () => {
     });
 
     await railgunLogic.transact(
-      // Proof
-      proof2.proof.solidity,
-      // Shared
-      proof2.publicInputs.adaptID.address,
-      proof2.publicInputs.adaptID.parameters,
-      proof2.publicInputs.depositAmount,
-      proof2.publicInputs.withdrawAmount,
-      proof2.publicInputs.outputTokenField,
-      proof2.publicInputs.outputEthAddress,
-      // Join
-      proof2.publicInputs.treeNumber,
-      proof2.publicInputs.merkleRoot,
-      proof2.publicInputs.nullifiers,
-      // Split
-      proof2.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof2.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof2.publicInputs.adaptID.address,
+        _adaptIDparameters: proof2.publicInputs.adaptID.parameters,
+        _depositAmount: proof2.publicInputs.depositAmount,
+        _withdrawAmount: proof2.publicInputs.withdrawAmount,
+        _tokenField: proof2.publicInputs.outputTokenField,
+        _outputEthAddress: proof2.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof2.publicInputs.treeNumber,
+        _merkleRoot: proof2.publicInputs.merkleRoot,
+        _nullifiers: proof2.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof2.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -263,21 +269,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -315,21 +323,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -367,21 +377,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -411,21 +423,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof2)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof2.proof.solidity,
-      // Shared
-      proof2.publicInputs.adaptID.address,
-      proof2.publicInputs.adaptID.parameters,
-      proof2.publicInputs.depositAmount,
-      proof2.publicInputs.withdrawAmount,
-      proof2.publicInputs.outputTokenField,
-      proof2.publicInputs.outputEthAddress,
-      // Join
-      proof2.publicInputs.treeNumber,
-      proof2.publicInputs.merkleRoot,
-      proof2.publicInputs.nullifiers,
-      // Split
-      proof2.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof2.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof2.publicInputs.adaptID.address,
+        _adaptIDparameters: proof2.publicInputs.adaptID.parameters,
+        _depositAmount: proof2.publicInputs.depositAmount,
+        _withdrawAmount: proof2.publicInputs.withdrawAmount,
+        _tokenField: proof2.publicInputs.outputTokenField,
+        _outputEthAddress: proof2.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof2.publicInputs.treeNumber,
+        _merkleRoot: proof2.publicInputs.merkleRoot,
+        _nullifiers: proof2.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof2.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -468,21 +482,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -519,21 +535,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof2)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof2.proof.solidity,
-      // Shared
-      proof2.publicInputs.adaptID.address,
-      proof2.publicInputs.adaptID.parameters,
-      proof2.publicInputs.depositAmount,
-      proof2.publicInputs.withdrawAmount,
-      proof2.publicInputs.outputTokenField,
-      proof2.publicInputs.outputEthAddress,
-      // Join
-      proof2.publicInputs.treeNumber,
-      proof2.publicInputs.merkleRoot,
-      proof2.publicInputs.nullifiers,
-      // Split
-      proof2.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof2.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof2.publicInputs.adaptID.address,
+        _adaptIDparameters: proof2.publicInputs.adaptID.parameters,
+        _depositAmount: proof2.publicInputs.depositAmount,
+        _withdrawAmount: proof2.publicInputs.withdrawAmount,
+        _tokenField: proof2.publicInputs.outputTokenField,
+        _outputEthAddress: proof2.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof2.publicInputs.treeNumber,
+        _merkleRoot: proof2.publicInputs.merkleRoot,
+        _nullifiers: proof2.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof2.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -565,21 +583,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof3)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof3.proof.solidity,
-      // Shared
-      proof3.publicInputs.adaptID.address,
-      proof3.publicInputs.adaptID.parameters,
-      proof3.publicInputs.depositAmount,
-      proof3.publicInputs.withdrawAmount,
-      proof3.publicInputs.outputTokenField,
-      proof3.publicInputs.outputEthAddress,
-      // Join
-      proof2.publicInputs.treeNumber,
-      proof3.publicInputs.merkleRoot,
-      proof3.publicInputs.nullifiers,
-      // Split
-      proof3.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof3.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof3.publicInputs.adaptID.address,
+        _adaptIDparameters: proof3.publicInputs.adaptID.parameters,
+        _depositAmount: proof3.publicInputs.depositAmount,
+        _withdrawAmount: proof3.publicInputs.withdrawAmount,
+        _tokenField: proof3.publicInputs.outputTokenField,
+        _outputEthAddress: proof3.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof3.publicInputs.treeNumber,
+        _merkleRoot: proof3.publicInputs.merkleRoot,
+        _nullifiers: proof3.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof3.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -622,21 +642,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof, true)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 12000000,
@@ -673,21 +695,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof2, true)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof2.proof.solidity,
-      // Shared
-      proof2.publicInputs.adaptID.address,
-      proof2.publicInputs.adaptID.parameters,
-      proof2.publicInputs.depositAmount,
-      proof2.publicInputs.withdrawAmount,
-      proof2.publicInputs.outputTokenField,
-      proof2.publicInputs.outputEthAddress,
-      // Join
-      proof2.publicInputs.treeNumber,
-      proof2.publicInputs.merkleRoot,
-      proof2.publicInputs.nullifiers,
-      // Split
-      proof2.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof2.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof2.publicInputs.adaptID.address,
+        _adaptIDparameters: proof2.publicInputs.adaptID.parameters,
+        _depositAmount: proof2.publicInputs.depositAmount,
+        _withdrawAmount: proof2.publicInputs.withdrawAmount,
+        _tokenField: proof2.publicInputs.outputTokenField,
+        _outputEthAddress: proof2.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof2.publicInputs.treeNumber,
+        _merkleRoot: proof2.publicInputs.merkleRoot,
+        _nullifiers: proof2.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof2.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 12000000,
@@ -719,21 +743,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof3, true)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof3.proof.solidity,
-      // Shared
-      proof3.publicInputs.adaptID.address,
-      proof3.publicInputs.adaptID.parameters,
-      proof3.publicInputs.depositAmount,
-      proof3.publicInputs.withdrawAmount,
-      proof3.publicInputs.outputTokenField,
-      proof3.publicInputs.outputEthAddress,
-      // Join
-      proof2.publicInputs.treeNumber,
-      proof3.publicInputs.merkleRoot,
-      proof3.publicInputs.nullifiers,
-      // Split
-      proof3.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof3.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof3.publicInputs.adaptID.address,
+        _adaptIDparameters: proof3.publicInputs.adaptID.parameters,
+        _depositAmount: proof3.publicInputs.depositAmount,
+        _withdrawAmount: proof3.publicInputs.withdrawAmount,
+        _tokenField: proof3.publicInputs.outputTokenField,
+        _outputEthAddress: proof3.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof3.publicInputs.treeNumber,
+        _merkleRoot: proof3.publicInputs.merkleRoot,
+        _nullifiers: proof3.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof3.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 12000000,
@@ -763,15 +789,14 @@ describe('Logic/RailgunLogic', () => {
       (await ethers.getSigners())[0].address,
     );
 
-    await railgunLogic.generateDeposit(
-      utils.unpackPoint(railgunAccount.publicKey),
-      note.random,
-      note.amount,
-      utils.bigInt2ETHAddress(note.token),
-      {
-        gasLimit: 1500000,
-      },
-    );
+    await railgunLogic.generateDeposit([{
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }], {
+      gasLimit: 1500000,
+    });
 
     const newBalance = await testERC20.balanceOf(
       (await ethers.getSigners())[0].address,
@@ -780,6 +805,34 @@ describe('Logic/RailgunLogic', () => {
     expect(BigInt(initialBalance) - BigInt(newBalance)).to.equal(note.amount);
 
     merkleTree.insertLeaves([note.hash]);
+
+    expect(
+      (await railgunLogic.merkleRoot()),
+    ).to.equal(
+      merkleTree.root,
+    );
+
+    await railgunLogic.generateDeposit([{
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }, {
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }], {
+      gasLimit: 1500000,
+    });
+
+    const newBalance2 = await testERC20.balanceOf(
+      (await ethers.getSigners())[0].address,
+    );
+
+    expect(BigInt(initialBalance) - BigInt(newBalance2)).to.equal(note.amount * 3n);
+
+    merkleTree.insertLeaves([note.hash, note.hash]);
 
     expect(
       (await railgunLogic.merkleRoot()),
@@ -799,15 +852,14 @@ describe('Logic/RailgunLogic', () => {
       (await ethers.getSigners())[0].address,
     );
 
-    await railgunLogic.generateDeposit(
-      utils.unpackPoint(railgunAccount.publicKey),
-      note.random,
-      note.amount,
-      utils.bigInt2ETHAddress(note.token),
-      {
-        gasLimit: 1500000,
-      },
-    );
+    await railgunLogic.generateDeposit([{
+      pubkey: utils.unpackPoint(railgunAccount.publicKey),
+      random: note.random,
+      amount: note.amount,
+      token: utils.bigInt2ETHAddress(note.token),
+    }], {
+      gasLimit: 1500000,
+    });
 
     const newBalance = await testERC20.balanceOf(
       (await ethers.getSigners())[0].address,
@@ -838,21 +890,23 @@ describe('Logic/RailgunLogic', () => {
     expect(await prover.verifyProof(proof)).to.equal(true);
 
     await railgunLogic.transact(
-      // Proof
-      proof.proof.solidity,
-      // Shared
-      proof.publicInputs.adaptID.address,
-      proof.publicInputs.adaptID.parameters,
-      proof.publicInputs.depositAmount,
-      proof.publicInputs.withdrawAmount,
-      proof.publicInputs.outputTokenField,
-      proof.publicInputs.outputEthAddress,
-      // Join
-      proof.publicInputs.treeNumber,
-      proof.publicInputs.merkleRoot,
-      proof.publicInputs.nullifiers,
-      // Split
-      proof.publicInputs.commitments,
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
       {
         value: 1000000n,
         gasLimit: 1500000,
@@ -869,5 +923,138 @@ describe('Logic/RailgunLogic', () => {
 
     expect(await testERC20.balanceOf((await ethers.getSigners())[0].address))
       .to.equal(initialBalance);
+  });
+
+  it('Should do batch transactions', async () => {
+    const merkleTree = new MerkleTree();
+
+    const outputNote1a = Note.generateNote(railgunAccount.publicKey, 100n, testERC20.address);
+    const outputNote1b = Note.generateNote(railgunAccount.publicKey, 50n, testERC20.address);
+
+    await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
+
+    const proof = await prover.generateProof({
+      merkleTree,
+      depositAmount: 150n,
+      outputs: [
+        outputNote1a,
+        outputNote1b,
+      ],
+    });
+
+    expect(await prover.verifyProof(proof)).to.equal(true);
+
+    await railgunLogic.transact(
+      [{
+        // Proof
+        _proof: proof.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof.publicInputs.adaptID.address,
+        _adaptIDparameters: proof.publicInputs.adaptID.parameters,
+        _depositAmount: proof.publicInputs.depositAmount,
+        _withdrawAmount: proof.publicInputs.withdrawAmount,
+        _tokenField: proof.publicInputs.outputTokenField,
+        _outputEthAddress: proof.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof.publicInputs.treeNumber,
+        _merkleRoot: proof.publicInputs.merkleRoot,
+        _nullifiers: proof.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof.publicInputs.commitments,
+      }],
+      {
+        value: 1000000n,
+        gasLimit: 1500000,
+      },
+    );
+
+    merkleTree.insertLeaves(proof.publicInputs.commitments.map((commitment) => commitment.hash));
+
+    expect(
+      (await railgunLogic.merkleRoot()),
+    ).to.equal(
+      merkleTree.root,
+    );
+
+    const outputNote2a = Note.generateNote(railgunAccount.publicKey, 100n, testERC20.address);
+    const outputNote2b = Note.generateNote(railgunAccount.publicKey, 50n, testERC20.address);
+
+    const proof2 = await prover.generateProof({
+      merkleTree,
+      notes: [
+        outputNote1a,
+      ],
+      spendingKeys: [
+        railgunAccount.privateKey,
+      ],
+      outputs: [
+        outputNote2a,
+      ],
+    });
+
+    const proof3 = await prover.generateProof({
+      merkleTree,
+      notes: [
+        outputNote1b,
+      ],
+      spendingKeys: [
+        railgunAccount.privateKey,
+      ],
+      outputs: [
+        outputNote2b,
+      ],
+    });
+
+    expect(await prover.verifyProof(proof2)).to.equal(true);
+    expect(await prover.verifyProof(proof3)).to.equal(true);
+
+    await railgunLogic.transact(
+      [{
+        // Proof
+        _proof: proof2.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof2.publicInputs.adaptID.address,
+        _adaptIDparameters: proof2.publicInputs.adaptID.parameters,
+        _depositAmount: proof2.publicInputs.depositAmount,
+        _withdrawAmount: proof2.publicInputs.withdrawAmount,
+        _tokenField: proof2.publicInputs.outputTokenField,
+        _outputEthAddress: proof2.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof2.publicInputs.treeNumber,
+        _merkleRoot: proof2.publicInputs.merkleRoot,
+        _nullifiers: proof2.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof2.publicInputs.commitments,
+      }, {
+        // Proof
+        _proof: proof3.proof.solidity,
+        // Shared
+        _adaptIDcontract: proof3.publicInputs.adaptID.address,
+        _adaptIDparameters: proof3.publicInputs.adaptID.parameters,
+        _depositAmount: proof3.publicInputs.depositAmount,
+        _withdrawAmount: proof3.publicInputs.withdrawAmount,
+        _tokenField: proof3.publicInputs.outputTokenField,
+        _outputEthAddress: proof3.publicInputs.outputEthAddress,
+        // Join
+        _treeNumber: proof3.publicInputs.treeNumber,
+        _merkleRoot: proof3.publicInputs.merkleRoot,
+        _nullifiers: proof3.publicInputs.nullifiers,
+        // Split
+        _commitmentsOut: proof3.publicInputs.commitments,
+      }],
+      {
+        value: 1000000n,
+        gasLimit: 3000000,
+      },
+    );
+
+    merkleTree.insertLeaves(proof2.publicInputs.commitments.map((commitment) => commitment.hash));
+    merkleTree.insertLeaves(proof3.publicInputs.commitments.map((commitment) => commitment.hash));
+
+    expect(
+      (await railgunLogic.merkleRoot()),
+    ).to.equal(
+      merkleTree.root,
+    );
   });
 });

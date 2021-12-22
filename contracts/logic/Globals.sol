@@ -7,11 +7,38 @@ uint256 constant SNARK_SCALAR_FIELD = 218882428718392752222464057452572750885483
 uint256 constant CIRCUIT_OUTPUTS = 3;
 uint256 constant CIPHERTEXT_WORDS = 6;
 
+// Transaction struct
+struct Transaction{
+    // Proof
+    SnarkProof _proof;
+    // Shared
+    address _adaptIDcontract;
+    uint256 _adaptIDparameters;
+    uint256 _depositAmount;
+    uint256 _withdrawAmount;
+    address _tokenField;
+    address _outputEthAddress;
+    // Join
+    uint256 _treeNumber;
+    uint256 _merkleRoot;
+    uint256[] _nullifiers;
+    // Split
+    Commitment[CIRCUIT_OUTPUTS] _commitmentsOut;
+  }
+
 // Commitment hash and ciphertext
 struct Commitment {
   uint256 hash;
   uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
   uint256[2] senderPubKey; // Ephemeral one time use
+}
+
+// Commitment hash preimage
+struct GeneratedCommitment {
+  uint256[2] pubkey;
+  uint256 random;
+  uint256 amount;
+  address token;
 }
 
 struct G1Point {
@@ -34,6 +61,7 @@ struct VerifyingKey {
   G1Point[2] ic;
 }
 
+// Snark proof for transaction
 struct SnarkProof {
   G1Point a;
   G2Point b;
