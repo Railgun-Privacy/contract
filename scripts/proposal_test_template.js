@@ -89,16 +89,20 @@ async function stakeAll() {
   );
 }
 
-async function passProposal(proposalDocument, calls) {
+async function submitProposal(proposalDocument, calls) {
+  const voting = (await ethers.getContractFactory('Voting')).attach(DEPLOYCONFIG.voting);
+
+  const voteTX = await voting.createProposal(proposalDocument, calls);
+  const result = await voteTX.wait();
+  return result.events[0].args.id;
+}
+
+async function passProposal(proposalID) {
   const voting = (await ethers.getContractFactory('Voting')).attach(DEPLOYCONFIG.voting);
   const votingStartOffset = await voting.VOTING_START_OFFSET();
   const executionStartOffset = await voting.EXECUTION_START_OFFSET();
   const quorum = await voting.QUORUM();
   const proposalSponsorThreshold = await voting.PROPOSAL_SPONSOR_THRESHOLD();
-
-  const voteTX = await voting.createProposal(proposalDocument, calls);
-  const result = await voteTX.wait();
-  const proposalID = result.events[0].args.id;
 
   await voting.sponsorProposal(proposalID, proposalSponsorThreshold, 0n);
   await voting.callVote(proposalID);
@@ -122,13 +126,26 @@ async function main() {
   await stakeAll();
   await fastForward(1);
   const calls = await getProposalCalls();
-  await passProposal(PROPOSALDOCUMENT, calls);
+  const proposalID = await submitProposal(PROPOSALDOCUMENT, calls);
+  await passProposal(proposalID);
   await testProposalUpgrade();
   console.log('Tests passed with calls:');
   console.log(calls);
+}
+
+async function submit() {
+  await prep();
+  const calls = await getProposalCalls();
+  const proposalID = await submitProposal(PROPOSALDOCUMENT, calls);
+  console.log('Proposal ID: ', proposalID);
 }
 
 main().then(() => process.exit(0)).catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
+// submit().then(() => process.exit(0)).catch((error) => {
+//   console.error(error);
+//   process.exit(1);
+// });
