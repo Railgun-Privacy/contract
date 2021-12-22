@@ -3,6 +3,11 @@
 /* global ethers */
 const { expect } = require('chai');
 
+ethers.provider = new ethers.providers.JsonRpcProvider({
+  url: ethers.provider.connection.url,
+  timeout: 2147483647,
+});
+
 const DEPLOYCONFIG = {
   rail: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
   staking: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
