@@ -10,20 +10,20 @@ uint256 constant CIPHERTEXT_WORDS = 6;
 // Transaction struct
 struct Transaction{
     // Proof
-    SnarkProof _proof;
+    SnarkProof proof;
     // Shared
-    address _adaptIDcontract;
-    uint256 _adaptIDparameters;
-    uint256 _depositAmount;
-    uint256 _withdrawAmount;
-    address _tokenField;
-    address _outputEthAddress;
+    address adaptIDcontract;
+    uint256 adaptIDparameters;
+    uint256 depositAmount;
+    uint256 withdrawAmount;
+    address tokenField;
+    address outputEthAddress;
     // Join
-    uint256 _treeNumber;
-    uint256 _merkleRoot;
-    uint256[] _nullifiers;
+    uint256 treeNumber;
+    uint256 merkleRoot;
+    uint256[] nullifiers;
     // Split
-    Commitment[CIRCUIT_OUTPUTS] _commitmentsOut;
+    Commitment[CIRCUIT_OUTPUTS] commitmentsOut;
   }
 
 // Commitment hash and ciphertext

@@ -23,29 +23,6 @@ contract Commitments is Initializable {
   // variable at the end of this file
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
-  // Leaving events here so they will be available in the ABI for historical purposes.
-  // These will not be used in future.
-
-  // Commitment added event
-  event NewCommitment(
-    uint256 indexed treeNumber,
-    uint256 indexed position,
-    uint256 hash,
-    uint256[CIPHERTEXT_WORDS] ciphertext, // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
-    uint256[2] senderPubKey
-  );
-
-  // Generated commitment added event
-  event NewGeneratedCommitment(
-    uint256 indexed treeNumber,
-    uint256 indexed position,
-    uint256 hash,
-    uint256[2] pubkey,
-    uint256 random,
-    uint256 amount,
-    address token
-  );
-
   // Commitment nullifiers
   mapping(uint256 => bool) public nullifiers;
 

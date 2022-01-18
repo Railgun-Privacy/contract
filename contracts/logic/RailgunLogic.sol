@@ -12,7 +12,7 @@ import { Transaction, VerifyingKey, SnarkProof, Commitment, GeneratedCommitment,
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
-import { TokenWhitelist } from "./TokenWhitelist.sol";
+import { TokenBlacklist } from "./TokenBlacklist.sol";
 import { PoseidonT6 } from "./Poseidon.sol";
 
 /**
@@ -24,7 +24,7 @@ import { PoseidonT6 } from "./Poseidon.sol";
  * call the initializeRailgunLogic function.
  */
 
-contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWhitelist, Verifier {
+contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlacklist, Verifier {
   using SafeERC20 for IERC20;
 
   uint256 private constant MAX_DEPOSIT_WITHDRAW = 2**120;
@@ -66,7 +66,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
    * @notice Initialize Railgun contract
    * @dev OpenZeppelin initializer ensures this can only be called once
    * This function also calls initializers on inherited contracts
-   * @param _tokenWhitelist - Initial token whitelist to use
+   * @param _tokenBlacklist - Initial token blacklist to use
    * @param _treasury - address to send usage fees to
    * @param _depositFee - Deposit fee
    * @param _withdrawFee - Withdraw fee
@@ -77,7 +77,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
   function initializeRailgunLogic(
     VerifyingKey calldata _vKeySmall,
     VerifyingKey calldata _vKeyLarge,
-    address[] calldata _tokenWhitelist,
+    address[] calldata _tokenBlacklist,
     address payable _treasury,
     uint256 _depositFee,
     uint256 _withdrawFee,
@@ -87,7 +87,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
     // Call initializers
     OwnableUpgradeable.__Ownable_init();
     Commitments.initializeCommitments();
-    TokenWhitelist.initializeTokenWhitelist(_tokenWhitelist);
+    TokenBlacklist.initializeTokenBlacklist(_tokenBlacklist);
     Verifier.initializeVerifier(_vKeySmall, _vKeyLarge);
 
     // Set treasury and fee
@@ -169,27 +169,25 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
       Transaction calldata transaction = _transactions[transactionIter];
 
       // If _adaptIDcontract is not zero check that it matches the caller
-      require(transaction._adaptIDcontract == address (0) || transaction._adaptIDcontract == msg.sender, "AdaptID doesn't match caller contract");
+      require(transaction.adaptIDcontract == address (0) || transaction.adaptIDcontract == msg.sender, "AdaptID doesn't match caller contract");
 
       // Check merkle root is valid
-      require(Commitments.rootHistory[transaction._treeNumber][transaction._merkleRoot], "RailgunLogic: Invalid Merkle Root");
+      require(Commitments.rootHistory[transaction.treeNumber][transaction.merkleRoot], "RailgunLogic: Invalid Merkle Root");
 
       // Check depositAmount and withdrawAmount are below max allowed value
-      require(transaction._depositAmount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: depositAmount too high");
-      require(transaction._withdrawAmount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: withdrawAmount too high");
+      require(transaction.depositAmount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: depositAmount too high");
+      require(transaction.withdrawAmount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: withdrawAmount too high");
 
-      // If deposit amount is not 0, token should be on whitelist
-      // address(0) is wildcard (disables whitelist)
+      // If deposit amount is not 0, token should be on blacklist
       require(
-        transaction._depositAmount == 0 ||
-        TokenWhitelist.tokenWhitelist[transaction._tokenField] ||
-        TokenWhitelist.tokenWhitelist[address(0)],
-        "RailgunLogic: Token isn't whitelisted for deposit"
+        transaction.depositAmount == 0 ||
+        !TokenBlacklist.tokenBlacklist[transaction.tokenField],
+        "RailgunLogic: Token is blacklisted"
       );
 
-      // Check nullifiers haven't been seen before, this check will also fail if duplicate nullifiers are found in the same transaction
-      for (uint256 nullifierIter = 0; nullifierIter < transaction._nullifiers.length; nullifierIter++) {
-        uint256 nullifier = transaction._nullifiers[nullifierIter];
+      // Check nullifiers haven't been seen before, this check should also fail if duplicate nullifiers are found in the same transaction
+      for (uint256 nullifierIter = 0; nullifierIter < transaction.nullifiers.length; nullifierIter++) {
+        uint256 nullifier = transaction.nullifiers[nullifierIter];
 
         // Check if nullifier hasn't been seen
         require(!Commitments.nullifiers[nullifier], "RailgunLogic: Nullifier already seen");
@@ -205,36 +203,36 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
       require(
         Verifier.verifyProof(
           // Proof
-          transaction._proof,
+          transaction.proof,
           // Shared
-          transaction._adaptIDcontract,
-          transaction._adaptIDparameters,
-          transaction._depositAmount,
-          transaction._withdrawAmount,
-          transaction._tokenField,
-          transaction._outputEthAddress,
+          transaction.adaptIDcontract,
+          transaction.adaptIDparameters,
+          transaction.depositAmount,
+          transaction.withdrawAmount,
+          transaction.tokenField,
+          transaction.outputEthAddress,
           // Join
-          transaction._treeNumber,
-          transaction._merkleRoot,
-          transaction._nullifiers,
+          transaction.treeNumber,
+          transaction.merkleRoot,
+          transaction.nullifiers,
           // Split
-          transaction._commitmentsOut
+          transaction.commitmentsOut
         ),
         "RailgunLogic: Invalid SNARK proof"
       );
 
       // Retrieve ERC20 interface
-      IERC20 token = IERC20(transaction._tokenField);
+      IERC20 token = IERC20(transaction.tokenField);
 
       // Deposit tokens if required
       // Fee is on top of deposit
-      if (transaction._depositAmount > 0) {
+      if (transaction.depositAmount > 0) {
         // Calculate fee
-        uint256 feeAmount = transaction._depositAmount * depositFee / BASIS_POINTS;
+        uint256 feeAmount = transaction.depositAmount * depositFee / BASIS_POINTS;
 
         // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
         // Transfer deposit
-        token.safeTransferFrom(msg.sender, address(this), transaction._depositAmount);
+        token.safeTransferFrom(msg.sender, address(this), transaction.depositAmount);
 
         // Transfer fee
         token.safeTransferFrom(msg.sender, treasury, feeAmount);
@@ -242,34 +240,34 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
 
       // Withdraw tokens if required
       // Fee is subtracted from withdraw
-      if (transaction._withdrawAmount > 0) {
-        // Calculate fee
-        uint256 feeAmount = transaction._withdrawAmount * withdrawFee / BASIS_POINTS;
+      if (transaction.withdrawAmount > 0) {
+        // Calculate base amount (amount minus fee)
+        uint256 baseAmount = transaction.withdrawAmount * BASIS_POINTS / (BASIS_POINTS + withdrawFee);
 
         // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
         // Transfer withdraw
-        token.safeTransfer(transaction._outputEthAddress, transaction._withdrawAmount - feeAmount);
+        token.safeTransfer(transaction.outputEthAddress, baseAmount);
 
-        // Transfer fee
-        token.safeTransfer(treasury, feeAmount);
+        // Transfer fee (remainder = fee)
+        token.safeTransfer(treasury, transaction.withdrawAmount - baseAmount);
       }
     
       //add commitments to the struct
-      for(uint256 commitmientsIter = 0; commitmientsIter < transaction._commitmentsOut.length; commitmientsIter++){
+      for(uint256 commitmientsIter = 0; commitmientsIter < transaction.commitmentsOut.length; commitmientsIter++){
         // Throw if commitment hash is invalid
         require(
-          transaction._commitmentsOut[commitmientsIter].hash < SNARK_SCALAR_FIELD,
+          transaction.commitmentsOut[commitmientsIter].hash < SNARK_SCALAR_FIELD,
           "Commitments: context.leafHash[] entries must be < SNARK_SCALAR_FIELD"
         );
 
         // Push hash to insertion array
-        insertionLeaves[commitments] =  transaction._commitmentsOut[commitmientsIter].hash;
+        insertionLeaves[commitments] =  transaction.commitmentsOut[commitmientsIter].hash;
 
         // Push commitment to event array
         newCommitments[commitments] = Commitment(
-          transaction._commitmentsOut[commitmientsIter].hash,
-          transaction._commitmentsOut[commitmientsIter].ciphertext,
-          transaction._commitmentsOut[commitmientsIter].senderPubKey
+          transaction.commitmentsOut[commitmientsIter].hash,
+          transaction.commitmentsOut[commitmientsIter].ciphertext,
+          transaction.commitmentsOut[commitmientsIter].senderPubKey
         );
 
         // Increment commitments count
@@ -314,12 +312,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
       // Check deposit amount is not 0
       require(transaction.amount > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
-      // Check token is on the whitelist
-      // address(0) is wildcard (disables whitelist)
+      // Check token is on the blacklist
       require(
-        TokenWhitelist.tokenWhitelist[transaction.token] ||
-        TokenWhitelist.tokenWhitelist[address(0)],
-        "RailgunLogic: Token isn't whitelisted for deposit"
+        !TokenBlacklist.tokenBlacklist[transaction.token],
+        "RailgunLogic: Token is blacklisted"
       );
 
       // Check deposit amount isn't greater than max deposit amount
@@ -333,9 +329,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
       require(transaction.pubkey[1] < SNARK_SCALAR_FIELD, "RailgunLogic: pubkey[1] out of range");
 
       // Calculate fee
-      // Fee is subtracted from deposit
+      // Fee is in addition to deposit
       uint256 feeAmount = transaction.amount * depositFee / BASIS_POINTS;
-      uint256 depositAmount = transaction.amount - feeAmount;
 
       // Calculate commitment hash
       uint256 hash = PoseidonT6.poseidon([
@@ -353,7 +348,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenWh
       IERC20 token = IERC20(transaction.token);
 
       // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
-      token.safeTransferFrom(msg.sender, address(this), depositAmount);
+      token.safeTransferFrom(msg.sender, address(this), transaction.amount);
 
       // Transfer fee
       token.safeTransferFrom(msg.sender, treasury, feeAmount);

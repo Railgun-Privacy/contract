@@ -60,7 +60,7 @@ async function main() {
   const poseidonT6 = await PoseidonT6.deploy();
 
   // Get Railgun Logic
-  const RailgunLogic = await ethers.getContractFactory('RailgunLogicStub', {
+  const RailgunLogic = await ethers.getContractFactory('RailgunLogic', {
     libraries: {
       PoseidonT3: poseidonT3.address,
       PoseidonT6: poseidonT6.address,
@@ -91,7 +91,7 @@ async function main() {
   await (await railgun.initializeRailgunLogic(
     verificationKey.vKeySmall,
     verificationKey.vKeyLarge,
-    ['0x0000000000000000000000000000000000000000'],
+    [],
     treasury.address,
     25n,
     25n,
