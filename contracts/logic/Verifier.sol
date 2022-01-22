@@ -333,17 +333,6 @@ contract Verifier is Initializable, OwnableUpgradeable {
     // Alpha
     vKeySmall.alpha1.x = _vKey.alpha1.x;
     vKeySmall.alpha1.y = _vKey.alpha1.y;
-    for(uinty256 i = 0; i <2; i++){
-      vKeySmall.beta2.x[i] = _vKey.beta2.x[i];
-      vKeySmall.beta2.y[i] = _vKey.beta2.y[i];
-      vKeySmall.gamma2.x[i] = _vKey.gamma2.x[i];
-      vKeySmall.gamma2.y[i] = _vKey.gamma2.y[i];
-      vKeySmall.delta2.x[i] = _vKey.delta2.x[i];
-      vKeySmall.delta2.y[i] = _vKey.delta2.y[i];
-      vKeySmall.ic[i].x = _vKey.ic[i].x;
-      vKeySmall.ic[i].y = _vKey.ic[i].y;
-    }
-    /*
     // Beta
     vKeySmall.beta2.x[0] = _vKey.beta2.x[0];
     vKeySmall.beta2.x[1] = _vKey.beta2.x[1];
@@ -364,7 +353,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     vKeySmall.ic[0].y = _vKey.ic[0].y;
     vKeySmall.ic[1].x = _vKey.ic[1].x;
     vKeySmall.ic[1].y = _vKey.ic[1].y;
-    */
+    
 
     // Emit change event
     emit SmallVerificationKeyChange(_vKey);
