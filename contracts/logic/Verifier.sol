@@ -199,7 +199,6 @@ contract Verifier is Initializable, OwnableUpgradeable {
 
     // Hash all inputs into single parameter
     uint256[21] memory inputsHashPreimage;
-    uint256 loopNullifiers =7;
     inputsHashPreimage[0] = adaptIDhash % SNARK_SCALAR_FIELD;
     inputsHashPreimage[1] = _depositAmount;
     inputsHashPreimage[2] = _withdrawAmount;
