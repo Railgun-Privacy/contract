@@ -42,7 +42,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     setVKeyLarge(_vKeyLarge);
   }
 
-  function hashCipherText(Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut) internal returns(uint256) {
+  function hashCipherText(Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut) internal pure returns(uint256) {
     uint256[24] memory cipherTextHashPreimage;
     uint256 i = 0;
     for (uint256 loopNum = 0; loopNum<3; loopNum++){
@@ -64,7 +64,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     return uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
   }
 
-  function inputsHash(uint256[] memory inputsHashPreimage, uint256[] calldata _nullifiers) internal returns(uint256) {
+  function inputsHashPre(uint256[] memory inputsHashPreimage, uint256[] calldata _nullifiers) internal pure returns(uint256) {
     uint256 loopNullifiers = 7;
     uint256 loopLimit = 0;
     if (inputsHashPreimage.length == 13){
@@ -74,7 +74,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
       loopLimit = 10;
     }
 
-    for (loopNum = 0; loopNum<loopLimit; loopNum++){
+    for (uint256 loopNum = 0; loopNum<loopLimit; loopNum++){
       inputsHashPreimage[loopNullifiers] = _nullifiers[loopNum];
       loopNullifiers++;
     }
@@ -121,7 +121,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     // Hash ciphertext into single parameter
     uint256 cipherTextHash = hashCipherText(_commitmentsOut);
 
-    uint256[13] memory inputsHashPreimage;
+    uint256[] memory inputsHashPreimage = new uint256[](13);
     inputsHashPreimage[0] = adaptIDhash % SNARK_SCALAR_FIELD;
     inputsHashPreimage[1] = _depositAmount;
     inputsHashPreimage[2] = _withdrawAmount;
@@ -134,7 +134,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     inputsHashPreimage[11] = _commitmentsOut[2].hash;
     inputsHashPreimage[12] = cipherTextHash % SNARK_SCALAR_FIELD;
 
-    return inputsHash(inputsHashPreimage, _nullifiers);
+    return inputsHashPre(inputsHashPreimage, _nullifiers);
   }
 
   /**
@@ -198,7 +198,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 cipherTextHash = hashCipherText(_commitmentsOut);
 
     // Hash all inputs into single parameter
-    uint256[21] memory inputsHashPreimage;
+    uint256[] memory inputsHashPreimage = new uint256[](21);
     inputsHashPreimage[0] = adaptIDhash % SNARK_SCALAR_FIELD;
     inputsHashPreimage[1] = _depositAmount;
     inputsHashPreimage[2] = _withdrawAmount;
@@ -211,7 +211,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     inputsHashPreimage[19] = _commitmentsOut[2].hash;
     inputsHashPreimage[20] = cipherTextHash % SNARK_SCALAR_FIELD;
 
-    return inputsHash(inputsHashPreimage, _nullifiers);
+    return inputsHashPre(inputsHashPreimage, _nullifiers);
   }
 
   /**
