@@ -64,7 +64,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     return uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
   }
 
-  function inputsHash(uint256[] memory inputsHashPreimage) internal returns(uint256) {
+  function inputsHash(uint256[] memory inputsHashPreimage, uint256[] calldata _nullifiers) internal returns(uint256) {
     uint256 loopNullifiers = 7;
     uint256 loopLimit = 0;
     if (inputsHashPreimage.length == 13){
@@ -134,7 +134,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     inputsHashPreimage[11] = _commitmentsOut[2].hash;
     inputsHashPreimage[12] = cipherTextHash % SNARK_SCALAR_FIELD;
 
-    return inputsHash(inputsHashPreimage);
+    return inputsHash(inputsHashPreimage, _nullifiers);
   }
 
   /**
@@ -211,7 +211,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     inputsHashPreimage[19] = _commitmentsOut[2].hash;
     inputsHashPreimage[20] = cipherTextHash % SNARK_SCALAR_FIELD;
 
-    return inputsHash(inputsHashPreimage);
+    return inputsHash(inputsHashPreimage, _nullifiers);
   }
 
   /**
