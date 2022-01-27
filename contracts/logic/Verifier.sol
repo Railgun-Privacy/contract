@@ -42,6 +42,45 @@ contract Verifier is Initializable, OwnableUpgradeable {
     setVKeyLarge(_vKeyLarge);
   }
 
+  function hashCipherText(Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut) internal pure returns(uint256) {
+    uint256[24] memory cipherTextHashPreimage;
+    uint256 i = 0;
+    for (uint256 loopNum = 0; loopNum<3; loopNum++){
+      cipherTextHashPreimage[i] = _commitmentsOut[loopNum].senderPubKey[0];
+      cipherTextHashPreimage[i+1] = _commitmentsOut[loopNum].senderPubKey[1];
+      cipherTextHashPreimage[i+2] = _commitmentsOut[loopNum].ciphertext[0];
+      cipherTextHashPreimage[i+3] = _commitmentsOut[loopNum].ciphertext[1];
+      cipherTextHashPreimage[i+4] = _commitmentsOut[loopNum].ciphertext[2];
+      cipherTextHashPreimage[i+5] = _commitmentsOut[loopNum].ciphertext[3];
+      cipherTextHashPreimage[i+6] = _commitmentsOut[loopNum].ciphertext[4];
+      cipherTextHashPreimage[i+7] = _commitmentsOut[loopNum].ciphertext[5];
+      if(loopNum==0){
+        i = 8;
+      }
+      else if (loopNum == 1){
+        i = 16;
+      }
+    }
+    return uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
+  }
+
+  function inputsHashPre(uint256[] memory inputsHashPreimage, uint256[] calldata _nullifiers) internal pure returns(uint256) {
+    uint256 loopNullifiers = 7;
+    uint256 loopLimit = 0;
+    if (inputsHashPreimage.length == 13){
+      loopLimit = 2;
+    }
+    else if(inputsHashPreimage.length == 21){
+      loopLimit = 10;
+    }
+
+    for (uint256 loopNum = 0; loopNum<loopLimit; loopNum++){
+      inputsHashPreimage[loopNullifiers] = _nullifiers[loopNum];
+      loopNullifiers++;
+    }
+    return uint256(sha256(abi.encodePacked(inputsHashPreimage)));
+  }
+
   /**
    * @notice Hashes inputs for small proof verification
    * @param _adaptIDcontract - contract address to this proof to (ignored if set to 0)
@@ -80,38 +119,9 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 adaptIDhash = uint256(sha256(abi.encodePacked(adaptIDhashPreimage)));
 
     // Hash ciphertext into single parameter
-    uint256[24] memory cipherTextHashPreimage;
-    // Commitment 0
-    cipherTextHashPreimage[0] = _commitmentsOut[0].senderPubKey[0];
-    cipherTextHashPreimage[1] = _commitmentsOut[0].senderPubKey[1];
-    cipherTextHashPreimage[2] = _commitmentsOut[0].ciphertext[0];
-    cipherTextHashPreimage[3] = _commitmentsOut[0].ciphertext[1];
-    cipherTextHashPreimage[4] = _commitmentsOut[0].ciphertext[2];
-    cipherTextHashPreimage[5] = _commitmentsOut[0].ciphertext[3];
-    cipherTextHashPreimage[6] = _commitmentsOut[0].ciphertext[4];
-    cipherTextHashPreimage[7] = _commitmentsOut[0].ciphertext[5];
-    // Commitment 1
-    cipherTextHashPreimage[8] = _commitmentsOut[1].senderPubKey[0];
-    cipherTextHashPreimage[9] = _commitmentsOut[1].senderPubKey[1];
-    cipherTextHashPreimage[10] = _commitmentsOut[1].ciphertext[0];
-    cipherTextHashPreimage[11] = _commitmentsOut[1].ciphertext[1];
-    cipherTextHashPreimage[12] = _commitmentsOut[1].ciphertext[2];
-    cipherTextHashPreimage[13] = _commitmentsOut[1].ciphertext[3];
-    cipherTextHashPreimage[14] = _commitmentsOut[1].ciphertext[4];
-    cipherTextHashPreimage[15] = _commitmentsOut[1].ciphertext[5];
-    // Commitment 2
-    cipherTextHashPreimage[16] = _commitmentsOut[2].senderPubKey[0];
-    cipherTextHashPreimage[17] = _commitmentsOut[2].senderPubKey[1];
-    cipherTextHashPreimage[18] = _commitmentsOut[2].ciphertext[0];
-    cipherTextHashPreimage[19] = _commitmentsOut[2].ciphertext[1];
-    cipherTextHashPreimage[20] = _commitmentsOut[2].ciphertext[2];
-    cipherTextHashPreimage[21] = _commitmentsOut[2].ciphertext[3];
-    cipherTextHashPreimage[22] = _commitmentsOut[2].ciphertext[4];
-    cipherTextHashPreimage[23] = _commitmentsOut[2].ciphertext[5];
+    uint256 cipherTextHash = hashCipherText(_commitmentsOut);
 
-    uint256 cipherTextHash = uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
-
-    uint256[13] memory inputsHashPreimage;
+    uint256[] memory inputsHashPreimage = new uint256[](13);
     inputsHashPreimage[0] = adaptIDhash % SNARK_SCALAR_FIELD;
     inputsHashPreimage[1] = _depositAmount;
     inputsHashPreimage[2] = _withdrawAmount;
@@ -119,14 +129,12 @@ contract Verifier is Initializable, OwnableUpgradeable {
     inputsHashPreimage[4] = uint256(uint160(_outputEthAddress));
     inputsHashPreimage[5] = _treeNumber;
     inputsHashPreimage[6] = _merkleRoot;
-    inputsHashPreimage[7] = _nullifiers[0];
-    inputsHashPreimage[8] = _nullifiers[1];
     inputsHashPreimage[9] = _commitmentsOut[0].hash;
     inputsHashPreimage[10] = _commitmentsOut[1].hash;
     inputsHashPreimage[11] = _commitmentsOut[2].hash;
     inputsHashPreimage[12] = cipherTextHash % SNARK_SCALAR_FIELD;
 
-    return uint256(sha256(abi.encodePacked(inputsHashPreimage)));
+    return inputsHashPre(inputsHashPreimage, _nullifiers);
   }
 
   /**
@@ -187,39 +195,10 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 adaptIDhash = uint256(sha256(abi.encodePacked(adaptIDhashPreimage)));
 
     // Hash ciphertext into single parameter
-    uint256[24] memory cipherTextHashPreimage;
-    // Commitment 0
-    cipherTextHashPreimage[0] = _commitmentsOut[0].senderPubKey[0];
-    cipherTextHashPreimage[1] = _commitmentsOut[0].senderPubKey[1];
-    cipherTextHashPreimage[2] = _commitmentsOut[0].ciphertext[0];
-    cipherTextHashPreimage[3] = _commitmentsOut[0].ciphertext[1];
-    cipherTextHashPreimage[4] = _commitmentsOut[0].ciphertext[2];
-    cipherTextHashPreimage[5] = _commitmentsOut[0].ciphertext[3];
-    cipherTextHashPreimage[6] = _commitmentsOut[0].ciphertext[4];
-    cipherTextHashPreimage[7] = _commitmentsOut[0].ciphertext[5];
-    // Commitment 1
-    cipherTextHashPreimage[8] = _commitmentsOut[1].senderPubKey[0];
-    cipherTextHashPreimage[9] = _commitmentsOut[1].senderPubKey[1];
-    cipherTextHashPreimage[10] = _commitmentsOut[1].ciphertext[0];
-    cipherTextHashPreimage[11] = _commitmentsOut[1].ciphertext[1];
-    cipherTextHashPreimage[12] = _commitmentsOut[1].ciphertext[2];
-    cipherTextHashPreimage[13] = _commitmentsOut[1].ciphertext[3];
-    cipherTextHashPreimage[14] = _commitmentsOut[1].ciphertext[4];
-    cipherTextHashPreimage[15] = _commitmentsOut[1].ciphertext[5];
-    // Commitment 2
-    cipherTextHashPreimage[16] = _commitmentsOut[2].senderPubKey[0];
-    cipherTextHashPreimage[17] = _commitmentsOut[2].senderPubKey[1];
-    cipherTextHashPreimage[18] = _commitmentsOut[2].ciphertext[0];
-    cipherTextHashPreimage[19] = _commitmentsOut[2].ciphertext[1];
-    cipherTextHashPreimage[20] = _commitmentsOut[2].ciphertext[2];
-    cipherTextHashPreimage[21] = _commitmentsOut[2].ciphertext[3];
-    cipherTextHashPreimage[22] = _commitmentsOut[2].ciphertext[4];
-    cipherTextHashPreimage[23] = _commitmentsOut[2].ciphertext[5];
-
-    uint256 cipherTextHash = uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
+    uint256 cipherTextHash = hashCipherText(_commitmentsOut);
 
     // Hash all inputs into single parameter
-    uint256[21] memory inputsHashPreimage;
+    uint256[] memory inputsHashPreimage = new uint256[](21);
     inputsHashPreimage[0] = adaptIDhash % SNARK_SCALAR_FIELD;
     inputsHashPreimage[1] = _depositAmount;
     inputsHashPreimage[2] = _withdrawAmount;
@@ -227,22 +206,12 @@ contract Verifier is Initializable, OwnableUpgradeable {
     inputsHashPreimage[4] = uint256(uint160(_outputEthAddress));
     inputsHashPreimage[5] = _treeNumber;
     inputsHashPreimage[6] = _merkleRoot;
-    inputsHashPreimage[7] = _nullifiers[0];
-    inputsHashPreimage[8] = _nullifiers[1];
-    inputsHashPreimage[9] = _nullifiers[2];
-    inputsHashPreimage[10] = _nullifiers[3];
-    inputsHashPreimage[11] = _nullifiers[4];
-    inputsHashPreimage[12] = _nullifiers[5];
-    inputsHashPreimage[13] = _nullifiers[6];
-    inputsHashPreimage[14] = _nullifiers[7];
-    inputsHashPreimage[15] = _nullifiers[8];
-    inputsHashPreimage[16] = _nullifiers[9];
     inputsHashPreimage[17] = _commitmentsOut[0].hash;
     inputsHashPreimage[18] = _commitmentsOut[1].hash;
     inputsHashPreimage[19] = _commitmentsOut[2].hash;
     inputsHashPreimage[20] = cipherTextHash % SNARK_SCALAR_FIELD;
 
-    return uint256(sha256(abi.encodePacked(inputsHashPreimage)));
+    return inputsHashPre(inputsHashPreimage, _nullifiers);
   }
 
   /**
@@ -383,6 +352,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     vKeySmall.ic[0].y = _vKey.ic[0].y;
     vKeySmall.ic[1].x = _vKey.ic[1].x;
     vKeySmall.ic[1].y = _vKey.ic[1].y;
+    
 
     // Emit change event
     emit SmallVerificationKeyChange(_vKey);
