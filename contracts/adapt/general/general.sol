@@ -1,0 +1,149 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
+pragma abicoder v2;
+
+// OpenZeppelin v4
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import { RailgunLogic, Transaction, GeneratedCommitment } from "../../logic/RailgunLogic.sol";
+
+/**
+ * @title General Adapt
+ * @author Railgun Contributors
+ * @notice Multicall adapt contract for Railgun
+ */
+
+contract GeneralAdapt {
+  using SafeERC20 for IERC20;
+
+  struct Call {
+    address to;
+    bytes data;
+    uint256 value;
+  }
+
+  struct Result {
+    bool success;
+    bytes returnData;
+  }
+
+  RailgunLogic public railgun;
+
+  /**
+   * @notice Sets Railgun contract address
+   */
+  constructor(RailgunLogic _railgun) {
+    railgun = _railgun;
+  }
+
+  /**
+   * @notice Executes a batch of Railgun transactions followed by a multicall and finally a deposit back to Railgun
+   * @param _transactions - Batch of Railgun transactions to execute
+   * @param _random - Random value (should be less than snark scalar field and shouldn't be reused if resubmitting the same transaction through another relayer)
+   * @param _requireSuccess - Whether transaction should throw on failure
+   * @param _calls - multicall
+   * @param _deposits - array of tokens to deposit back to Railgun once transaction is complete
+   * @param _pubkey - pubkey of Railgun account to deposit back to
+   */
+  function execute(
+    Transaction[] calldata _transactions,
+    // In an edge case where railgun transactions are submitted into the mempool
+    // but not mined followed by a different set of railgun transactions submitted
+    // to the mempool with the same calls, an advisary could mix and match
+    // transactions as long as the total transaction count remains the same
+    // Including the random factor here prevents this from happening
+    uint256 _random,
+    bool _requireSuccess,
+    Call[] calldata _calls,
+    IERC20[] calldata _deposits,
+    uint256[2] calldata _pubkey
+  ) public returns (Result[] memory) {
+    // Calculate the expected adaptID parameters value
+    // The number of transactions is included here to ensure railgun transactions can't be removed
+    // by an advisary while the transaction is still in the mempool
+    uint256 adaptIDparameters = uint256(
+      sha256(
+        abi.encode(
+          _transactions.length,
+          _random,
+          _requireSuccess,
+          _calls,
+          _deposits,
+          _pubkey
+        )
+      )
+    );
+
+    // Loop through each transaction and en
+    for(uint256 i = 0; i < _transactions.length; i++) {
+      require(_transactions[i].adaptIDparameters == adaptIDparameters, "GeneralAdapt: AdaptID Parameters Mismatch");
+    }
+
+    // Check adapt parameters
+    _transactions[0].adaptIDparameters;
+
+    // Execute initial railgun transaction
+    railgun.transact(_transactions);
+
+    // Initialize returnData array
+    Result[] memory returnData = new Result[](_calls.length);
+
+    // Loop through each call
+    for(uint256 i = 0; i < _calls.length; i++) {
+      // Retrieve call
+      Call calldata call = _calls[i];
+
+      // NOTE:
+      // If any of these calls are to a Railgun transaction, adaptID contract should be set to this contracts address
+      // adaptID paramemters can be set to anything. This will ensure that the transaction can't be extracted and submitted
+      // standalone
+
+      // Execute call
+      (bool success, bytes memory ret) = call.to.call{value: call.value}(call.data);
+
+      // If requireSuccess is true, throw on failure
+      if (_requireSuccess) {
+        require(success, "GeneralAdapt: Call Failed");
+      }
+
+      // Add call result to returnData
+      returnData[i] = Result(success, ret);
+    }
+
+    // Initialize generated deposits array
+    GeneratedCommitment[] memory generatedDeposits = new GeneratedCommitment[](_deposits.length);
+
+    // Loop through each token specified for deposit and deposit our total balance
+    // Due to a quirk with the USDT token contract this will fail if it's approval is
+    // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
+    // transaction always succeeds when dealing with USDT/similar tokens make sure the last
+    // call in your calls is a call to the token contract with an approval of 0
+    for (uint256 i = 0; i < _calls.length; i++) {
+      IERC20 token = _deposits[i];
+
+      // Fetch balance
+      uint256 balance = token.balanceOf(address(this));
+
+      // Approve the balance for deposit
+      token.safeApprove(
+        address(railgun),
+        balance
+      );
+
+      // Push to deposits array
+      generatedDeposits[i] = GeneratedCommitment({
+        pubkey: _pubkey,
+        random: _random,
+        amount: balance,
+        token: address(token)
+      });
+    }
+
+    // Deposit back to Railgun
+    railgun.generateDeposit(generatedDeposits);
+
+    // Return returnData
+    return returnData;
+  }
+}
