@@ -26,6 +26,7 @@ contract ProxyAdmin is Ownable {
    * @param _newOwner - Address to transfer ownership to
    */
   function transferProxyOwnership(PausableUpgradableProxy _proxy, address _newOwner) external onlyOwner{
+    require(_newOwner != address(0), "ProxyAdmin: Preventing potential accidental burn");
     _proxy.transferOwnership(_newOwner);
   }
 

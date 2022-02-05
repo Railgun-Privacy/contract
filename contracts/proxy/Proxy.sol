@@ -116,6 +116,8 @@ contract PausableUpgradableProxy {
    * @param _newOwner - Address to transfer ownership to
    */
   function transferOwnership(address _newOwner) external onlyOwner {
+    require(_newOwner != address(0), "Proxy: Preventing potential accidental burn");
+
     // Get admin slot
     StorageSlot.AddressSlot storage admin = StorageSlot.getAddressSlot(ADMIN_SLOT);
 
