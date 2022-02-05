@@ -59,6 +59,9 @@ contract PausableUpgradableProxy {
     // Get implementation
     address implementation = StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT).value;
 
+    // Check that implementation exists
+    require(Address.isContract(implementation), "Proxy: Implementation doesn't exist");
+
     // solhint-disable-next-line no-inline-assembly
     assembly {
       // Copy msg.data. We take full control of memory in this inline assembly
@@ -128,9 +131,6 @@ contract PausableUpgradableProxy {
    * @param _newImplementation - Address of the new implementation
    */
   function upgrade(address _newImplementation) external onlyOwner {
-    // Don't upgrade unless address is a contract
-    require(Address.isContract(_newImplementation), "Proxy: Can't upgrade to non-contract");
-
     // Get implementation slot
     StorageSlot.AddressSlot storage implementation = StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT);
 
@@ -165,9 +165,6 @@ contract PausableUpgradableProxy {
    * @notice Unpauses contract
    */
   function unpause() external onlyOwner {
-    // Don't allow unpausing unless implementation is set
-    require(StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT).value != address(0), "Proxy: Can't unpause before implementation is set");
-
     // Get paused slot
     StorageSlot.BooleanSlot storage paused = StorageSlot.getBooleanSlot(PAUSED_SLOT);
 
