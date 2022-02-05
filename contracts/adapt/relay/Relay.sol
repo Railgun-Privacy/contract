@@ -6,6 +6,7 @@ pragma abicoder v2;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import { IWETH } from "./IWETH.sol";
 import { RailgunLogic, Transaction, GeneratedCommitment } from "../../logic/RailgunLogic.sol";
 
 /**
@@ -29,6 +30,8 @@ contract RelayAdapt {
   }
 
   RailgunLogic public railgun;
+  IWETH public weth;
+
 
   /**
    * @notice Blocks calls from external contracts
@@ -46,10 +49,11 @@ contract RelayAdapt {
   }
 
   /**
-   * @notice Sets Railgun contract address
+   * @notice Sets Railgun contract and weth address
    */
-  constructor(RailgunLogic _railgun) {
+  constructor(RailgunLogic _railgun, IWETH _weth) {
     railgun = _railgun;
+    weth = _weth;
   }
 
   /**
@@ -71,7 +75,7 @@ contract RelayAdapt {
 
       // NOTE:
       // If any of these calls are to a Railgun transaction, adaptID contract should be set to this contracts address
-      // adaptID paramemters can be set to anything. This will ensure that the transaction can't be extracted and submitted
+      // adaptID paramemters set to 0. This will ensure that the transaction can't be extracted and submitted
       // standalone
 
       // Execute call
@@ -165,7 +169,7 @@ contract RelayAdapt {
 
   /**
    * @notice Sends tokens to particular address
-   * @param _tokens - ERC20 tokens to send
+   * @param _tokens - ERC20 tokens to send (0x0 is eth)
    * @param _to - ETH address to send to
    */
    function send(
@@ -180,12 +184,37 @@ contract RelayAdapt {
     for (uint256 i = 0; i < _tokens.length; i++) {
       IERC20 token = _tokens[i];
 
-      // Fetch balance
-      uint256 balance = token.balanceOf(address(this));
+      if (address(token) == address(0x0)) {
+        // Fetch ETH balance
+        uint256 balance = address(this).balance;
 
-      // Send all to address
-      token.safeTransfer(_to, balance);
+        // Send ETH
+        (bool sent,) = _to.call{value: balance}("");
+        require(sent, "Failed to send Ether");
+      } else {
+        // Fetch balance
+        uint256 balance = token.balanceOf(address(this));
+
+        // Send all to address
+        token.safeTransfer(_to, balance);
+      }
     }
+  }
+
+  function wrapAllETH() public noExternalContract {
+    // Fetch ETH balance
+    uint256 balance = address(this).balance;
+
+    // Wrap
+    weth.deposit{value: balance}();
+  }
+
+  function unwrapAllWETH() public noExternalContract {
+    // Fetch ETH balance
+    uint256 balance = weth.balanceOf(address(this));
+
+    // Unwrap
+    weth.withdraw(balance);
   }
 
   /**
@@ -205,7 +234,7 @@ contract RelayAdapt {
     uint256 _random,
     bool _requireSuccess,
     Call[] calldata _calls
-  ) public returns (Result[] memory) {
+  ) public payable returns (Result[] memory) {
     // Calculate additionalData parameter for adaptID parameters
     bytes memory additionalData = abi.encode(
       _random,
