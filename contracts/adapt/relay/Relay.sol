@@ -14,7 +14,7 @@ import { RailgunLogic, Transaction, GeneratedCommitment } from "../../logic/Rail
  * @notice Multicall adapt contract for Railgun
  */
 
-contract GeneralAdapt {
+contract RelayAdapt {
   using SafeERC20 for IERC20;
 
   struct Call {
@@ -40,7 +40,9 @@ contract GeneralAdapt {
       msg.sender == tx.origin
       || msg.sender == address(this)
       , "GeneralAdapt: Caller is external contract"
-    )
+    );
+
+    _;
   }
 
   /**
@@ -57,7 +59,7 @@ contract GeneralAdapt {
    */
   function multicall(
     bool _requireSuccess,
-    Call[] calldata _calls,
+    Call[] calldata _calls
   ) public noExternalContract returns (Result[] memory) {
     // Initialize returnData array
     Result[] memory returnData = new Result[](_calls.length);
@@ -134,7 +136,9 @@ contract GeneralAdapt {
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
     // transaction always succeeds when dealing with USDT/similar tokens make sure the last
     // call in your calls is a call to the token contract with an approval of 0
-    for (uint256 i = 0; i < _calls.length; i++) {
+    GeneratedCommitment[] memory generatedDeposits = new GeneratedCommitment[](_deposits.length);
+
+    for (uint256 i = 0; i < _deposits.length; i++) {
       IERC20 token = _deposits[i];
 
       // Fetch balance
@@ -173,29 +177,15 @@ contract GeneralAdapt {
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
     // transaction always succeeds when dealing with USDT/similar tokens make sure the last
     // call in your calls is a call to the token contract with an approval of 0
-    for (uint256 i = 0; i < _calls.length; i++) {
-      IERC20 token = _deposits[i];
+    for (uint256 i = 0; i < _tokens.length; i++) {
+      IERC20 token = _tokens[i];
 
       // Fetch balance
       uint256 balance = token.balanceOf(address(this));
 
-      // Approve the balance for deposit
-      token.safeApprove(
-        address(railgun),
-        balance
-      );
-
-      // Push to deposits array
-      generatedDeposits[i] = GeneratedCommitment({
-        pubkey: _pubkey,
-        random: _random,
-        amount: balance,
-        token: address(token)
-      });
+      // Send all to address
+      token.safeTransfer(_to, balance);
     }
-
-    // Deposit back to Railgun
-    railgun.generateDeposit(generatedDeposits);
   }
 
   /**
@@ -214,24 +204,20 @@ contract GeneralAdapt {
     // Including the random factor here prevents this from happening
     uint256 _random,
     bool _requireSuccess,
-    Call[] calldata _calls,
+    Call[] calldata _calls
   ) public returns (Result[] memory) {
     // Calculate additionalData parameter for adaptID parameters
-    uint256 additionalData = uint256(
-      sha256(
-        abi.encode(
-          _random,
-          _requireSuccess,
-          _calls
-        )
-      )
+    bytes memory additionalData = abi.encode(
+      _random,
+      _requireSuccess,
+      _calls
     );
 
     // Executes railgun batch
     railgunBatch(_transactions, additionalData);
 
     // Execute multicalls
-    Result[] memory returnData = multicall(requireSuccess, _calls);
+    Result[] memory returnData = multicall(_requireSuccess, _calls);
 
     // To execute a multicall and deposit or send the result, encode a call to the relevant function on this
     // contract at the end of your calls array.
