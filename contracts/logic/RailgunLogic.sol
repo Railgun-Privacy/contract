@@ -40,12 +40,12 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   uint256 public depositFee;
   uint256 public withdrawFee;
 
-  // Flat fee in wei that applies to all transactions
-  uint256 public transferFee;
+  // Flat fee in wei that applies to NFT transactions
+  uint256 public nftFee;
 
   // Treasury events
   event TreasuryChange(address treasury);
-  event FeeChange(uint256 depositFee, uint256 withdrawFee, uint256 transferFee);
+  event FeeChange(uint256 depositFee, uint256 withdrawFee, uint256 nftFee);
 
   // Transaction events
   event CommitmentBatch(
@@ -70,7 +70,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _treasury - address to send usage fees to
    * @param _depositFee - Deposit fee
    * @param _withdrawFee - Withdraw fee
-   * @param _transferFee - Flat fee that applies to all transactions
+   * @param _nftFee - Flat fee in wei that applies to NFT transactions
    * @param _owner - governance contract
    */
 
@@ -81,7 +81,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     address payable _treasury,
     uint256 _depositFee,
     uint256 _withdrawFee,
-    uint256 _transferFee,
+    uint256 _nftFee,
     address _owner
   ) external initializer {
     // Call initializers
@@ -92,7 +92,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
     // Set treasury and fee
     changeTreasury(_treasury);
-    changeFee(_depositFee, _withdrawFee, _transferFee);
+    changeFee(_depositFee, _withdrawFee, _nftFee);
 
     // Change Owner
     OwnableUpgradeable.transferOwnership(_owner);
@@ -120,40 +120,60 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Change fee rate for future transactions
    * @param _depositFee - Deposit fee
    * @param _withdrawFee - Withdraw fee
-   * @param _transferFee - Flat fee that applies to all transactions
+   * @param _nftFee - Flat fee in wei that applies to NFT transactions
    */
 
   function changeFee(
     uint256 _depositFee,
     uint256 _withdrawFee,
-    uint256 _transferFee
+    uint256 _nftFee
   ) public onlyOwner {
     if (
       _depositFee != depositFee
       || _withdrawFee != withdrawFee
-      || _transferFee != transferFee
+      || nftFee != _nftFee
     ) {
       // Change fee
       depositFee = _depositFee;
       withdrawFee = _withdrawFee;
-      transferFee = _transferFee;
+      nftFee = _nftFee;
 
       // Emit fee change event
-      emit FeeChange(_depositFee, _withdrawFee, _transferFee);
+      emit FeeChange(_depositFee, _withdrawFee, _nftFee);
     }
   }
 
-  function transact(Transaction[] calldata _transactions) external payable {
-    // Skip fee transfer if no fee is required
-    if (transferFee > 0) {
-      // Check treasury fee is paid
-      require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
+  /**
+   * @notice Get base and fee amount
+   * @param _amount - Amount to calculate 
+   * @param _isInclusive - Whether the amount passed in is inclusive of the fee
+   * @return base, fee
+   */
 
-      // Transfer to treasury
-      (bool sent,) = treasury.call{value: msg.value}("");
-      require(sent, "Failed to send Ether");
+  function getBaseAndFee(uint256 _amount, bool _isInclusive) public view returns (uint256, uint256) {
+    // Base is the amount deposited into the railgun contract or withdrawn to the target eth address
+    // for deposits and withdraws respectively
+    uint256 base;
+    // Fee is the amount sent to the treasury
+    uint256 fee;
+
+    if (_isInclusive) {
+      fee = _amount * depositFee / BASIS_POINTS;
+      base = _amount - fee;
+    } else {
+      base = _amount * BASIS_POINTS / (BASIS_POINTS + withdrawFee);
+      fee = _amount - base;
     }
 
+    return (base, fee);
+  }
+
+  /**
+   * @notice Execute batch of Railgun snark transactions
+   * @param _transactions - Transactions to execute
+   */
+  
+  function transact(Transaction[] calldata _transactions) external payable {
     // Insertion array
     uint256[] memory insertionLeaves = new uint256[](_transactions.length * CIRCUIT_OUTPUTS);
 
@@ -227,29 +247,29 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Deposit tokens if required
       // Fee is on top of deposit
       if (transaction.depositAmount > 0) {
-        // Calculate fee
-        uint256 feeAmount = transaction.depositAmount * depositFee / BASIS_POINTS;
+        // Calculate base and fee amounts
+        (uint256 base, uint256 fee) = getBaseAndFee(transaction.withdrawAmount, false);
 
         // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
         // Transfer deposit
-        token.safeTransferFrom(msg.sender, address(this), transaction.depositAmount);
+        token.safeTransferFrom(msg.sender, address(this), base);
 
         // Transfer fee
-        token.safeTransferFrom(msg.sender, treasury, feeAmount);
+        token.safeTransferFrom(msg.sender, treasury, fee);
       }
 
       // Withdraw tokens if required
       // Fee is subtracted from withdraw
       if (transaction.withdrawAmount > 0) {
-        // Calculate base amount (amount minus fee)
-        uint256 baseAmount = transaction.withdrawAmount * BASIS_POINTS / (BASIS_POINTS + withdrawFee);
+        // Calculate base and fee amounts
+        (uint256 base, uint256 fee) = getBaseAndFee(transaction.withdrawAmount, true);
 
         // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
         // Transfer withdraw
-        token.safeTransfer(transaction.outputEthAddress, baseAmount);
+        token.safeTransfer(transaction.outputEthAddress, base);
 
-        // Transfer fee (remainder = fee)
-        token.safeTransfer(treasury, transaction.withdrawAmount - baseAmount);
+        // Transfer fee
+        token.safeTransfer(treasury, fee);
       }
     
       //add commitments to the struct
@@ -293,16 +313,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    */
 
   function generateDeposit(GeneratedCommitment[] calldata _transactions) external payable {
-    // Skip fee transfer if no fee is required
-    if (transferFee > 0) {
-      // Check treasury fee is paid
-      require(msg.value >= transferFee, "RailgunLogic: Fee not paid");
-
-      // Transfer to treasury
-      (bool sent,) = treasury.call{value: msg.value}("");
-      require(sent, "Failed to send Ether");
-    }
-
     // Insertion array
     uint256[] memory insertionLeaves = new uint256[](_transactions.length);
 
