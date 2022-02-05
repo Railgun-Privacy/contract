@@ -10,9 +10,9 @@ import { IWETH } from "./IWETH.sol";
 import { RailgunLogic, Transaction, GeneratedCommitment } from "../../logic/RailgunLogic.sol";
 
 /**
- * @title General Adapt
+ * @title Relay Adapt
  * @author Railgun Contributors
- * @notice Multicall adapt contract for Railgun
+ * @notice Multicall adapt contract for Railgun with relayer support
  */
 
 contract RelayAdapt {
@@ -105,7 +105,7 @@ contract RelayAdapt {
   ) public noExternalContract {
     // Calculate the expected adaptID parameters value
     // The number of transactions is included here to ensure railgun transactions can't be removed
-    // by an advisary while the transaction is still in the mempool
+    // by an adversary while the transaction is still in the mempool
     uint256 adaptIDparameters = uint256(
       sha256(
         abi.encode(
@@ -228,7 +228,7 @@ contract RelayAdapt {
     Transaction[] calldata _transactions,
     // In an edge case where railgun transactions are submitted into the mempool
     // but not mined followed by a different set of railgun transactions submitted
-    // to the mempool with the same calls, an advisary could mix and match
+    // to the mempool with the same calls, an adversary could mix and match
     // transactions as long as the total transaction count remains the same
     // Including the random factor here prevents this from happening
     uint256 _random,
