@@ -159,10 +159,10 @@ contract RelayAdapt {
       generatedDeposits[i] = GenerateDepositTX({
         pubkey: _pubkey,
         random: _random,
-        amount: balance,
+        amount: uint120(balance),
         tokenType: 0,
         tokenSubID: 0,
-        token: address(token)
+        token: uint256(uint160(address(token)))
       });
     }
 
