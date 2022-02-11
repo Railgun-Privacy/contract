@@ -99,7 +99,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 _adaptIDparameters,
     uint256 _depositAmount,
     uint256 _withdrawAmount,
-    address _tokenField,
+    uint256 _tokenField,
     address _outputEthAddress,
     // Join
     uint256 _treeNumber,
@@ -175,7 +175,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 _adaptIDparameters,
     uint256 _depositAmount,
     uint256 _withdrawAmount,
-    address _tokenField,
+    uint256 _tokenField,
     address _outputEthAddress,
     // Join
     uint256 _treeNumber,
@@ -260,7 +260,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
     uint256 _adaptIDparameters,
     uint256 _depositAmount,
     uint256 _withdrawAmount,
-    address _tokenField,
+    uint256 _tokenField,
     address _outputEthAddress,
     // Join
     uint256 _treeNumber,

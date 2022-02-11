@@ -75,7 +75,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   function initializeRailgunLogic(
     VerifyingKey calldata _vKeySmall,
     VerifyingKey calldata _vKeyLarge,
-    address[] calldata _tokenBlacklist,
+    uint256[] calldata _tokenBlacklist,
     address payable _treasury,
     uint256 _depositFee,
     uint256 _withdrawFee,
@@ -238,9 +238,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Require tokenType and tokenSubID to be 0 here, replace with NFT and 1155 support
       require(transaction.tokenType == 0, "RailgunLogic: tokenType must be ERC20");
       require(transaction.tokenSubID == 0, "RailgunLogic: tokenSubID must be 0");
+      require(transaction.tokenField <= 2**160, "RailgunLogic: tokenField too large");
 
       // Retrieve ERC20 interface
-      IERC20 token = IERC20(transaction.tokenField);
+      IERC20 token = IERC20(address(uint160(transaction.tokenField)));
 
       // Deposit tokens if required
       // Fee is on top of deposit
@@ -317,7 +318,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Check deposit amount is not 0
       require(transaction.amount > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
-      // Check token is on the blacklist
+      // Check if token is on the blacklist
       require(
         !TokenBlacklist.tokenBlacklist[transaction.token],
         "RailgunLogic: Token is blacklisted"
@@ -359,7 +360,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       require(transaction.tokenSubID == 0, "RailgunLogic: tokenSubID must be 0");
 
       // Get ERC20 interface
-      IERC20 token = IERC20(transaction.token);
+      IERC20 token = IERC20(address(uint160(transaction.token)));
 
       // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
       token.safeTransferFrom(msg.sender, address(this), transaction.amount);

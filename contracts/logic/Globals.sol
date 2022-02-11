@@ -18,7 +18,7 @@ struct Transaction{
   uint120 withdrawAmount;
   uint8 tokenType; // ENUM: 0 = ERC20, 1 = ERC721, 2 = ERC1155
   uint256 tokenSubID;
-  address tokenField;
+  uint256 tokenField;
   address outputEthAddress;
   // Join
   uint256 treeNumber;
@@ -41,7 +41,7 @@ struct GeneratedCommitment {
   uint256[2] pubkey;
   uint256 random;
   uint120 amount;
-  address token;
+  uint256 token;
 }
 
 // Commitment hash preimage
@@ -51,7 +51,7 @@ struct GenerateDepositTX {
   uint120 amount;
   uint8 tokenType; // ENUM: 0 = ERC20, 1 = ERC721, 2 = ERC1155
   uint256 tokenSubID;
-  address token;
+  uint256 token;
 }
 
 struct G1Point {

@@ -8,7 +8,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 import { TokenBlacklist } from "../../logic/TokenBlacklist.sol";
 
 contract TokenBlacklistStub is TokenBlacklist {
-  function initializeTokenBlacklistStub(address[] calldata _value) external initializer {
+  function initializeTokenBlacklistStub(uint256[] calldata _value) external initializer {
     OwnableUpgradeable.__Ownable_init();
     TokenBlacklist.initializeTokenBlacklist(_value);
   }

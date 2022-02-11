@@ -18,14 +18,14 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 
 contract TokenBlacklist is Initializable, OwnableUpgradeable {
   // Events for offchain building of blacklist index
-  event TokenListing(address indexed token);
-  event TokenDelisting(address indexed token);
+  event TokenListing(uint256 indexed token);
+  event TokenDelisting(uint256 indexed token);
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list and decrement the __gap
   // variable at the end of this file
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
-  mapping(address => bool) public tokenBlacklist;
+  mapping(uint256 => bool) public tokenBlacklist;
 
   /**
    * @notice Adds initial set of tokens to blacklist.
@@ -33,7 +33,7 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
    * @param _tokens - List of tokens to add to blacklist
    */
 
-  function initializeTokenBlacklist(address[] calldata _tokens) internal initializer {
+  function initializeTokenBlacklist(uint256[] calldata _tokens) internal initializer {
     // Push initial token blacklist to map
     addToBlacklist(_tokens);
   }
@@ -45,7 +45,7 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
    * @param _tokens - List of tokens to add to blacklist
    */
 
-  function addToBlacklist(address[] calldata _tokens) public onlyOwner {
+  function addToBlacklist(uint256[] calldata _tokens) public onlyOwner {
     // Loop through token array
     for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token is already blacklisted
@@ -66,7 +66,7 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
    * @param _tokens - List of tokens to remove from blacklist
    */
 
-  function removeFromBlacklist(address[] calldata _tokens) external onlyOwner {
+  function removeFromBlacklist(uint256[] calldata _tokens) external onlyOwner {
     // Loop through token array
     for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token isn't blacklisted
