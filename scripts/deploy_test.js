@@ -76,6 +76,14 @@ async function main() {
   await railgunLogic.deployTransaction.wait();
   await proxy.deployTransaction.wait();
 
+  // Give deployer address full permissions
+  await delegator.setPermission(
+    (await ethers.getSigners())[0].address,
+    '0x0000000000000000000000000000000000000000',
+    '0x00000000',
+    true,
+  );
+
   // Transfer ownerships
   await delegator.transferOwnership(voting.address);
   await rail.transferOwnership(delegator.address);
