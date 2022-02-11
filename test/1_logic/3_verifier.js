@@ -1,4 +1,4 @@
-/* global describe it beforeEach overwriteArtifact ethers */
+/* global describe it beforeEach ethers */
 const { expect } = require('chai');
 const {
   MerkleTree, Note, prover, utils,
@@ -13,18 +13,19 @@ const railgunAccount = {
 };
 
 let verifier;
+let testERC20;
 
 describe('Logic/Verifier', () => {
   beforeEach(async () => {
     const TestERC20 = await ethers.getContractFactory('TestERC20');
-    testERC20 = await TestERC20.deploy()
+    testERC20 = await TestERC20.deploy();
     // Deploy Verifier Logic
     const Verifier = await ethers.getContractFactory('VerifierStub');
 
     verifier = await Verifier.deploy();
     await verifier.initializeVerifierStub(
       verificationKey.vKeySmall,
-      verificationKey.vKeyLarge
+      verificationKey.vKeyLarge,
     );
   });
 
@@ -39,9 +40,9 @@ describe('Logic/Verifier', () => {
         outputNote,
       ],
     });
-  
-    let txResult = String(await verifier.hashCipherTextStub(proof.publicInputs.commitments));
-    let txResult2 = String(await verifier.hashCipherTextStub(proof.publicInputs.commitments));
+
+    const txResult = String(await verifier.hashCipherTextStub(proof.publicInputs.commitments));
+    const txResult2 = String(await verifier.hashCipherTextStub(proof.publicInputs.commitments));
     expect(txResult).to.equal(txResult2);
   });
 
@@ -55,23 +56,9 @@ describe('Logic/Verifier', () => {
       outputs: [
         outputNote,
       ],
-      
     });
 
-    let txResult = String(await verifier.inputsHashPreStub(  
-    proof.publicInputs.adaptID.address,
-    proof.publicInputs.adaptID.parameters,
-    proof.publicInputs.depositAmount,
-    proof.publicInputs.withdrawAmount,
-    proof.publicInputs.outputTokenField,
-    proof.publicInputs.outputEthAddress,
-    proof.publicInputs.treeNumber,
-    proof.publicInputs.merkleRoot,
-    proof.publicInputs.nullifiers,
-    proof.publicInputs.commitments,
-    ));
-
-    let txResult2 = String(await verifier.inputsHashPreStub(  
+    const txResult = String(await verifier.inputsHashPreStub(
       proof.publicInputs.adaptID.address,
       proof.publicInputs.adaptID.parameters,
       proof.publicInputs.depositAmount,
@@ -82,9 +69,21 @@ describe('Logic/Verifier', () => {
       proof.publicInputs.merkleRoot,
       proof.publicInputs.nullifiers,
       proof.publicInputs.commitments,
-      ));
+    ));
+
+    const txResult2 = String(await verifier.inputsHashPreStub(
+      proof.publicInputs.adaptID.address,
+      proof.publicInputs.adaptID.parameters,
+      proof.publicInputs.depositAmount,
+      proof.publicInputs.withdrawAmount,
+      proof.publicInputs.outputTokenField,
+      proof.publicInputs.outputEthAddress,
+      proof.publicInputs.treeNumber,
+      proof.publicInputs.merkleRoot,
+      proof.publicInputs.nullifiers,
+      proof.publicInputs.commitments,
+    ));
 
     expect(txResult).to.equal(txResult2);
   });
-
 });

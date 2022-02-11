@@ -125,6 +125,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -135,7 +137,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -177,6 +178,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -187,7 +190,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -231,6 +233,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -241,7 +245,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -285,6 +288,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -295,7 +300,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -331,6 +335,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof2.publicInputs.adaptID.parameters,
         depositAmount: proof2.publicInputs.depositAmount,
         withdrawAmount: proof2.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof2.publicInputs.outputTokenField,
         outputEthAddress: proof2.publicInputs.outputEthAddress,
         // Join
@@ -341,7 +347,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof2.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -390,6 +395,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -400,7 +407,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -443,6 +449,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof2.publicInputs.adaptID.parameters,
         depositAmount: proof2.publicInputs.depositAmount,
         withdrawAmount: proof2.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof2.publicInputs.outputTokenField,
         outputEthAddress: proof2.publicInputs.outputEthAddress,
         // Join
@@ -453,7 +461,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof2.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -491,6 +498,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof3.publicInputs.adaptID.parameters,
         depositAmount: proof3.publicInputs.depositAmount,
         withdrawAmount: proof3.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof3.publicInputs.outputTokenField,
         outputEthAddress: proof3.publicInputs.outputEthAddress,
         // Join
@@ -501,7 +510,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof3.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -550,6 +558,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -560,7 +570,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 12000000,
       },
     );
@@ -603,6 +612,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof2.publicInputs.adaptID.parameters,
         depositAmount: proof2.publicInputs.depositAmount,
         withdrawAmount: proof2.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof2.publicInputs.outputTokenField,
         outputEthAddress: proof2.publicInputs.outputEthAddress,
         // Join
@@ -613,7 +624,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof2.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 12000000,
       },
     );
@@ -651,6 +661,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof3.publicInputs.adaptID.parameters,
         depositAmount: proof3.publicInputs.depositAmount,
         withdrawAmount: proof3.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof3.publicInputs.outputTokenField,
         outputEthAddress: proof3.publicInputs.outputEthAddress,
         // Join
@@ -661,7 +673,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof3.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 12000000,
       },
     );
@@ -798,6 +809,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -808,7 +821,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -853,6 +865,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -863,7 +877,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -917,6 +930,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof2.publicInputs.adaptID.parameters,
         depositAmount: proof2.publicInputs.depositAmount,
         withdrawAmount: proof2.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof2.publicInputs.outputTokenField,
         outputEthAddress: proof2.publicInputs.outputEthAddress,
         // Join
@@ -943,7 +958,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof3.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 3000000,
       },
     );
@@ -958,16 +972,44 @@ describe('Logic/RailgunLogic', () => {
     );
   });
 
-  it('Should collect treasury fees correctly', async () => {
-    await railgunLogic.changeFee(25n, 25n, 1000000n);
+  it('Should calculate fees', async () => {
+    await railgunLogic.changeFee(25n, 25n, 0n);
+
+    const vectors = [
+      {
+        base: 10000n,
+        fee: 25n,
+        total: 10025n,
+      },
+      {
+        base: 10226000n,
+        fee: 25565n,
+        total: 10251565n,
+      },
+      {
+        base: 4800n,
+        fee: 12n,
+        total: 4812n,
+      },
+    ];
+
+    await Promise.all(vectors.map(async (vector) => {
+      const result = await railgunLogic.getBaseAndFee(vector.base, false);
+      expect(result[0]).to.equal(vector.base);
+      expect(result[1]).to.equal(vector.fee);
+
+      const result2 = await railgunLogic.getBaseAndFee(vector.total, true);
+      expect(result2[0]).to.equal(vector.base);
+      expect(result2[1]).to.equal(vector.fee);
+    }));
+  });
+
+  it('Should collect treasury fees', async () => {
+    await railgunLogic.changeFee(25n, 25n, 0n);
 
     const merkleTree = new MerkleTree();
 
     const note = Note.generateNote(railgunAccount.publicKey, 1000000n, testERC20.address);
-
-    const initialTreasuryBalance = await ethers.provider.getBalance(
-      (await ethers.getSigners())[1].address,
-    );
 
     const proof = await prover.generateProof({
       merkleTree,
@@ -992,6 +1034,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof.publicInputs.adaptID.parameters,
         depositAmount: proof.publicInputs.depositAmount,
         withdrawAmount: proof.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof.publicInputs.outputTokenField,
         outputEthAddress: proof.publicInputs.outputEthAddress,
         // Join
@@ -1002,16 +1046,9 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
-
-    const newTreasuryBalance = await ethers.provider.getBalance(
-      (await ethers.getSigners())[1].address,
-    );
-
-    expect(BigInt(newTreasuryBalance) - BigInt(initialTreasuryBalance)).to.equal(1000000n);
 
     expect(
       await testERC20.balanceOf((await ethers.getSigners())[1].address),
@@ -1042,6 +1079,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof2.publicInputs.adaptID.parameters,
         depositAmount: proof2.publicInputs.depositAmount,
         withdrawAmount: proof2.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof2.publicInputs.outputTokenField,
         outputEthAddress: proof2.publicInputs.outputEthAddress,
         // Join
@@ -1052,7 +1091,6 @@ describe('Logic/RailgunLogic', () => {
         commitmentsOut: proof2.publicInputs.commitments,
       }],
       {
-        value: 1000000n,
         gasLimit: 1500000,
       },
     );
@@ -1071,7 +1109,6 @@ describe('Logic/RailgunLogic', () => {
       amount: note.amount,
       token: utils.bigInt2ETHAddress(note.token),
     }], {
-      value: 1000000n,
       gasLimit: 1500000,
     });
 

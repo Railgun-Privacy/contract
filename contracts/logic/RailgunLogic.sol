@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { Transaction, VerifyingKey, SnarkProof, Commitment, GeneratedCommitment, SNARK_SCALAR_FIELD, CIPHERTEXT_WORDS, CIRCUIT_OUTPUTS } from "./Globals.sol";
+import { Transaction, GenerateDepositTX, VerifyingKey, SnarkProof, Commitment, GeneratedCommitment, SNARK_SCALAR_FIELD, CIPHERTEXT_WORDS, CIRCUIT_OUTPUTS } from "./Globals.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
@@ -26,8 +26,6 @@ import { PoseidonT6 } from "./Poseidon.sol";
 
 contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlacklist, Verifier {
   using SafeERC20 for IERC20;
-
-  uint256 private constant MAX_DEPOSIT_WITHDRAW = 2**120;
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list
@@ -158,11 +156,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256 fee;
 
     if (_isInclusive) {
-      fee = _amount * depositFee / BASIS_POINTS;
-      base = _amount - fee;
-    } else {
       base = _amount * BASIS_POINTS / (BASIS_POINTS + withdrawFee);
       fee = _amount - base;
+    } else {
+      fee = _amount * depositFee / BASIS_POINTS;
+      base = _amount;
     }
 
     return (base, fee);
@@ -193,10 +191,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Check merkle root is valid
       require(Commitments.rootHistory[transaction.treeNumber][transaction.merkleRoot], "RailgunLogic: Invalid Merkle Root");
-
-      // Check depositAmount and withdrawAmount are below max allowed value
-      require(transaction.depositAmount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: depositAmount too high");
-      require(transaction.withdrawAmount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: withdrawAmount too high");
 
       // If deposit amount is not 0, token should be on blacklist
       require(
@@ -241,6 +235,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         "RailgunLogic: Invalid SNARK proof"
       );
 
+      // Require tokenType and tokenSubID to be 0 here, replace with NFT and 1155 support
+      require(transaction.tokenType == 0, "RailgunLogic: tokenType must be ERC20");
+      require(transaction.tokenSubID == 0, "RailgunLogic: tokenSubID must be 0");
+
       // Retrieve ERC20 interface
       IERC20 token = IERC20(transaction.tokenField);
 
@@ -248,7 +246,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Fee is on top of deposit
       if (transaction.depositAmount > 0) {
         // Calculate base and fee amounts
-        (uint256 base, uint256 fee) = getBaseAndFee(transaction.withdrawAmount, false);
+        (uint256 base, uint256 fee) = getBaseAndFee(transaction.depositAmount, false);
 
         // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
         // Transfer deposit
@@ -284,11 +282,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         insertionLeaves[commitments] =  transaction.commitmentsOut[commitmientsIter].hash;
 
         // Push commitment to event array
-        newCommitments[commitments] = Commitment(
-          transaction.commitmentsOut[commitmientsIter].hash,
-          transaction.commitmentsOut[commitmientsIter].ciphertext,
-          transaction.commitmentsOut[commitmientsIter].senderPubKey
-        );
+        newCommitments[commitments] = transaction.commitmentsOut[commitmientsIter];
 
         // Increment commitments count
         commitments++;
@@ -312,12 +306,13 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _transactions - list of commitments to generate
    */
 
-  function generateDeposit(GeneratedCommitment[] calldata _transactions) external payable {
-    // Insertion array
+  function generateDeposit(GenerateDepositTX[] calldata _transactions) external payable {
+    // Insertion and event arrays
     uint256[] memory insertionLeaves = new uint256[](_transactions.length);
+    GeneratedCommitment[] memory generatedCommitments = new GeneratedCommitment[](_transactions.length);
 
     for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++) {
-      GeneratedCommitment calldata transaction = _transactions[transactionIter];
+      GenerateDepositTX calldata transaction = _transactions[transactionIter];
 
       // Check deposit amount is not 0
       require(transaction.amount > 0, "RailgunLogic: Cannot deposit 0 tokens");
@@ -328,9 +323,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         "RailgunLogic: Token is blacklisted"
       );
 
-      // Check deposit amount isn't greater than max deposit amount
-      require(transaction.amount < MAX_DEPOSIT_WITHDRAW, "RailgunLogic: depositAmount too high");
-
       // Check _random is in snark scalar field
       require(transaction.random < SNARK_SCALAR_FIELD, "RailgunLogic: random out of range");
 
@@ -340,7 +332,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Calculate fee
       // Fee is in addition to deposit
-      uint256 feeAmount = transaction.amount * depositFee / BASIS_POINTS;
+      (, uint256 fee) = getBaseAndFee(transaction.amount, false);
 
       // Calculate commitment hash
       uint256 hash = PoseidonT6.poseidon([
@@ -354,6 +346,18 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Add to insertion array
       insertionLeaves[transactionIter] = hash;
 
+      // Add GeneratedCommitment to event array
+      generatedCommitments[transactionIter] = GeneratedCommitment({
+        pubkey: transaction.pubkey,
+        random: transaction.random,
+        amount: transaction.amount,
+        token: transaction.token
+      });
+
+      // Require tokenType and tokenSubID to be 0 here, replace with NFT and 1155 support
+      require(transaction.tokenType == 0, "RailgunLogic: tokenType must be ERC20");
+      require(transaction.tokenSubID == 0, "RailgunLogic: tokenSubID must be 0");
+
       // Get ERC20 interface
       IERC20 token = IERC20(transaction.token);
 
@@ -361,7 +365,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       token.safeTransferFrom(msg.sender, address(this), transaction.amount);
 
       // Transfer fee
-      token.safeTransferFrom(msg.sender, treasury, feeAmount);
+      token.safeTransferFrom(msg.sender, treasury, fee);
     }
 
     // Create new tree if current one can't contain existing tree
@@ -369,7 +373,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     if ((nextLeafIndex + _transactions.length) >= (2 ** TREE_DEPTH)) { Commitments.newTree(); }
 
     // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, _transactions);
+    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments);
 
     // Push new commitments to merkle free
     Commitments.insertLeaves(insertionLeaves);

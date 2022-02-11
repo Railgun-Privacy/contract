@@ -6,7 +6,7 @@ pragma abicoder v2;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { SnarkProof, VerifyingKey, Commitment, SNARK_SCALAR_FIELD, CIRCUIT_OUTPUTS } from "./Globals.sol";
+import { SnarkProof, VerifyingKey, Commitment, SNARK_SCALAR_FIELD, CIRCUIT_OUTPUTS, CIPHERTEXT_WORDS } from "./Globals.sol";
 
 import { Snark } from "./Snark.sol";
 
@@ -43,9 +43,10 @@ contract Verifier is Initializable, OwnableUpgradeable {
   }
 
   function hashCipherText(Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut) internal pure returns(uint256) {
-    uint256[24] memory cipherTextHashPreimage;
+    uint256[CIRCUIT_OUTPUTS * (CIPHERTEXT_WORDS + 4)] memory cipherTextHashPreimage;
     uint256 i = 0;
     for (uint256 loopNum = 0; loopNum<3; loopNum++){
+      i = loopNum * (CIPHERTEXT_WORDS + 4);
       cipherTextHashPreimage[i] = _commitmentsOut[loopNum].senderPubKey[0];
       cipherTextHashPreimage[i+1] = _commitmentsOut[loopNum].senderPubKey[1];
       cipherTextHashPreimage[i+2] = _commitmentsOut[loopNum].ciphertext[0];
@@ -54,12 +55,8 @@ contract Verifier is Initializable, OwnableUpgradeable {
       cipherTextHashPreimage[i+5] = _commitmentsOut[loopNum].ciphertext[3];
       cipherTextHashPreimage[i+6] = _commitmentsOut[loopNum].ciphertext[4];
       cipherTextHashPreimage[i+7] = _commitmentsOut[loopNum].ciphertext[5];
-      if(loopNum==0){
-        i = 8;
-      }
-      else if (loopNum == 1){
-        i = 16;
-      }
+      cipherTextHashPreimage[i+8] = _commitmentsOut[loopNum].revealKey[0];
+      cipherTextHashPreimage[i+9] = _commitmentsOut[loopNum].revealKey[1];
     }
     return uint256(sha256(abi.encodePacked(cipherTextHashPreimage)));
   }
@@ -279,7 +276,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
 
     // Check all commitment hashes are valid snark field elements
     for (uint256 i = 0; i < _commitmentsOut.length; i++) {
-      require(_commitmentsOut[i].hash < SNARK_SCALAR_FIELD, "Verifier: Nullifier not a valid field element");
+      require(_commitmentsOut[i].hash < SNARK_SCALAR_FIELD, "Verifier: Commit hash not a valid field element");
     }
 
     if (_nullifiers.length == 2) {

@@ -9,35 +9,48 @@ uint256 constant CIPHERTEXT_WORDS = 6;
 
 // Transaction struct
 struct Transaction{
-    // Proof
-    SnarkProof proof;
-    // Shared
-    address adaptIDcontract;
-    uint256 adaptIDparameters;
-    uint256 depositAmount;
-    uint256 withdrawAmount;
-    address tokenField;
-    address outputEthAddress;
-    // Join
-    uint256 treeNumber;
-    uint256 merkleRoot;
-    uint256[] nullifiers;
-    // Split
-    Commitment[CIRCUIT_OUTPUTS] commitmentsOut;
-  }
+  // Proof
+  SnarkProof proof;
+  // Shared
+  address adaptIDcontract;
+  uint256 adaptIDparameters;
+  uint120 depositAmount;
+  uint120 withdrawAmount;
+  uint8 tokenType; // ENUM: 0 = ERC20, 1 = ERC721, 2 = ERC1155
+  uint256 tokenSubID;
+  address tokenField;
+  address outputEthAddress;
+  // Join
+  uint256 treeNumber;
+  uint256 merkleRoot;
+  uint256[] nullifiers;
+  // Split
+  Commitment[CIRCUIT_OUTPUTS] commitmentsOut;
+}
 
 // Commitment hash and ciphertext
 struct Commitment {
   uint256 hash;
   uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
   uint256[2] senderPubKey; // Ephemeral one time use
+  uint256[2] revealKey; // Encrypted shared key
 }
 
 // Commitment hash preimage
 struct GeneratedCommitment {
   uint256[2] pubkey;
   uint256 random;
-  uint256 amount;
+  uint120 amount;
+  address token;
+}
+
+// Commitment hash preimage
+struct GenerateDepositTX {
+  uint256[2] pubkey;
+  uint256 random;
+  uint120 amount;
+  uint8 tokenType; // ENUM: 0 = ERC20, 1 = ERC721, 2 = ERC1155
+  uint256 tokenSubID;
   address token;
 }
 
