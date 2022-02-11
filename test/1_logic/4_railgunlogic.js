@@ -704,6 +704,8 @@ describe('Logic/RailgunLogic', () => {
       pubkey: utils.unpackPoint(railgunAccount.publicKey),
       random: note.random,
       amount: note.amount,
+      tokenType: 0n,
+      tokenSubID: 0n,
       token: utils.bigInt2ETHAddress(note.token),
     }], {
       gasLimit: 1500000,
@@ -727,11 +729,15 @@ describe('Logic/RailgunLogic', () => {
       pubkey: utils.unpackPoint(railgunAccount.publicKey),
       random: note.random,
       amount: note.amount,
+      tokenType: 0n,
+      tokenSubID: 0n,
       token: utils.bigInt2ETHAddress(note.token),
     }, {
       pubkey: utils.unpackPoint(railgunAccount.publicKey),
       random: note.random,
       amount: note.amount,
+      tokenType: 0n,
+      tokenSubID: 0n,
       token: utils.bigInt2ETHAddress(note.token),
     }], {
       gasLimit: 1500000,
@@ -767,6 +773,8 @@ describe('Logic/RailgunLogic', () => {
       pubkey: utils.unpackPoint(railgunAccount.publicKey),
       random: note.random,
       amount: note.amount,
+      tokenType: 0n,
+      tokenSubID: 0n,
       token: utils.bigInt2ETHAddress(note.token),
     }], {
       gasLimit: 1500000,
@@ -948,6 +956,8 @@ describe('Logic/RailgunLogic', () => {
         adaptIDparameters: proof3.publicInputs.adaptID.parameters,
         depositAmount: proof3.publicInputs.depositAmount,
         withdrawAmount: proof3.publicInputs.withdrawAmount,
+        tokenType: 0n,
+        tokenSubID: 0n,
         tokenField: proof3.publicInputs.outputTokenField,
         outputEthAddress: proof3.publicInputs.outputEthAddress,
         // Join
@@ -1107,6 +1117,8 @@ describe('Logic/RailgunLogic', () => {
       pubkey: utils.unpackPoint(railgunAccount.publicKey),
       random: note.random,
       amount: note.amount,
+      tokenType: 0n,
+      tokenSubID: 0n,
       token: utils.bigInt2ETHAddress(note.token),
     }], {
       gasLimit: 1500000,

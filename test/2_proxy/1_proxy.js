@@ -24,10 +24,6 @@ describe('Proxy/Proxy', () => {
     await expect(target.testFunction()).to.eventually.be.rejectedWith('Proxy: Contract is paused');
   });
 
-  it('Shouldn\'t allow unpausing unless implementation is set', async () => {
-    await expect(proxy.unpause()).to.eventually.be.rejectedWith('Proxy: Can\'t unpause before implementation is set');
-  });
-
   it('Should upgrade and unpause', async () => {
     const Target = await ethers.getContractFactory('ProxyTargetStubA');
 
