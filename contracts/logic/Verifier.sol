@@ -269,6 +269,9 @@ contract Verifier is Initializable, OwnableUpgradeable {
     // Split
     Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut
   ) public view returns (bool) {
+    // Default false validity unless nullifier length matches
+    bool validity = false;
+
     // Check all nullifiers are valid snark field elements
     for (uint256 i = 0; i < _nullifiers.length; i++) {
       require(_nullifiers[i] < SNARK_SCALAR_FIELD, "Verifier: Nullifier not a valid field element");
@@ -295,7 +298,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
       );
 
       // Verify proof
-      return verifySmallProof(_proof, inputsHash % SNARK_SCALAR_FIELD);
+      validity = verifySmallProof(_proof, inputsHash % SNARK_SCALAR_FIELD);
     } else if (_nullifiers.length == 10) {
       // Hash all inputs into single parameter
       uint256 inputsHash = hashLargeInputs(
@@ -312,10 +315,17 @@ contract Verifier is Initializable, OwnableUpgradeable {
       );
 
       // Verify proof
-      return verifyLargeProof(_proof, inputsHash % SNARK_SCALAR_FIELD);
+      validity = verifyLargeProof(_proof, inputsHash % SNARK_SCALAR_FIELD);
+    }
+
+    // If we're submitting from 0x0 address (provably impossible to submit a trasnaction from)
+    // then this is a gas estimation transation. Return true.
+    // TODO: Get review to ensure any changes to tx.origin in future will not break this bypass
+    if (tx.origin == address(0)) {
+      return true;
     } else {
-      // Fail if nullifiers length doesn't match
-      return false;
+      // Return proof validity
+      return validity;
     }
   }
 
