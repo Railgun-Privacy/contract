@@ -320,7 +320,7 @@ contract Verifier is Initializable, OwnableUpgradeable {
 
     // If we're submitting from 0x0 address (provably impossible to submit a trasnaction from)
     // then this is a gas estimation transation. Return true.
-    // TODO: Get review to ensure any changes to tx.origin in future will not break this bypass
+    // This code needs to be rechecked if changes to tx.origin behaviour are proposed in future
     if (tx.origin == address(0)) {
       return true;
     } else {
