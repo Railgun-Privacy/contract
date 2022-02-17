@@ -105,11 +105,17 @@ contract RelayAdapt {
   ) public noExternalContract {
     // Calculate the expected adaptID parameters value
     // The number of transactions is included here to ensure railgun transactions can't be removed
-    // by an adversary while the transaction is still in the mempool
+    // by an adversary while the transaction is still in the mempool\
+    uint256[ _transactions.lenth] memory firstNullifiers;
+    for (uint256 i = 0; i < _transactions.length; i++){
+      //only need first nullifier
+      firstNullifiers[i] = _transactions[i].nullifier[0];
+    }
+
     uint256 adaptIDparameters = uint256(
       sha256(
         abi.encode(
-          // TODO: Add nullifiers of all transactions here
+          firstNullifiers,
           _transactions.length,
           _additionalData
         )
