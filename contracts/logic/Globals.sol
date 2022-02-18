@@ -32,7 +32,7 @@ struct Transaction{
 struct Commitment {
   uint256 hash;
   uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
-  uint256[2] senderPubKey; // Ephemeral one time use
+  uint256 senderPubKey; // Ephemeral one time use
   uint256[2] revealKey; // Encrypted shared key
 }
 

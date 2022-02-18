@@ -43,12 +43,11 @@ contract Verifier is Initializable, OwnableUpgradeable {
   }
 
   function hashCipherText(Commitment[CIRCUIT_OUTPUTS] calldata _commitmentsOut) internal pure returns(uint256) {
-    uint256[CIRCUIT_OUTPUTS * (CIPHERTEXT_WORDS + 4)] memory cipherTextHashPreimage;
+    uint256[CIRCUIT_OUTPUTS * (CIPHERTEXT_WORDS + 3)] memory cipherTextHashPreimage;
     uint256 i = 0;
     for (uint256 loopNum = 0; loopNum<3; loopNum++){
-      i = loopNum * (CIPHERTEXT_WORDS + 4);
-      cipherTextHashPreimage[i] = _commitmentsOut[loopNum].senderPubKey[0];
-      cipherTextHashPreimage[i+1] = _commitmentsOut[loopNum].senderPubKey[1];
+      i = loopNum * (CIPHERTEXT_WORDS + 3);
+      cipherTextHashPreimage[i] = _commitmentsOut[loopNum].senderPubKey;
       cipherTextHashPreimage[i+2] = _commitmentsOut[loopNum].ciphertext[0];
       cipherTextHashPreimage[i+3] = _commitmentsOut[loopNum].ciphertext[1];
       cipherTextHashPreimage[i+4] = _commitmentsOut[loopNum].ciphertext[2];
