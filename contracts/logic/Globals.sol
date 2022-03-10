@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 // Constants
 uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-uint256 constant CIPHERTEXT_WORDS = 6;
+uint256 constant CIPHERTEXT_WORDS = 4;
 
 // Transaction token data
 struct TokenData {
@@ -15,15 +15,14 @@ struct TokenData {
 
 // Transaction bound parameters
 struct BoundParams {
-  address outputEthAddress;
   address adaptContract;
   bytes32 adaptParams;
 }
 
 // Commitment ciphertext
 struct CommitmentCiphertext {
-  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient pubkey (2 x uint256), random, amount, token
-  uint256[2] ephemeralKeys; // Sender first, receipient second
+  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256){sign, random, amount}, token (uint256)
+  uint256[2] ephemeralKeys; // Sender first, receipient second (packed points 32 bytes each)
   bytes32[] memo;
 }
 
@@ -41,17 +40,15 @@ struct Transaction {
 
 // Commitment hash preimage
 struct GeneratedCommitment {
-  uint256[2] pubkey;
-  uint256 random;
-  uint120 amount;
+  uint256 yPubkey; // y coordinate of master public key
+  uint256 packed; // 249-bits (y sign 1-bit, random 128-bit, value 120-bit)
   uint256 token;
 }
 
 // Commitment hash preimage
 struct GenerateDepositTX {
-  uint256[2] pubkey;
-  uint256 random;
-  uint120 amount;
+  uint256 yPubkey;
+  uint256 packed;
   uint8 tokenType; // ENUM: 0 = ERC20, 1 = ERC721, 2 = ERC1155
   uint256 tokenSubID;
   uint256 token;

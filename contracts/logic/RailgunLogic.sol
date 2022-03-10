@@ -199,9 +199,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         "RailgunLogic: Token is blacklisted"
       );
 
+      // NOTE unique nullifiers across trees are computed as H(nullifier, treeNumber)
       // Check nullifiers haven't been seen before, this check should also fail if duplicate nullifiers are found in the same transaction
       for (uint256 nullifierIter = 0; nullifierIter < transaction.nullifiers.length; nullifierIter++) {
-        uint256 nullifier = transaction.nullifiers[nullifierIter];
+        uint256 nullifier = keccack256(abi.encodePacked(transaction.nullifiers[nullifierIter], transaction.treeNumber));
 
         // Check if nullifier hasn't been seen
         require(!Commitments.nullifiers[nullifier], "RailgunLogic: Nullifier already seen");
@@ -215,23 +216,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Verify proof
       require(
-        Verifier.verifyProof(
-          // Proof
-          transaction.proof,
-          // Shared
-          transaction.adaptIDcontract,
-          transaction.adaptIDparameters,
-          transaction.depositAmount,
-          transaction.withdrawAmount,
-          transaction.tokenField,
-          transaction.outputEthAddress,
-          // Join
-          transaction.treeNumber,
-          transaction.merkleRoot,
-          transaction.nullifiers,
-          // Split
-          transaction.commitmentsOut
-        ),
+        Verifier.verify(transaction),
         "RailgunLogic: Invalid SNARK proof"
       );
 

@@ -69,11 +69,9 @@ contract Verifier is OwnableUpgradeable {
   function hashInputs(Transaction calldata _transaction) public pure returns (uint256) {
     return uint256(sha256(
       abi.encodePacked(
-        _transaction.treeNumber,
         _transaction.merkleRoot,
         _transaction.nullifiers,
         _transaction.commitments,
-        calculateTokenField(_transaction.tokenData),
         uint256(keccak256(abi.encode(
           _transaction.boundParams,
           _transaction.commitmentCiphertext
