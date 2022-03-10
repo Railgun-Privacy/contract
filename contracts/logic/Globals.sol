@@ -4,36 +4,39 @@ pragma abicoder v2;
 
 // Constants
 uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-uint256 constant CIRCUIT_OUTPUTS = 3;
 uint256 constant CIPHERTEXT_WORDS = 6;
 
-// Transaction struct
-struct Transaction{
-  // Proof
-  SnarkProof proof;
-  // Shared
-  address adaptIDcontract;
-  uint256 adaptIDparameters;
-  uint120 depositAmount;
-  uint120 withdrawAmount;
+// Transaction token data
+struct TokenData {
   uint8 tokenType; // ENUM: 0 = ERC20, 1 = ERC721, 2 = ERC1155
+  address tokenAddress;
   uint256 tokenSubID;
-  uint256 tokenField;
-  address outputEthAddress;
-  // Join
-  uint256 treeNumber;
-  uint256 merkleRoot;
-  uint256[] nullifiers;
-  // Split
-  Commitment[CIRCUIT_OUTPUTS] commitmentsOut;
 }
 
-// Commitment hash and ciphertext
-struct Commitment {
-  uint256 hash;
-  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv, recipient pubkey (2 x uint256), random, amount, token
-  uint256 senderPubKey; // Ephemeral one time use
-  uint256[2] revealKey; // Encrypted shared key
+// Transaction bound parameters
+struct BoundParams {
+  address outputEthAddress;
+  address adaptContract;
+  bytes32 adaptParams;
+}
+
+// Commitment ciphertext
+struct CommitmentCiphertext {
+  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient pubkey (2 x uint256), random, amount, token
+  uint256[2] ephemeralKeys; // Sender first, receipient second
+  bytes32[] memo;
+}
+
+// Transaction struct
+struct Transaction {
+  SnarkProof proof;
+  uint16 treeNumber;
+  uint256 merkleRoot;
+  uint256[] nullifiers;
+  uint256[] commitments;
+  TokenData tokenData;
+  BoundParams boundParams;
+  CommitmentCiphertext[] commitmentCiphertext;
 }
 
 // Commitment hash preimage
@@ -67,6 +70,7 @@ struct G2Point {
 
 // Verification key for SNARK
 struct VerifyingKey {
+  string artifactsIPFSHash;
   G1Point alpha1;
   G2Point beta2;
   G2Point gamma2;

@@ -22,7 +22,7 @@ library Snark {
     rh = mulmod(rh, p.x, PRIME_Q); //x^3
     rh = addmod(rh, 3, PRIME_Q); //x^3 + 3
     uint256 lh = mulmod(p.y, p.y, PRIME_Q); //y^2
-    require(lh == rh, "Snark: ");
+    require(lh == rh, "Snark: Invalid negation");
 
     return G1Point(p.x, PRIME_Q - (p.y % PRIME_Q));
     }
@@ -60,6 +60,7 @@ library Snark {
    * @dev The product of a point on G1 and a scalar, i.e.
    * p == p.scalar_mul(1) and p.plus(p) == p.scalar_mul(2) for all
    * points p.
+   * @return r - result
    */
   function scalarMul(G1Point memory p, uint256 s) internal view returns (G1Point memory r) {
     uint256[3] memory input;
@@ -158,7 +159,7 @@ library Snark {
     G1Point memory vkX = G1Point(0, 0);
     
     // Make sure input is less than SNARK_SCALAR_FIELD
-    require(_input < SNARK_SCALAR_FIELD, "Snark: Input gte SNARK_SCALAR_FIELD");
+    require(_input < SNARK_SCALAR_FIELD, "Snark: Input > SNARK_SCALAR_FIELD");
 
     // Compute vkX
     vkX = add(vkX, scalarMul(_vk.ic[1], _input));
