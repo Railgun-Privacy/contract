@@ -6,7 +6,7 @@ pragma abicoder v2;
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { Commitment, SNARK_SCALAR_FIELD, CIRCUIT_OUTPUTS, CIPHERTEXT_WORDS } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD, CIPHERTEXT_WORDS } from "./Globals.sol";
 import { PoseidonT3 } from "./Poseidon.sol";
 
 /**
@@ -230,5 +230,5 @@ contract Commitments is Initializable {
     treeNumber++;
   }
 
-  uint256[50] private __gap;
+  uint256[10] private __gap;
 }

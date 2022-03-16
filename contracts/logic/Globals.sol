@@ -40,14 +40,14 @@ struct Transaction {
 
 // Commitment hash preimage
 struct GeneratedCommitment {
-  uint256 yPubkey; // y coordinate of master public key
+  uint256 ypubkey; // y coordinate of master public key
   uint256 packed; // 249-bits (y sign 1-bit, random 128-bit, value 120-bit)
   uint256 token;
 }
 
 // Commitment hash preimage
 struct GenerateDepositTX {
-  uint256 yPubkey;
+  uint256 ypubkey;
   uint256 packed;
   uint8 tokenType; // ENUM: 0 = ERC20, 1 = ERC721, 2 = ERC1155
   uint256 tokenSubID;

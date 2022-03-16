@@ -80,5 +80,5 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
     }
   }
 
-  uint256[50] private __gap;
+  uint256[49] private __gap;
 }
