@@ -71,8 +71,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _owner - governance contract
    */
   function initializeRailgunLogic(
-    VerifyingKey calldata _vKeySmall,
-    VerifyingKey calldata _vKeyLarge,
     uint256[] calldata _tokenBlacklist,
     address payable _treasury,
     uint256 _depositFee,
@@ -84,7 +82,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     OwnableUpgradeable.__Ownable_init();
     Commitments.initializeCommitments();
     TokenBlacklist.initializeTokenBlacklist(_tokenBlacklist);
-    Verifier.initializeVerifier(_vKeySmall, _vKeyLarge);
 
     // Set treasury and fee
     changeTreasury(_treasury);
