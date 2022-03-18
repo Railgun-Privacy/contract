@@ -15,7 +15,6 @@ import { Snark } from "./Snark.sol";
  * @notice Verifies snark proof
  * @dev Functions in this contract statelessly verify proofs, nullifiers and adaptID should be checked in RailgunLogic.
  */
-
 contract Verifier is OwnableUpgradeable {
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list and decrement __gap

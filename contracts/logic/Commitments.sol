@@ -16,7 +16,6 @@ import { PoseidonT3 } from "./Poseidon.sol";
  * @dev Publically accessible functions to be put in RailgunLogic
  * Relevent external contract calls should be in those functions, not here
  */
-
 contract Commitments is Initializable {
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list and decrement the __gap
@@ -62,7 +61,6 @@ contract Commitments is Initializable {
    * @notice Calculates initial values for Merkle Tree
    * @dev OpenZeppelin initializer ensures this can only be called once
    */
-
   function initializeCommitments() internal initializer {
     /*
     To initialise the Merkle tree, we need to calculate the Merkle root
@@ -118,7 +116,6 @@ contract Commitments is Initializable {
    * _leafHashes and _count should never be reused.
    * @param _leafHashes - array of leaf hashes to be added to the merkle tree
    */
-
   function insertLeaves(uint256[] memory _leafHashes) internal {
     /*
     Loop through leafHashes at each level, if the leaf is on the left (index is even)
@@ -216,7 +213,6 @@ contract Commitments is Initializable {
   /**
    * @notice Creates new merkle tree
    */
-
   function newTree() internal {
     // Restore merkleRoot to newTreeRoot
     merkleRoot = newTreeRoot;

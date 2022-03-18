@@ -15,7 +15,6 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
  * internally (as internal transactions have a shielded token ID) and
  * withdrawable (to prevent user funds from being locked)
  */
-
 contract TokenBlacklist is Initializable, OwnableUpgradeable {
   // Events for offchain building of blacklist index
   event TokenListing(uint256 indexed token);
@@ -32,7 +31,6 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
    * @dev OpenZeppelin initializer ensures this can only be called once
    * @param _tokens - List of tokens to add to blacklist
    */
-
   function initializeTokenBlacklist(uint256[] calldata _tokens) internal initializer {
     // Push initial token blacklist to map
     addToBlacklist(_tokens);
@@ -44,7 +42,6 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
    * no events will be emitted in this case
    * @param _tokens - List of tokens to add to blacklist
    */
-
   function addToBlacklist(uint256[] calldata _tokens) public onlyOwner {
     // Loop through token array
     for (uint256 i = 0; i < _tokens.length; i++) {
@@ -65,7 +62,6 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
    * no events will be emitted in this case
    * @param _tokens - List of tokens to remove from blacklist
    */
-
   function removeFromBlacklist(uint256[] calldata _tokens) external onlyOwner {
     // Loop through token array
     for (uint256 i = 0; i < _tokens.length; i++) {

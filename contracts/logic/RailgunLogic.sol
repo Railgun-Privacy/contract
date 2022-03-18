@@ -23,7 +23,6 @@ import { PoseidonT6 } from "./Poseidon.sol";
  * This contract is written to be run behind a ERC1967-like proxy. Upon deployment of proxy the _data parameter should
  * call the initializeRailgunLogic function.
  */
-
 contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlacklist, Verifier {
   using SafeERC20 for IERC20;
 
@@ -71,7 +70,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _nftFee - Flat fee in wei that applies to NFT transactions
    * @param _owner - governance contract
    */
-
   function initializeRailgunLogic(
     VerifyingKey calldata _vKeySmall,
     VerifyingKey calldata _vKeyLarge,
@@ -102,7 +100,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * it won't transfer tokens already in the treasury 
    * @param _treasury - Address of new treasury contract
    */
-
   function changeTreasury(address payable _treasury) public onlyOwner {
     // Do nothing if the new treasury address is same as the old
     if (treasury != _treasury) {
@@ -120,7 +117,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _withdrawFee - Withdraw fee
    * @param _nftFee - Flat fee in wei that applies to NFT transactions
    */
-
   function changeFee(
     uint256 _depositFee,
     uint256 _withdrawFee,
@@ -147,7 +143,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _isInclusive - Whether the amount passed in is inclusive of the fee
    * @return base, fee
    */
-
   function getBaseAndFee(uint256 _amount, bool _isInclusive) public view returns (uint256, uint256) {
     // Base is the amount deposited into the railgun contract or withdrawn to the target eth address
     // for deposits and withdraws respectively
@@ -169,8 +164,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Execute batch of Railgun snark transactions
    * @param _transactions - Transactions to execute
-   */
-  
+   */  
   function transact(Transaction[] calldata _transactions) external payable {
     // Insertion array
     uint256[] memory insertionLeaves = new uint256[](_transactions.length * CIRCUIT_OUTPUTS);
@@ -291,7 +285,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * can't be known in advance (eg. AMM trade where transaction ordering could cause token amounts to change)
    * @param _transactions - list of commitments to generate
    */
-
   function generateDeposit(GenerateDepositTX[] calldata _transactions) external payable {
     // Insertion and event arrays
     uint256[] memory insertionLeaves = new uint256[](_transactions.length);
