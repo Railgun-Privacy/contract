@@ -139,6 +139,10 @@ contract Commitments is Initializable {
     // Get initial count
     uint256 count = _leafHashes.length;
 
+    // Create new tree if current one can't contain new leaves
+    // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
+    if ((nextLeafIndex + count) >= (2 ** TREE_DEPTH)) { newTree(); }
+
     // Current index is the index at each level to insert the hash
     uint256 levelInsertionIndex = nextLeafIndex;
 
@@ -213,7 +217,7 @@ contract Commitments is Initializable {
   /**
    * @notice Creates new merkle tree
    */
-  function newTree() internal {
+  function newTree() private {
     // Restore merkleRoot to newTreeRoot
     merkleRoot = newTreeRoot;
 

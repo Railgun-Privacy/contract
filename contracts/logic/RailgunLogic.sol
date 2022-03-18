@@ -266,9 +266,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       }
     }
 
-    // Create new tree if current tree can't contain entries
-    if ((nextLeafIndex + commitments) > (2 ** TREE_DEPTH)) { Commitments.newTree(); }
-
     // Emit commitment state update
     emit CommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, newCommitments);
 
@@ -344,14 +341,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       token.safeTransferFrom(msg.sender, treasury, fee);
     }
 
-    // Create new tree if current one can't contain existing tree
-    // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + _transactions.length) >= (2 ** TREE_DEPTH)) { Commitments.newTree(); }
-
     // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
     emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments);
 
-    // Push new commitments to merkle free
+    // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
   }
 }
