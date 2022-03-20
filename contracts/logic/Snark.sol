@@ -148,21 +148,26 @@ library Snark {
     * @notice Verifies snark proof against proving key
     * @param _vk - Verification Key
     * @param _proof - snark proof
-    * @param _input - hash of inputs
+    * @param _inputs - inputs
     */
   function verify(
     VerifyingKey memory _vk,
     SnarkProof memory _proof,
-    uint256 _input
+    uint256[] memory _inputs
   ) internal view returns (bool) {
     // Compute the linear combination vkX
     G1Point memory vkX = G1Point(0, 0);
     
-    // Make sure input is less than SNARK_SCALAR_FIELD
-    require(_input < SNARK_SCALAR_FIELD, "Snark: Input > SNARK_SCALAR_FIELD");
+    // Loop through every input
+    for (uint i = 0; i < _inputs.length; i++) {
+      // Make sure inputs are less than SNARK_SCALAR_FIELD
+      require(_inputs[i] < SNARK_SCALAR_FIELD, "Snark: Input > SNARK_SCALAR_FIELD");
 
-    // Compute vkX
-    vkX = add(vkX, scalarMul(_vk.ic[1], _input));
+      // Add to vkX point
+      vkX = add(vkX, scalarMul(_vk.ic[i + 1], _inputs[i]));
+  }
+
+    // Compute final vkX point
     vkX = add(vkX, _vk.ic[0]);
 
     // Verify pairing and return

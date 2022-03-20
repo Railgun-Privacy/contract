@@ -72,7 +72,7 @@ struct VerifyingKey {
   G2Point beta2;
   G2Point gamma2;
   G2Point delta2;
-  G1Point[2] ic;
+  G1Point[] ic;
 }
 
 // Snark proof for transaction
