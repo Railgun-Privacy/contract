@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { Transaction, GenerateDepositTX, VerifyingKey, SnarkProof, Commitment, GeneratedCommitment, SNARK_SCALAR_FIELD, CIPHERTEXT_WORDS, CIRCUIT_OUTPUTS } from "./Globals.sol";
+import { CommitmentCiphertext, GeneratedCommitment } from "./Globals.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
@@ -46,18 +46,19 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   // Transaction events
   event CommitmentBatch(
-    uint256 indexed treeNumber,
-    uint256 indexed startPosition,
-    Commitment[] commitments
+    uint256 treeNumber,
+    uint256 startPosition,
+    uint256[] hash,
+    CommitmentCiphertext[] ciphertext
   );
 
   event GeneratedCommitmentBatch(
-    uint256 indexed treeNumber,
-    uint256 indexed startPosition,
+    uint256 treeNumber,
+    uint256 startPosition,
     GeneratedCommitment[] commitments
   );
 
-  event Nullifier(uint256 indexed nullifier);
+  event Nullifier(uint256 treeNumber, uint256 nullifier);
 
   /**
    * @notice Initialize Railgun contract

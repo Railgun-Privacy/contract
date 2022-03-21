@@ -6,7 +6,8 @@ pragma abicoder v2;
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { SNARK_SCALAR_FIELD, CIPHERTEXT_WORDS } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD } from "./Globals.sol";
+
 import { PoseidonT3 } from "./Poseidon.sol";
 
 /**
@@ -22,8 +23,8 @@ contract Commitments is Initializable {
   // variable at the end of this file
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
-  // Commitment nullifiers
-  mapping(uint256 => bool) public nullifiers;
+  // Commitment nullifiers (treenumber -> nullifier -> seen)
+  mapping(uint256 => mapping(uint256 => bool)) public nullifiers;
 
   // The tree depth
   uint256 internal constant TREE_DEPTH = 16;
@@ -53,7 +54,7 @@ contract Commitments is Initializable {
   uint256[TREE_DEPTH] private filledSubTrees;
 
   // Whether the contract has already seen a particular Merkle tree root
-  // treeNumber => root => seen
+  // treeNumber -> root -> seen
   mapping(uint256 => mapping(uint256 => bool)) public rootHistory;
 
 

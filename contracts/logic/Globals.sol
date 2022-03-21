@@ -13,17 +13,19 @@ struct TokenData {
   uint256 tokenSubID;
 }
 
-// Transaction bound parameters
-struct BoundParams {
-  address adaptContract;
-  bytes32 adaptParams;
-}
-
 // Commitment ciphertext
 struct CommitmentCiphertext {
   uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256){sign, random, amount}, token (uint256)
   uint256[2] ephemeralKeys; // Sender first, receipient second (packed points 32 bytes each)
   bytes32[] memo;
+}
+
+// Transaction bound parameters
+struct BoundParams {
+  uint96 withdrawMask;
+  address adaptContract;
+  bytes32 adaptParams;
+  CommitmentCiphertext[] commitmentCiphertext;
 }
 
 // Transaction struct
@@ -35,7 +37,6 @@ struct Transaction {
   uint256[] commitments;
   TokenData tokenData;
   BoundParams boundParams;
-  CommitmentCiphertext[] commitmentCiphertext;
 }
 
 // Commitment hash preimage

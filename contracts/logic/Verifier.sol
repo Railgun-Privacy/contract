@@ -5,7 +5,7 @@ pragma abicoder v2;
 // OpenZeppelin v4
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { SnarkProof, TokenData, Transaction, VerifyingKey, SNARK_SCALAR_FIELD } from "./Globals.sol";
+import { SnarkProof, Transaction, BoundParams, VerifyingKey, SNARK_SCALAR_FIELD } from "./Globals.sol";
 
 import { Snark } from "./Snark.sol";
 
@@ -39,62 +39,32 @@ contract Verifier is OwnableUpgradeable {
   }
 
   /**
-   * @notice Calculate token field from tokendata
-   * @param _tokenData - tokendata to calculate tokenfield from
-   * @return tokenField
+   * @notice Calculates hash of transaction bound params for snark verification
+   * @param _boundParams - bound parameters
+   * @return bound parameters hash
    */
-  function calculateTokenField(TokenData calldata _tokenData) public pure returns (uint256) {
-    if (_tokenData.tokenType == 0) {
-      // Type is ERC20, just return token address
-      return uint256(uint160(_tokenData.tokenAddress));
-    }
-
-    if (_tokenData.tokenType == 1 || _tokenData.tokenType == 2) {
-      // Type is ERC721 or ERC1155, return hash of token address and token sub ID
-      return uint256(keccak256(abi.encodePacked(
-        _tokenData.tokenAddress,
-        _tokenData.tokenSubID
-      ))) % SNARK_SCALAR_FIELD;
-    }
-
-    revert("Verifier: Token Field Unknown");
-  }
-
-  /**
-   * @notice Calculates hash of transaction inputs for snark verification
-   * @param _transaction - transaction to hash
-   * @return transaction hash
-   */
-  function hashInputs(Transaction calldata _transaction) public pure returns (uint256) {
-    return uint256(sha256(
-      abi.encodePacked(
-        _transaction.merkleRoot,
-        _transaction.nullifiers,
-        _transaction.commitments,
-        uint256(keccak256(abi.encode(
-          _transaction.boundParams,
-          _transaction.commitmentCiphertext
-        ))) % SNARK_SCALAR_FIELD
-      )
-    )) % SNARK_SCALAR_FIELD;
+  function hashBoundParams(BoundParams calldata _boundParams) public pure returns (uint256) {
+    return uint256(keccak256(abi.encode(
+      _boundParams
+    ))) % SNARK_SCALAR_FIELD;
   }
 
   /**
    * @notice Verifies an inputs hash against a verification key
-   * @param _proof - proof to verify
-   * @param _inputsHash - input hash to verify
    * @param _verifyingKey - verifying key to verify with
+   * @param _proof - proof to verify
+   * @param _inputs - input to verify
    * @return proof validity
    */
   function verifyProof(
+    VerifyingKey memory _verifyingKey,
     SnarkProof calldata _proof,
-    uint256 _inputsHash,
-    VerifyingKey memory _verifyingKey
+    uint256[] memory _inputs
   ) public view returns (bool) {
     return Snark.verify(
       _verifyingKey,
       _proof,
-      _inputsHash
+      _inputs
     );
   }
 
@@ -104,34 +74,36 @@ contract Verifier is OwnableUpgradeable {
    * @return transaction validity
    */
   function verify(Transaction calldata _transaction) public view returns (bool) {
-    // Ensure merkleRoot, nullifiers, and commitments are in range
-    require(_transaction.merkleRoot < SNARK_SCALAR_FIELD, "Verifier: Merkle root out of range");
-
-    // Fetch commitments length once for gas efficiency
-    uint256 commitmentLength = _transaction.commitments.length;
-    for (uint256 commitmientsIter = 0; commitmientsIter < commitmentLength; commitmientsIter++) {
-      require(_transaction.commitments[commitmientsIter] < SNARK_SCALAR_FIELD, "Verifier: Commitment out of range");
-    }
-
-    // Fetch nullifiers length once for gas efficiency
-    uint256 nullifierLength = _transaction.commitments.length;
-    for (uint256 nullifierIter = 0; nullifierIter < nullifierLength; nullifierIter++) {
-      require(_transaction.nullifiers[nullifierIter] < SNARK_SCALAR_FIELD, "Verifier: Nullifier out of range");
-    }
-
-    // Hash inputs
-    uint256 inputsHash = hashInputs(_transaction);
+    uint256 nullifiersLength = _transaction.nullifiers.length;
+    uint256 commitmentsLength = _transaction.commitments.length;
 
     // Retrieve verification key
     VerifyingKey memory verifyingKey = verificationKeys
-      [_transaction.nullifiers.length]
-      [_transaction.commitments.length];
+      [nullifiersLength]
+      [commitmentsLength];
+
+    // Calculate inputs
+    uint256[] memory inputs = new uint256[](2 + nullifiersLength + commitmentsLength);
+    inputs[0] = _transaction.merkleRoot;
+    
+    // Hash bound parameters
+    inputs[1] = hashBoundParams(_transaction.boundParams);
+
+    // Loop through nullifiers and add to inputs
+    for (uint i = 0; i < nullifiersLength; i++) {
+      inputs[2 + i] = _transaction.nullifiers[i];
+    }
+
+    // Loop through commitments and add to inputs
+    for (uint i = 0; i < commitmentsLength; i++) {
+      inputs[2 + nullifiersLength + i] = _transaction.commitments[i];
+    }
     
     // Verify snark proof
     bool validity = verifyProof(
+      verifyingKey,
       _transaction.proof,
-      inputsHash,
-      verifyingKey
+      inputs
     );
 
     // Always return true in gas estimation transaction

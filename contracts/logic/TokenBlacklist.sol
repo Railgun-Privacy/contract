@@ -9,11 +9,13 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 /**
  * @title Token Blacklist
  * @author Railgun Contributors
- * @notice Blacklist of tokens that may be problematic to the protocol
+ * @notice Blacklist of tokens that are incompatible with the protocol
  * @dev Tokens on this blacklist can't be deposited to railgun.
  * Tokens on this blacklist will still be transferrable
  * internally (as internal transactions have a shielded token ID) and
  * withdrawable (to prevent user funds from being locked)
+ * THIS WILL ALWAYS BE A NON-EXHAUSTIVE LIST, DO NOT RELY ON IT BLOCKING ALL
+ * INCOMPATIBLE TOKENS
  */
 contract TokenBlacklist is Initializable, OwnableUpgradeable {
   // Events for offchain building of blacklist index
