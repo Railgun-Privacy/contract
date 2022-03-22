@@ -8,12 +8,14 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { CommitmentCiphertext, GeneratedCommitment } from "./Globals.sol";
+import { CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
+
+import { Uint80BitMap } from "./Uint80Bitmap.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
 import { TokenBlacklist } from "./TokenBlacklist.sol";
-import { PoseidonT6 } from "./Poseidon.sol";
+import { PoseidonT4 } from "./Poseidon.sol";
 
 /**
  * @title Railgun Logic
@@ -25,6 +27,7 @@ import { PoseidonT6 } from "./Poseidon.sol";
  */
 contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlacklist, Verifier {
   using SafeERC20 for IERC20;
+  using Uint80BitMap for uint80;
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list
@@ -55,10 +58,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   event GeneratedCommitmentBatch(
     uint256 treeNumber,
     uint256 startPosition,
-    GeneratedCommitment[] commitments
+    CommitmentPreimage[] commitments
   );
 
-  event Nullifier(uint256 treeNumber, uint256 nullifier);
+  event Nullifiers(uint256 treeNumber, uint256[] nullifier);
 
   /**
    * @notice Initialize Railgun contract
@@ -141,7 +144,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _isInclusive - Whether the amount passed in is inclusive of the fee
    * @return base, fee
    */
-  function getBaseAndFee(uint256 _amount, bool _isInclusive) public view returns (uint256, uint256) {
+  function getFee(uint256 _amount, bool _isInclusive) public view returns (uint256, uint256) {
     // Base is the amount deposited into the railgun contract or withdrawn to the target eth address
     // for deposits and withdraws respectively
     uint256 base;
@@ -160,51 +163,69 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   }
 
   /**
+   * @notice Hashes a commitment
+   * @param _commitmentPreimage - commitment to hash
+   * @return commitment hash
+   */
+  function hashCommitment(CommitmentPreimage calldata _commitmentPreimage) public returns (uint256) {
+    return PoseidonT4.poseidon([
+      _commitmentPreimage.ypubkey,
+      abi.encodePacked(
+        _commitmentPreimage.sign,
+        _commitmentPreimage.value,
+        _commitmentPreimage.random
+      ),
+      _commitmentPreimage.token
+    ]);
+  }
+
+  /**
    * @notice Execute batch of Railgun snark transactions
    * @param _transactions - Transactions to execute
+   * @param _withdraws - Commitment preimages to withdraw
+   * @param _withdrawOutputs - Overrides for withdraw destination
    */  
-  function transact(Transaction[] calldata _transactions) external payable {
-    // Insertion array
-    uint256[] memory insertionLeaves = new uint256[](_transactions.length * CIRCUIT_OUTPUTS);
-
-    // Commitment event
-    Commitment[] memory newCommitments = new Commitment[](_transactions.length * CIRCUIT_OUTPUTS);
-
-    // Track count of commitments
-    uint256 commitments = 0;
+  function transact(
+    Transaction[] calldata _transactions,
+    CommitmentPreimage[] calldata _withdraws,
+    address[] calldata _withdrawOutputOverrides
+  ) external payable {
+    // Accumulate total number of withdrawn commitments
+    uint256 withdrawCommitmentCount = 0;
 
     // Loop through each transaction
-    for(uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++){
+    uint256 transactionLength = _transactions.length;
+    for(uint256 transactionIter = 0; transactionIter < transactionLength; transactionIter++){
       // Retrieve transaction
       Transaction calldata transaction = _transactions[transactionIter];
 
       // If _adaptIDcontract is not zero check that it matches the caller
-      require(transaction.adaptIDcontract == address (0) || transaction.adaptIDcontract == msg.sender, "AdaptID doesn't match caller contract");
+      require(
+        transaction.boundParams.adaptIDcontract == address (0) || transaction.adaptIDcontract == msg.sender,
+        "AdaptID doesn't match caller contract"
+      );
 
       // Check merkle root is valid
       require(Commitments.rootHistory[transaction.treeNumber][transaction.merkleRoot], "RailgunLogic: Invalid Merkle Root");
 
-      // If deposit amount is not 0, token should be on blacklist
-      require(
-        transaction.depositAmount == 0 ||
-        !TokenBlacklist.tokenBlacklist[transaction.tokenField],
-        "RailgunLogic: Token is blacklisted"
-      );
+      // Retrieve treeNumber
+      uint256 treeNumber = transaction.boundParams.treeNumber;
 
-      // NOTE unique nullifiers across trees are computed as H(nullifier, treeNumber)
-      // Check nullifiers haven't been seen before, this check should also fail if duplicate nullifiers are found in the same transaction
-      for (uint256 nullifierIter = 0; nullifierIter < transaction.nullifiers.length; nullifierIter++) {
-        uint256 nullifier = keccack256(abi.encodePacked(transaction.nullifiers[nullifierIter], transaction.treeNumber));
+      // Loop through each nullifier
+      uint256 nullifiersLength = transaction.nullifiers.length;
+      for (uint256 nullifierIter = 0; nullifierIter < nullifiersLength; nullifierIter++) {
+        // Retrieve nullifier
+        uint256 nullifier = transaction.nullifiers[nullifierIter];
 
-        // Check if nullifier hasn't been seen
-        require(!Commitments.nullifiers[nullifier], "RailgunLogic: Nullifier already seen");
+        // Check if nullifier has been seen before
+        require(!Commitments.nullifiers[treeNumber][nullifier], "RailgunLogic: Nullifier already seen");
 
         // Push to nullifiers
-        Commitments.nullifiers[nullifier] = true;
-
-        // Emit event
-        emit Nullifier(nullifier);
+        Commitments.nullifiers[treeNumber][nullifier] = true;
       }
+
+      // Emit nullifiers event
+      emit Nullifiers(treeNumber, transaction.nullifiers);
 
       // Verify proof
       require(
@@ -212,41 +233,38 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         "RailgunLogic: Invalid SNARK proof"
       );
 
-      // Require tokenType and tokenSubID to be 0 here, replace with NFT and 1155 support
-      require(transaction.tokenType == 0, "RailgunLogic: tokenType must be ERC20");
-      require(transaction.tokenSubID == 0, "RailgunLogic: tokenSubID must be 0");
-      require(transaction.tokenField <= 2**160, "RailgunLogic: tokenField too large");
+      // Retrieve withdraw mask
+      uint80 withdrawMask = transaction.boundParams.withdrawMask;
 
-      // Retrieve ERC20 interface
-      IERC20 token = IERC20(address(uint160(transaction.tokenField)));
+      // Loop through commitments and add relevant to withdraw queue
+      uint256 commitmentsLength = transaction.commitments.length;
+      for (uint256 commitmientsIter = 0; commitmientsIter < commitmentsLength; commitmientsIter++) {
+        if (withdrawMask.getBit(commitmientsIter)) {
+          // Hash the commitment
+          uint256 commitmentHash = hashCommitment(_withdraws[withdrawCommitmentCount]);
 
-      // Deposit tokens if required
-      // Fee is on top of deposit
-      if (transaction.depositAmount > 0) {
-        // Calculate base and fee amounts
-        (uint256 base, uint256 fee) = getBaseAndFee(transaction.depositAmount, false);
+          // Make sure the commitment hash matches the transaction output
+          require(
+            commitmentHash == transaction.commitments[commitmientsIter],
+            "RailgunLogic: Withdraw commitment preimage is invalid"
+          );
 
-        // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
-        // Transfer deposit
-        token.safeTransferFrom(msg.sender, address(this), base);
+          // Get ERC20 interface
+          IERC20 token = IERC20(address(uint160(transaction.token)));
 
-        // Transfer fee
-        token.safeTransferFrom(msg.sender, treasury, fee);
+          // Check if we've been asked to override the withdraw destination
+          if(_withdrawOutputOverrides[withdrawCommitmentCount] != address(0)) {
+
+          }
+
+          // Increment counter of withdrawn commitments
+          withdrawCommitmentCount++;
+        }
       }
+    }
 
-      // Withdraw tokens if required
-      // Fee is subtracted from withdraw
-      if (transaction.withdrawAmount > 0) {
-        // Calculate base and fee amounts
-        (uint256 base, uint256 fee) = getBaseAndFee(transaction.withdrawAmount, true);
-
-        // Use OpenZeppelin safetransfer to revert on failure - https://github.com/ethereum/solidity/issues/4116
-        // Transfer withdraw
-        token.safeTransfer(transaction.outputEthAddress, base);
-
-        // Transfer fee
-        token.safeTransfer(treasury, fee);
-      }
+    // Loop through each transaction
+    for(uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++){
     
       //add commitments to the struct
       for(uint256 commitmientsIter = 0; commitmientsIter < transaction.commitmentsOut.length; commitmientsIter++){
@@ -261,9 +279,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
         // Push commitment to event array
         newCommitments[commitments] = transaction.commitmentsOut[commitmientsIter];
-
-        // Increment commitments count
-        commitments++;
       }
     }
 
@@ -278,9 +293,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @dev This is for DeFi integrations where the resulting number of tokens to be added
    * can't be known in advance (eg. AMM trade where transaction ordering could cause token amounts to change)
-   * @param _transactions - list of commitments to generate
+   * @param _notes - list of commitments to generate
    */
-  function generateDeposit(GenerateDepositTX[] calldata _transactions) external payable {
+  function generateDeposit(CommitmentPreimage[] calldata _notes) external payable {
     // Insertion and event arrays
     uint256[] memory insertionLeaves = new uint256[](_transactions.length);
     GeneratedCommitment[] memory generatedCommitments = new GeneratedCommitment[](_transactions.length);
@@ -309,7 +324,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       (, uint256 fee) = getBaseAndFee(transaction.amount, false);
 
       // Calculate commitment hash
-      uint256 hash = PoseidonT6.poseidon([
+      uint256 hash = PoseidonT4.poseidon([
         transaction.pubkey[0],
         transaction.pubkey[1],
         transaction.random,
