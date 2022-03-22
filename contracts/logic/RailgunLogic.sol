@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
+import { TokenData, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
 
 import { Uint80BitMap } from "./Uint80Bitmap.sol";
 
@@ -163,11 +163,28 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   }
 
   /**
+   * @notice Gets token field value from tokenData
+   * @param _tokenData - tokenData to calculate token field from
+   * @return token field
+   */
+  function getTokenField(TokenData calldata _tokenData) public pure returns (uint256) {
+    if (_tokenData.tokenType == 0) {
+      return uint256(uint160(_tokenData.tokenAddress));
+    } else if (_tokenData.tokenType == 1) {
+      revert("RailgunLogic: ERC721 not yet supported");
+    } else if (_tokenData.tokenType == 2) {
+      revert("RailgunLogic: ERC1155 not yet supported");
+    } else {
+      revert("RailgunLogic: Unknown token type");
+    }
+  }
+
+  /**
    * @notice Hashes a commitment
    * @param _commitmentPreimage - commitment to hash
    * @return commitment hash
    */
-  function hashCommitment(CommitmentPreimage calldata _commitmentPreimage) public returns (uint256) {
+  function hashCommitment(CommitmentPreimage calldata _commitmentPreimage) public pure returns (uint256) {
     return PoseidonT4.poseidon([
       _commitmentPreimage.ypubkey,
       abi.encodePacked(
@@ -182,34 +199,30 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Execute batch of Railgun snark transactions
    * @param _transactions - Transactions to execute
-   * @param _withdraws - Commitment preimages to withdraw
-   * @param _withdrawOutputs - Overrides for withdraw destination
    */  
   function transact(
-    Transaction[] calldata _transactions,
-    CommitmentPreimage[] calldata _withdraws,
-    address[] calldata _withdrawOutputOverrides
+    Transaction[] calldata _transactions
   ) external payable {
-    // Accumulate total number of withdrawn commitments
-    uint256 withdrawCommitmentCount = 0;
+    // Accumulate total number of insertion commitments
+    uint256 insertionCommitmentCount = 0;
 
     // Loop through each transaction
     uint256 transactionLength = _transactions.length;
-    for(uint256 transactionIter = 0; transactionIter < transactionLength; transactionIter++){
+    for(uint256 transactionIter = 0; transactionIter < transactionLength; transactionIter++) {
       // Retrieve transaction
       Transaction calldata transaction = _transactions[transactionIter];
 
-      // If _adaptIDcontract is not zero check that it matches the caller
+      // If adaptIDcontract is not zero check that it matches the caller
       require(
         transaction.boundParams.adaptIDcontract == address (0) || transaction.adaptIDcontract == msg.sender,
         "AdaptID doesn't match caller contract"
       );
 
-      // Check merkle root is valid
-      require(Commitments.rootHistory[transaction.treeNumber][transaction.merkleRoot], "RailgunLogic: Invalid Merkle Root");
-
       // Retrieve treeNumber
       uint256 treeNumber = transaction.boundParams.treeNumber;
+
+      // Check merkle root is valid
+      require(Commitments.rootHistory[treeNumber][transaction.merkleRoot], "RailgunLogic: Invalid Merkle Root");
 
       // Loop through each nullifier
       uint256 nullifiersLength = transaction.nullifiers.length;
@@ -233,66 +246,122 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         "RailgunLogic: Invalid SNARK proof"
       );
 
-      // Retrieve withdraw mask
-      uint80 withdrawMask = transaction.boundParams.withdrawMask;
+      if (transaction.boundParams.withdraw) {
+        // First output is marked as withdraw, process
+        // Hash the withdraw commitment preimage
+        uint256 commitmentHash = hashCommitment(transaction.withdraw);
 
-      // Loop through commitments and add relevant to withdraw queue
-      uint256 commitmentsLength = transaction.commitments.length;
-      for (uint256 commitmientsIter = 0; commitmientsIter < commitmentsLength; commitmientsIter++) {
-        if (withdrawMask.getBit(commitmientsIter)) {
-          // Hash the commitment
-          uint256 commitmentHash = hashCommitment(_withdraws[withdrawCommitmentCount]);
-
-          // Make sure the commitment hash matches the transaction output
-          require(
-            commitmentHash == transaction.commitments[commitmientsIter],
-            "RailgunLogic: Withdraw commitment preimage is invalid"
-          );
-
-          // Get ERC20 interface
-          IERC20 token = IERC20(address(uint160(transaction.token)));
-
-          // Check if we've been asked to override the withdraw destination
-          if(_withdrawOutputOverrides[withdrawCommitmentCount] != address(0)) {
-
-          }
-
-          // Increment counter of withdrawn commitments
-          withdrawCommitmentCount++;
-        }
-      }
-    }
-
-    // Loop through each transaction
-    for(uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++){
-    
-      //add commitments to the struct
-      for(uint256 commitmientsIter = 0; commitmientsIter < transaction.commitmentsOut.length; commitmientsIter++){
-        // Throw if commitment hash is invalid
+        // Make sure the commitment hash matches the withdraw transaction output
         require(
-          transaction.commitmentsOut[commitmientsIter].hash < SNARK_SCALAR_FIELD,
-          "Commitments: context.leafHash[] entries must be < SNARK_SCALAR_FIELD"
+          commitmentHash == transaction.commitments[0],
+          "RailgunLogic: Withdraw commitment preimage is invalid"
         );
 
-        // Push hash to insertion array
-        insertionLeaves[commitments] =  transaction.commitmentsOut[commitmientsIter].hash;
+        // Fetch output address
+        address output = transaction.withdraw.ypubkey;
 
-        // Push commitment to event array
-        newCommitments[commitments] = transaction.commitmentsOut[commitmientsIter];
+        // Check if we've been asked to override the withdraw destination
+        if(transaction.overrideOutput != address(0)) {
+          // Sign must be true and msg.sender must be the original recepient to change the output destination
+          require(
+            msg.sender == transaction.withdraw.ypubkey && transaction.withdraw.sign,
+            "RailgunLogic: Can't override destination address"
+          );
+
+          // Override output address
+          output = transaction.overrideOutput;
+        }
+
+        // Process withdrawal request
+        if (transaction.withdraw.tokenData.tokenType == 0) {
+          // ERC20
+          require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
+
+          // Get ERC20 interface
+          IERC20 token = IERC20(address(uint160(transaction.withdraw.token)));
+
+          // Get base and fee amounts
+          (uint256 base, uint256 fee) = getFee(transaction.withdraw.value, true);
+
+          // Transfer base to output address
+          token.safeTransfer(
+            output,
+            base
+          );
+
+          // Transfer fee to treasury
+          token.safeTransfer(
+            treasury,
+            fee
+          );
+        } else if (transaction.withdraw.tokenData.tokenType == 1) {
+          // ERC721 token
+          revert("RailgunLogic: ERC721 not yet supported");
+        } else if (transaction.withdraw.tokenData.tokenType == 2) {
+          // ERC1155 token
+          revert("RailgunLogic: ERC1155 not yet supported");
+        } else {
+          // Invalid token type, revert
+          revert("RailgunLogic: Unknown token type");
+        }
+
+        // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
+        require(
+          transaction.boundParams.commitmentCiphertext.lenght == transaction.commitments.length,
+          "RailgunLogic: Ciphertexts and commitments count mismatch"
+        );
+
+        // Increment insertion commitment count (minus 1 for withdrawn output)
+        insertionCommitmentCount += transaction.commitments.length;
+      } else {
+        // Ensure ciphertext length matches the commitments length
+        require(
+          transaction.boundParams.commitmentCiphertext.lenght == transaction.commitments.length,
+          "RailgunLogic: Ciphertexts and commitments count mismatch"
+        );
+
+        // Increment insertion commitment count
+        insertionCommitmentCount += transaction.commitments.length;
       }
     }
 
-    // Emit commitment state update
-    emit CommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, newCommitments);
+    // Create insertion array
+    uint256[] memory hashes = new uint256[](insertionCommitmentCount);
 
-    // Push new commitments to merkle free
-    Commitments.insertLeaves(insertionLeaves);
+    // Create ciphertext array
+    CommitmentCiphertext[] memory ciphertext = new uint256[](insertionCommitmentCount);
+
+    // Track insert position
+    uint256 insertPosition = 0;
+
+    // Loop through each transaction and accumulate commitments
+    for(uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++) {
+      // Retrieve transaction
+      Transaction calldata transaction = _transactions[transactionIter];
+
+      // Loop through commitments and push to array
+      uint256 commitmentLength = transaction.boundParams.commitmentCiphertext.length;
+      for(uint256 commitmentIter = 0; commitmentIter < commitmentLength; commitmentIter++) {
+        // Push commitment hash to array
+        hashes[insertPosition] = transaction.commitments[commitmentIter];
+
+        // Push ciphertext to array
+        ciphertext[insertPosition] = transaction.boundParams.commitmentCiphertext[commitmentIter];
+
+        // Increment insert position
+        insertPosition++;
+      }
+    }
+
+    // Push new commitments to merkle tree
+    Commitments.insertLeaves(hashes);
+
+    // Emit commitment state update
+    emit CommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, hashes, ciphertext);
   }
 
   /**
    * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
-   * @dev This is for DeFi integrations where the resulting number of tokens to be added
-   * can't be known in advance (eg. AMM trade where transaction ordering could cause token amounts to change)
    * @param _notes - list of commitments to generate
    */
   function generateDeposit(CommitmentPreimage[] calldata _notes) external payable {

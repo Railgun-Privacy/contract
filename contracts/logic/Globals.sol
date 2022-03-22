@@ -15,7 +15,7 @@ struct TokenData {
 
 // Commitment ciphertext
 struct CommitmentCiphertext {
-  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256){sign, random, amount}, token (uint256)
+  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
   uint256[2] ephemeralKeys; // Sender first, receipient second (packed points 32 bytes each)
   bytes32[] memo;
 }
@@ -23,9 +23,11 @@ struct CommitmentCiphertext {
 // Transaction bound parameters
 struct BoundParams {
   uint16 treeNumber;
-  uint80 withdrawMask; // Max outputs possible is 80
+  bool withdraw; // Marks the last commitment for withdrawal
   address adaptContract;
   bytes32 adaptParams;
+  // For withdraws do not include an element in ciphertext array
+  // Ciphertext array length = commitments - withdraws
   CommitmentCiphertext[] commitmentCiphertext;
 }
 
@@ -36,12 +38,14 @@ struct Transaction {
   uint256[] nullifiers;
   uint256[] commitments;
   BoundParams boundParams;
+  CommitmentPreimage withdraw;
+  address overrideOutput; // Only allowed if original destination == msg.sender & sign == true
 }
 
 // Commitment hash preimage
 struct CommitmentPreimage {
-  uint256 ypubkey; // Y coordinate of master public key
-  bool sign; // Public key sign
+  uint256 ypubkey; // Y coordinate of master public key, used as output eth address for withdraws
+  bool sign; // Public key sign, used to indicate if output override is allowed
   uint120 value; // Note value
   uint128 random; // Randomness field
   TokenData token; // Token field
