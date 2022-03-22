@@ -14,5 +14,5 @@ library PoseidonT3 {
 
 library PoseidonT4 {
   // solhint-disable-next-line no-empty-blocks
-  function poseidon(uint256[5] memory input) public pure returns (uint256) {}
+  function poseidon(uint256[3] memory input) public pure returns (uint256) {}
 }
