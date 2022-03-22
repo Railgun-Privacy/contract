@@ -10,8 +10,6 @@ import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/
 
 import { SNARK_SCALAR_FIELD, TokenData, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
 
-import { Uint80BitMap } from "./Uint80Bitmap.sol";
-
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
 import { TokenBlacklist } from "./TokenBlacklist.sol";
@@ -27,7 +25,6 @@ import { PoseidonT4 } from "./Poseidon.sol";
  */
 contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlacklist, Verifier {
   using SafeERC20 for IERC20;
-  using Uint80BitMap for uint80;
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list
