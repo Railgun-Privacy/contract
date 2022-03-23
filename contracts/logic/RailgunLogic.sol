@@ -64,7 +64,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Initialize Railgun contract
    * @dev OpenZeppelin initializer ensures this can only be called once
    * This function also calls initializers on inherited contracts
-   * @param _tokenBlacklist - Initial token blacklist to use
    * @param _treasury - address to send usage fees to
    * @param _depositFee - Deposit fee
    * @param _withdrawFee - Withdraw fee
@@ -72,7 +71,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _owner - governance contract
    */
   function initializeRailgunLogic(
-    uint256[] calldata _tokenBlacklist,
     address payable _treasury,
     uint120 _depositFee,
     uint120 _withdrawFee,
@@ -82,7 +80,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     // Call initializers
     OwnableUpgradeable.__Ownable_init();
     Commitments.initializeCommitments();
-    TokenBlacklist.initializeTokenBlacklist(_tokenBlacklist);
 
     // Set treasury and fee
     changeTreasury(_treasury);

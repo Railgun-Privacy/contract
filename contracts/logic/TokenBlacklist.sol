@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
@@ -17,26 +16,16 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
  * THIS WILL ALWAYS BE A NON-EXHAUSTIVE LIST, DO NOT RELY ON IT BLOCKING ALL
  * INCOMPATIBLE TOKENS
  */
-contract TokenBlacklist is Initializable, OwnableUpgradeable {
+contract TokenBlacklist is OwnableUpgradeable {
   // Events for offchain building of blacklist index
-  event TokenListing(uint256 indexed token);
-  event TokenDelisting(uint256 indexed token);
+  event AddToBlacklist(uint256 indexed token);
+  event RemoveFromBlacklist(uint256 indexed token);
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list and decrement the __gap
   // variable at the end of this file
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
   mapping(uint256 => bool) public tokenBlacklist;
-
-  /**
-   * @notice Adds initial set of tokens to blacklist.
-   * @dev OpenZeppelin initializer ensures this can only be called once
-   * @param _tokens - List of tokens to add to blacklist
-   */
-  function initializeTokenBlacklist(uint256[] calldata _tokens) internal initializer {
-    // Push initial token blacklist to map
-    addToBlacklist(_tokens);
-  }
 
   /**
    * @notice Adds tokens to blacklist, only callable by owner (governance contract)
@@ -53,7 +42,7 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
         tokenBlacklist[_tokens[i]] = true;
 
         // Emit event for building index of blacklisted tokens offchain
-        emit TokenListing(_tokens[i]);
+        emit AddToBlacklist(_tokens[i]);
       }
     }
   }
@@ -73,7 +62,7 @@ contract TokenBlacklist is Initializable, OwnableUpgradeable {
         delete tokenBlacklist[_tokens[i]];
 
         // Emit event for building index of blacklisted tokens offchain
-        emit TokenDelisting(_tokens[i]);
+        emit RemoveFromBlacklist(_tokens[i]);
       }
     }
   }

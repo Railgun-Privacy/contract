@@ -12,7 +12,7 @@ async function main() {
   const Delegator = await ethers.getContractFactory('Delegator');
   const Treasury = await ethers.getContractFactory('Treasury');
   const PoseidonT3 = await ethers.getContractFactory('PoseidonT3');
-  const PoseidonT6 = await ethers.getContractFactory('PoseidonT6');
+  const PoseidonT4 = await ethers.getContractFactory('PoseidonT4');
   const ProxyAdmin = await ethers.getContractFactory('ProxyAdmin');
   const Proxy = await ethers.getContractFactory('PausableUpgradableProxy');
 
@@ -51,19 +51,19 @@ async function main() {
   );
 
   await overwriteArtifact(
-    'PoseidonT6',
-    poseidonGenContract.createCode(5),
+    'PoseidonT4',
+    poseidonGenContract.createCode(3),
   );
 
   // Deploy Poseidon libraries
   const poseidonT3 = await PoseidonT3.deploy();
-  const poseidonT6 = await PoseidonT6.deploy();
+  const poseidonT4 = await PoseidonT4.deploy();
 
   // Get Railgun Logic
   const RailgunLogic = await ethers.getContractFactory('RailgunLogic', {
     libraries: {
       PoseidonT3: poseidonT3.address,
-      PoseidonT6: poseidonT6.address,
+      PoseidonT4: poseidonT4.address,
     },
   });
 
