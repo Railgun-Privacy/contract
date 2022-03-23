@@ -2,7 +2,6 @@
 /* eslint-disable jsdoc/require-jsdoc */
 /* global overwriteArtifact ethers */
 const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
-const verificationKey = require('../verificationKey');
 
 async function main() {
   // Get build artifacts
@@ -97,9 +96,6 @@ async function main() {
 
   // Initialize Railgun Logic
   await (await railgun.initializeRailgunLogic(
-    verificationKey.vKeySmall,
-    verificationKey.vKeyLarge,
-    [],
     treasury.address,
     25n,
     25n,
