@@ -50,7 +50,7 @@ library Snark {
     }
 
     // Check if operation succeeded
-    require(success, "Pairing: Add Failed");
+    require(success, "Snark: Add Failed");
 
     return result;
   }
@@ -75,7 +75,7 @@ library Snark {
     }
 
     // Check multiplication succeeded
-    require(success, "Pairing: Scalar Multiplication Failed");
+    require(success, "Snark: Scalar Multiplication Failed");
   }
 
   /**
@@ -139,7 +139,7 @@ library Snark {
     }
 
     // Check if operation succeeded
-    require(success, "Pairing: Pairing Verification Failed");
+    require(success, "Snark: Pairing Verification Failed");
 
     return out[0] != 0;
   }
@@ -183,4 +183,3 @@ library Snark {
     );
   }
 }
-

@@ -26,8 +26,6 @@
     "hardhat-docgen": "^1.1.1",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-tracer": "^1.0.0-alpha.6",
-    "railgun-artifacts": "https://npm.railgun.org/railgun-artifacts-0.0.1.tgz",
-    "railgun-privacy.js": "https://npm.railgun.org/railgun-privacy.js-contract-tests-0.0.1.tgz",
     "solhint": "^3.3.2"
   },
   "dependencies": {

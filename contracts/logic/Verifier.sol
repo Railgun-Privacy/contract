@@ -50,7 +50,7 @@ contract Verifier is OwnableUpgradeable {
   }
 
   /**
-   * @notice Verifies an inputs hash against a verification key
+   * @notice Verifies inputs against a verification key
    * @param _verifyingKey - verifying key to verify with
    * @param _proof - proof to verify
    * @param _inputs - input to verify
