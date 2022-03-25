@@ -8,9 +8,10 @@ yarn.lock
 networks.config.js
 
 # Hardhat files
-cache
-circuit_artifacts
 artifacts
+cache
+coverage
+coverage.json
 docs
 
 # Temporary Files

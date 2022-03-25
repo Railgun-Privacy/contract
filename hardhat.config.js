@@ -5,6 +5,7 @@ require('@nomiclabs/hardhat-etherscan');
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-gas-reporter');
 require('hardhat-artifactor');
+require('solidity-coverage');
 require('hardhat-tracer');
 require('hardhat-docgen');
 

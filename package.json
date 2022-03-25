@@ -26,7 +26,8 @@
     "hardhat-docgen": "^1.1.1",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-tracer": "^1.0.0-alpha.6",
-    "solhint": "^3.3.2"
+    "solhint": "^3.3.2",
+    "solidity-coverage": "^0.7.20"
   },
   "dependencies": {
     "@openzeppelin/contracts": "4.5.0",
