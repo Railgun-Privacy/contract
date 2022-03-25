@@ -3,6 +3,7 @@ const ethers = require('@nomiclabs/hardhat-ethers');
 const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 require('@nomiclabs/hardhat-etherscan');
 require('@nomiclabs/hardhat-waffle');
+require('hardhat-contract-sizer');
 require('hardhat-gas-reporter');
 require('hardhat-artifactor');
 require('solidity-coverage');
