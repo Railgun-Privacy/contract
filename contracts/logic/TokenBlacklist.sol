@@ -18,14 +18,14 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
  */
 contract TokenBlacklist is OwnableUpgradeable {
   // Events for offchain building of blacklist index
-  event AddToBlacklist(uint256 indexed token);
-  event RemoveFromBlacklist(uint256 indexed token);
+  event AddToBlacklist(address indexed token);
+  event RemoveFromBlacklist(address indexed token);
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
   // add new variables to the bottom of the list and decrement the __gap
   // variable at the end of this file
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
-  mapping(uint256 => bool) public tokenBlacklist;
+  mapping(address => bool) public tokenBlacklist;
 
   /**
    * @notice Adds tokens to blacklist, only callable by owner (governance contract)
@@ -33,7 +33,7 @@ contract TokenBlacklist is OwnableUpgradeable {
    * no events will be emitted in this case
    * @param _tokens - List of tokens to add to blacklist
    */
-  function addToBlacklist(uint256[] calldata _tokens) public onlyOwner {
+  function addToBlacklist(address[] calldata _tokens) public onlyOwner {
     // Loop through token array
     for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token is already blacklisted
@@ -53,7 +53,7 @@ contract TokenBlacklist is OwnableUpgradeable {
    * no events will be emitted in this case
    * @param _tokens - List of tokens to remove from blacklist
    */
-  function removeFromBlacklist(uint256[] calldata _tokens) external onlyOwner {
+  function removeFromBlacklist(address[] calldata _tokens) external onlyOwner {
     // Loop through token array
     for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token isn't blacklisted

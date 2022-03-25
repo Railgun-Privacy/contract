@@ -347,11 +347,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       }
     }
 
-    // Push new commitments to merkle tree
-    Commitments.insertLeaves(hashes);
-
     // Emit commitment state update
     emit CommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, hashes, ciphertext);
+
+    // Push new commitments to merkle tree after event due to inserLeaves causing side effects
+    Commitments.insertLeaves(hashes);
   }
 
   /**
@@ -374,10 +374,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       require(note.value > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
       // Check if token is on the blacklist
-      // require(
-      //   !TokenBlacklist.tokenBlacklist[note.token],
-      //   "RailgunLogic: Token is blacklisted"
-      // );
+      require(
+        !TokenBlacklist.tokenBlacklist[note.token.tokenAddress],
+        "RailgunLogic: Token is blacklisted"
+      );
 
       // Check ypubkey is in snark scalar field
       require(note.ypubkey < SNARK_SCALAR_FIELD, "RailgunLogic: ypubkey out of range");
