@@ -23,54 +23,54 @@ describe('Logic/Commitments', () => {
     merkletree = new MerkleTree();
   });
 
-  // it('Should calculate zero values', async () => {
-  //   await expect(await commitmentsStub.ZERO_VALUE()).to.equal(MerkleTree.zeroValue);
+  it('Should calculate zero values', async () => {
+    await expect(await commitmentsStub.ZERO_VALUE()).to.equal(MerkleTree.zeroValue);
 
-  //   await Promise.all(merkletree.zeros.map(async (zeroValue, level) => {
-  //     expect(await commitmentsStub.zeros(level)).to.equal(zeroValue);
-  //   }));
-  // });
+    await Promise.all(merkletree.zeros.map(async (zeroValue, level) => {
+      expect(await commitmentsStub.zeros(level)).to.equal(zeroValue);
+    }));
+  });
 
-  // it('Should calculate empty root', async () => {
-  //   await expect(await commitmentsStub.merkleRoot()).to.equal(merkletree.root);
-  // });
+  it('Should calculate empty root', async () => {
+    await expect(await commitmentsStub.merkleRoot()).to.equal(merkletree.root);
+  });
 
-  // it('Should hash left/right pairs', async () => {
-  //   let loops = 10n;
+  it('Should hash left/right pairs', async () => {
+    let loops = 10n;
 
-  //   if (process.env.LONG_TESTS) {
-  //     loops = 1000n;
-  //   }
+    if (process.env.LONG_TESTS) {
+      loops = 1000n;
+    }
 
-  //   for (let i = 0n; i < loops; i += 1n) {
-  //     const left = poseidon([i]);
-  //     const right = poseidon([i, 10000n]);
-  //     const result = poseidon([left, right]);
+    for (let i = 0n; i < loops; i += 1n) {
+      const left = poseidon([i]);
+      const right = poseidon([i, 10000n]);
+      const result = poseidon([left, right]);
 
-  //     // eslint-disable-next-line no-await-in-loop
-  //     expect(await commitmentsStub.hashLeftRight(left, right)).to.equal(result);
-  //   }
-  // });
+      // eslint-disable-next-line no-await-in-loop
+      expect(await commitmentsStub.hashLeftRight(left, right)).to.equal(result);
+    }
+  });
 
-  // it('Should incrementally insert elements', async () => {
-  //   let loops = 10n;
+  it('Should incrementally insert elements', async () => {
+    let loops = 10n;
 
-  //   if (process.env.LONG_TESTS) {
-  //     loops = 100n;
-  //   }
+    if (process.env.LONG_TESTS) {
+      loops = 100n;
+    }
 
-  //   const insertList = [];
-  //   for (let i = 0n; i < loops; i += 1n) {
-  //     insertList.push(i);
+    const insertList = [];
+    for (let i = 0n; i < loops; i += 1n) {
+      insertList.push(i);
 
-  //     // eslint-disable-next-line no-await-in-loop
-  //     await commitmentsStub.insertLeavesStub(insertList);
-  //     merkletree.insertLeaves(insertList);
+      // eslint-disable-next-line no-await-in-loop
+      await commitmentsStub.insertLeavesStub(insertList);
+      merkletree.insertLeaves(insertList);
 
-  //     // eslint-disable-next-line no-await-in-loop
-  //     expect(await commitmentsStub.merkleRoot()).to.equal(merkletree.root);
-  //   }
-  // });
+      // eslint-disable-next-line no-await-in-loop
+      expect(await commitmentsStub.merkleRoot()).to.equal(merkletree.root);
+    }
+  });
 
   it('Should roll over to new tree', async function () {
     this.timeout(5 * 60 * 60 * 1000);
