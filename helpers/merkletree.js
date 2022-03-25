@@ -67,10 +67,6 @@ class MerkleTree {
    * @param {Array<bigint>} leaves - array of leaves to add
    */
   insertLeaves(leaves) {
-    // Make all leaves BigInts
-    // eslint-disable-next-line no-param-reassign
-    leaves = leaves.map(BigInt);
-
     // Add leaves to tree
     this.tree[0].push(...leaves);
 
@@ -83,7 +79,7 @@ class MerkleTree {
    *
    * @returns {Array<bigint>} leaves
    */
-  getLeaves() {
+  get leaves() {
     return this.tree[0];
   }
 
@@ -187,7 +183,7 @@ class MerkleTree {
    *
    * @returns {bigint} zero value
    */
-  static getZeroValue() {
+  static get zeroValue() {
     const railgunHashBI = BigInt(
       ethers.utils.keccak256(
         Buffer.from('Railgun', 'utf8'),
@@ -207,7 +203,7 @@ class MerkleTree {
     const levels = [];
 
     // First level should be the leaf zero value
-    levels.push(this.getZeroValue());
+    levels.push(this.zeroValue);
 
     // Loop through remaining levels to root
     for (let level = 1; level < depth; level += 1) {

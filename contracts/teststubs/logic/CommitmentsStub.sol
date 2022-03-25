@@ -5,7 +5,7 @@ pragma abicoder v2;
 import { Commitments } from "../../logic/Commitments.sol";
 
 contract CommitmentsStub is Commitments {
-  function initializeCommitmentsStub() external {
+  constructor() {
     Commitments.initializeCommitments();
   }
 

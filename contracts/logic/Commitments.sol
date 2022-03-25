@@ -30,7 +30,7 @@ contract Commitments is Initializable {
   uint256 internal constant TREE_DEPTH = 16;
 
   // Tree zero value
-  uint256 private constant ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD;
+  uint256 public constant ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD;
 
   // Next leaf index (number of inserted leaves in the current tree)
   uint256 internal nextLeafIndex = 0;
@@ -42,12 +42,12 @@ contract Commitments is Initializable {
   uint256 private newTreeRoot;
 
   // Tree number
-  uint256 internal treeNumber;
+  uint256 public treeNumber;
 
   // The Merkle path to the leftmost leaf upon initialisation. It *should
   // not* be modified after it has been set by the initialize function.
   // Caching these values is essential to efficient appends.
-  uint256[TREE_DEPTH] private zeros;
+  uint256[TREE_DEPTH] public zeros;
 
   // Right-most elements at each level
   // Used for efficient upodates of the merkle tree
