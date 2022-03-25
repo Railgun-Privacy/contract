@@ -6,7 +6,6 @@ require('@nomiclabs/hardhat-waffle');
 require('hardhat-contract-sizer');
 require('hardhat-gas-reporter');
 require('hardhat-artifactor');
-require('solidity-coverage');
 require('hardhat-tracer');
 require('hardhat-docgen');
 

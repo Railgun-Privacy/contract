@@ -10,8 +10,6 @@ networks.config.js
 # Hardhat files
 artifacts
 cache
-coverage
-coverage.json
 docs
 
 # Temporary Files
