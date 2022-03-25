@@ -4,9 +4,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 
-const { expect } = require('chai');
-
-const abiCoder = new ethers.utils.AbiCoder();
+const { expect } = chai;
 
 let delegator;
 let delegatorAdmin;

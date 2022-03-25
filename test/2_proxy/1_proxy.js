@@ -4,7 +4,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);
 
-const { expect } = require('chai');
+const { expect } = chai;
 
 let proxy;
 
