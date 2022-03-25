@@ -103,7 +103,7 @@ contract Commitments is Initializable {
    * @param _right - Right side of hash
    * @return hash result
    */
-  function hashLeftRight(uint256 _left, uint256 _right) private pure returns (uint256) {
+  function hashLeftRight(uint256 _left, uint256 _right) public pure returns (uint256) {
     return PoseidonT3.poseidon([
       _left,
       _right
