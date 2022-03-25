@@ -1,5 +1,6 @@
-/* global task hre */
+/* global task hre runSuper */
 const ethers = require('@nomiclabs/hardhat-ethers');
+const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 require('@nomiclabs/hardhat-etherscan');
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-gas-reporter');
@@ -24,6 +25,20 @@ try {
     },
   };
 }
+
+task('compile', 'Compiles the entire project, building all artifacts and injecting precompiled artifacts', async () => {
+  await runSuper();
+
+  await hre.overwriteArtifact(
+    'PoseidonT3',
+    poseidonGenContract.createCode(2),
+  );
+
+  await hre.overwriteArtifact(
+    'PoseidonT4',
+    poseidonGenContract.createCode(3),
+  );
+});
 
 task('accounts', 'Prints the list of accounts', async () => {
   const accounts = await ethers.getSigners();
