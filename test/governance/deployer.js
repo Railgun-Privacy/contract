@@ -1,5 +1,10 @@
 /* global describe it beforeEach ethers */
-const { expect } = require('chai');
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+
+chai.use(chaiAsPromised);
+
+const { expect } = chai;
 
 let deployer;
 

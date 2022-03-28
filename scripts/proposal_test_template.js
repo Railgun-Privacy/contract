@@ -1,7 +1,12 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
 /* global ethers */
-const { expect } = require('chai');
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+
+chai.use(chaiAsPromised);
+
+const { expect } = chai;
 
 ethers.provider = new ethers.providers.JsonRpcProvider({
   url: ethers.provider.connection.url,
