@@ -82,6 +82,9 @@ contract Verifier is OwnableUpgradeable {
       [nullifiersLength]
       [commitmentsLength];
 
+    // Check if verifying key is set
+    require(verifyingKey.alpha1.x != 0, "Verifier: Key not set");
+
     // Calculate inputs
     uint256[] memory inputs = new uint256[](2 + nullifiersLength + commitmentsLength);
     inputs[0] = _transaction.merkleRoot;
@@ -108,6 +111,7 @@ contract Verifier is OwnableUpgradeable {
 
     // Always return true in gas estimation transaction
     // This is so relayer fees can be calculated without needing to compute a proof
+    // solhint-disable-next-line avoid-tx-origin
     if (tx.origin == address(0)) {
       return true;
     } else {
