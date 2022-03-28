@@ -33,7 +33,7 @@ contract TokenBlacklist is OwnableUpgradeable {
    * no events will be emitted in this case
    * @param _tokens - List of tokens to add to blacklist
    */
-  function addToBlacklist(address[] calldata _tokens) public onlyOwner {
+  function addToBlacklist(address[] calldata _tokens) external onlyOwner {
     // Loop through token array
     for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token is already blacklisted
