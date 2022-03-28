@@ -20,6 +20,9 @@ contract Verifier is OwnableUpgradeable {
   // add new variables to the bottom of the list and decrement __gap
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
+  // Verifying key set event
+  event VerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey verifyingKey);
+
   // Nullifiers => Commitments => Verification Key
   mapping(uint256 => mapping(uint256 => VerifyingKey)) public verificationKeys;
 
@@ -36,6 +39,8 @@ contract Verifier is OwnableUpgradeable {
   ) public onlyOwner {
     // TODO: Check if struct copying is an issue here
     verificationKeys[_nullifiers][_commitments] = _verifyingKey;
+
+    emit VerifyingKeySet(_nullifiers, _commitments, _verifyingKey);
   }
 
   /**
