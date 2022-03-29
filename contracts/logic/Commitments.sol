@@ -62,7 +62,7 @@ contract Commitments is Initializable {
    * @notice Calculates initial values for Merkle Tree
    * @dev OpenZeppelin initializer ensures this can only be called once
    */
-  function initializeCommitments() internal initializer {
+  function initializeCommitments() internal onlyInitializing {
     /*
     To initialise the Merkle tree, we need to calculate the Merkle root
     assuming that each leaf is the zero value.
