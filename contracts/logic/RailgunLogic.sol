@@ -437,4 +437,12 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
   }
+
+  /*
+   * @notice Public accessor for Commitments.merkleRoot
+   * @return merkle root
+   */
+  function getMerkleRoot() public view returns (uint256) {
+    return Commitments.merkleRoot;
+  }
 }
