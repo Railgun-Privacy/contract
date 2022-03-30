@@ -92,7 +92,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Change treasury address, only callable by owner (governance contract)
    * @dev This will change the address of the contract we're sending the fees to in the future
-   * it won't transfer tokens already in the treasury 
+   * it won't transfer tokens already in the treasury
    * @param _treasury - Address of new treasury contract
    */
   function changeTreasury(address payable _treasury) public onlyOwner {
@@ -134,7 +134,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   /**
    * @notice Get base and fee amount
-   * @param _amount - Amount to calculate 
+   * @param _amount - Amount to calculate
    * @param _isInclusive - Whether the amount passed in is inclusive of the fee
    * @return base, fee
    */
@@ -193,7 +193,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Execute batch of Railgun snark transactions
    * @param _transactions - Transactions to execute
-   */  
+   */
   function transact(
     Transaction[] calldata _transactions
   ) external payable {
@@ -409,13 +409,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         insertionLeaves[notesIter] = hash;
 
         // Transfer base to output address
-        token.safeTransfer(
+        token.safeTransferFrom(
+          address(msg.sender),
           address(this),
           base
         );
 
         // Transfer fee to treasury
-        token.safeTransfer(
+        token.safeTransferFrom(
+          address(msg.sender),
           treasury,
           fee
         );
