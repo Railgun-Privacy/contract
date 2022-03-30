@@ -1,3 +1,5 @@
+const artifacts = require('railgun-artifacts-node');
+
 /**
  * Formats vkey for solidity input
  *
@@ -6,6 +8,7 @@
  */
 function formatVKey(vkey) {
   return {
+    artifactsIPFSHash: '',
     alpha1: {
       x: BigInt(vkey.vk_alpha_1[0]),
       y: BigInt(vkey.vk_alpha_1[1]),
@@ -53,4 +56,21 @@ function formatVKey(vkey) {
   };
 }
 
-module.exports = formatVKey;
+/**
+ * Fetches artifact with formatted verification key
+ *
+ * @param {number} nullifiers - nullifier count
+ * @param {number} commitments - commitment count
+ * @returns {object} keys
+ */
+function getKeys(nullifiers, commitments) {
+  const artifact = artifacts[nullifiers][commitments];
+  artifact.solidityVkey = formatVKey(artifact.vkey);
+
+  return artifact;
+}
+
+module.exports = {
+  formatVKey,
+  getKeys,
+};
