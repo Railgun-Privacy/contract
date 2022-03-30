@@ -24,7 +24,7 @@ contract Verifier is OwnableUpgradeable {
   event VerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey verifyingKey);
 
   // Nullifiers => Commitments => Verification Key
-  mapping(uint256 => mapping(uint256 => VerifyingKey)) public verificationKeys;
+  mapping(uint256 => mapping(uint256 => VerifyingKey)) private verificationKeys;
 
   /**
    * @notice Sets verification key
@@ -37,10 +37,22 @@ contract Verifier is OwnableUpgradeable {
     uint256 _commitments,
     VerifyingKey calldata _verifyingKey
   ) public onlyOwner {
-    // TODO: Check if struct copying is an issue here
     verificationKeys[_nullifiers][_commitments] = _verifyingKey;
 
     emit VerifyingKeySet(_nullifiers, _commitments, _verifyingKey);
+  }
+
+  /**
+   * @notice Gets verification key
+   * @param _nullifiers - number of nullifiers this verification key is for
+   * @param _commitments - number of commitmets out this verification key is for
+   */
+  function getVerificationKey(
+    uint256 _nullifiers,
+    uint256 _commitments
+  ) public view returns (VerifyingKey memory) {
+    // Manually add getter so dynamic IC array is included in response
+    return verificationKeys[_nullifiers][_commitments];
   }
 
   /**
