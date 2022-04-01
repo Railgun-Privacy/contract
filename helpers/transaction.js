@@ -22,7 +22,23 @@ Private:
 - packedOut[numOut]
 */
 
-async function transaction(
+const dummyProof = {
+  a: { x: 0n, y: 0n },
+  b: { x: [0n, 0n], y: [0n, 0n] },
+  c: { x: 0n, y: 0n },
+};
+
+function hashBoundParams(
+  treeNumber,
+  withdraw,
+  adaptContract,
+  adaptParams,
+  
+) {
+
+}
+
+function formatInputs(
   merkleRoot,
   boundParamsHash,
   notesIn,
@@ -31,4 +47,34 @@ async function transaction(
 
 }
 
-module.exports = transaction;
+async function transact(
+  merkleRoot,
+  boundParamsHash,
+  notesIn,
+  notesOut,
+) {
+  const artifact = artifacts.getKeys(notesIn.length, notesOut.length);
+
+  const inputs = formatInputs(
+    merkleRoot,
+    boundParamsHash,
+    notesIn,
+    notesOut,
+  );
+
+  const proof = prover.prove(
+    artifact,
+    inputs,
+  );
+
+  return {
+    inputs,
+    proof,
+  };
+}
+
+module.exports = {
+  dummyProof,
+  formatInputs,
+  transact,
+};
