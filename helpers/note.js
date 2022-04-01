@@ -1,5 +1,4 @@
-const { babyjub, poseidon, eddsa } = require('circomlib');
-const ethers = require('ethers');
+const { poseidon, eddsa } = require('circomlib');
 const babyjubjubHelper = require('./babyjubjub');
 
 class Note {
@@ -12,41 +11,26 @@ class Note {
   }
 
   get masterPublicKey() {
-    const masterPrivateKey = babyjub.F.mul(this.babyjubjubPrivateKey, this.nullifyingKey);
-    return babyjubjubHelper.privateKeyToPublicKey(masterPrivateKey);
+    const babyJubJubPublicKey = babyjubjubHelper.privateKeyToPublicKey(this.babyjubjubPrivateKey);
+    return poseidon([babyJubJubPublicKey, this.nullifyingKey]);
   }
 
-  get packed() {
-    const sign = babyjub.F.lt(this.masterPublicKey[0], babyjub.F.zero);
-
-    const abiCoder = ethers.utils.defaultAbiCoder;
-
-    return abiCoder.encode([
-      sign,
-      this.value,
-      this.random,
-    ], [
-      'bool',
-      'uint120',
-      'uint128',
-    ]);
+  get notePublicKey() {
+    return poseidon([this.masterPublicKey, this.random]);
   }
 
   get hash() {
-    const y = this.masterPublicKey[1];
-
     return poseidon([
-      y,
-      this.packed,
+      this.notePublicKey,
       this.token,
+      this.value,
     ]);
   }
 
   getNullifier(leafIndex) {
     return poseidon([
-      leafIndex,
       this.nullifyingKey,
-      this.random,
+      leafIndex,
     ]);
   }
 
