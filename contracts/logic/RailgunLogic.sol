@@ -55,7 +55,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   event GeneratedCommitmentBatch(
     uint256 treeNumber,
     uint256 startPosition,
-    CommitmentPreimage[] commitments
+    CommitmentPreimage[] commitments,
+    uint256[2][] encryptedRandom
   );
 
   event Nullifiers(uint256 treeNumber, uint256[] nullifier);
@@ -180,13 +181,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    */
   function hashCommitment(CommitmentPreimage memory _commitmentPreimage) public pure returns (uint256) {
     return PoseidonT4.poseidon([
-      _commitmentPreimage.ypubkey,
-      uint256(bytes32(abi.encodePacked(
-        _commitmentPreimage.sign,
-        _commitmentPreimage.value,
-        _commitmentPreimage.random
-      ))),
-      getTokenField(_commitmentPreimage.token)
+      _commitmentPreimage.npk,
+      getTokenField(_commitmentPreimage.token),
+      _commitmentPreimage.value
     ]);
   }
 
@@ -240,25 +237,25 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         "RailgunLogic: Invalid SNARK proof"
       );
 
-      if (transaction.boundParams.withdraw) {
+      if (transaction.boundParams.withdraw > 0) {
         // First output is marked as withdraw, process
         // Hash the withdraw commitment preimage
-        uint256 commitmentHash = hashCommitment(transaction.withdraw);
+        uint256 commitmentHash = hashCommitment(transaction.withdrawPreimage);
 
         // Make sure the commitment hash matches the withdraw transaction output
         require(
-          commitmentHash == transaction.commitments[0],
+          commitmentHash == transaction.commitments[transaction.commitments.length - 1],
           "RailgunLogic: Withdraw commitment preimage is invalid"
         );
 
         // Fetch output address
-        address output = address(uint160(transaction.withdraw.ypubkey));
+        address output = address(uint160(transaction.withdrawPreimage.npk));
 
         // Check if we've been asked to override the withdraw destination
         if(transaction.overrideOutput != address(0)) {
-          // Sign must be true and msg.sender must be the original recepient to change the output destination
+          // Withdraw must == 2 and msg.sender must be the original recepient to change the output destination
           require(
-            msg.sender == output && transaction.withdraw.sign,
+            msg.sender == output && transaction.boundParams.withdraw == 2,
             "RailgunLogic: Can't override destination address"
           );
 
@@ -267,15 +264,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         }
 
         // Process withdrawal request
-        if (transaction.withdraw.token.tokenType == 0) {
+        if (transaction.withdrawPreimage.token.tokenType == 0) {
           // ERC20
           require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
 
           // Get ERC20 interface
-          IERC20 token = IERC20(address(uint160(transaction.withdraw.token.tokenAddress)));
+          IERC20 token = IERC20(address(uint160(transaction.withdrawPreimage.token.tokenAddress)));
 
           // Get base and fee amounts
-          (uint256 base, uint256 fee) = getFee(transaction.withdraw.value, true);
+          (uint256 base, uint256 fee) = getFee(transaction.withdrawPreimage.value, true);
 
           // Transfer base to output address
           token.safeTransfer(
@@ -288,10 +285,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
             treasury,
             fee
           );
-        } else if (transaction.withdraw.token.tokenType == 1) {
+        } else if (transaction.withdrawPreimage.token.tokenType == 1) {
           // ERC721 token
           revert("RailgunLogic: ERC721 not yet supported");
-        } else if (transaction.withdraw.token.tokenType == 2) {
+        } else if (transaction.withdrawPreimage.token.tokenType == 2) {
           // ERC1155 token
           revert("RailgunLogic: ERC1155 not yet supported");
         } else {
@@ -301,12 +298,12 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
         // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
         require(
-          transaction.boundParams.commitmentCiphertext.length == transaction.commitments.length,
+          transaction.boundParams.commitmentCiphertext.length == transaction.commitments.length - 1,
           "RailgunLogic: Ciphertexts and commitments count mismatch"
         );
 
         // Increment insertion commitment count (minus 1 for withdrawn output)
-        insertionCommitmentCount += transaction.commitments.length;
+        insertionCommitmentCount += transaction.commitments.length - 1;
       } else {
         // Ensure ciphertext length matches the commitments length
         require(
@@ -350,7 +347,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     // Emit commitment state update
     emit CommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, hashes, ciphertext);
 
-    // Push new commitments to merkle tree after event due to inserLeaves causing side effects
+    // Push new commitments to merkle tree after event due to insertLeaves causing side effects
     Commitments.insertLeaves(hashes);
   }
 
@@ -358,7 +355,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _notes - list of commitments to deposit
    */
-  function generateDeposit(CommitmentPreimage[] calldata _notes) external payable {
+  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata encryptedRandom) external payable {
     // Get notes length
     uint256 notesLength = _notes.length;
 
@@ -380,7 +377,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       );
 
       // Check ypubkey is in snark scalar field
-      require(note.ypubkey < SNARK_SCALAR_FIELD, "RailgunLogic: ypubkey out of range");
+      require(note.npk < SNARK_SCALAR_FIELD, "RailgunLogic: npk out of range");
 
       // Process deposit request
       if (note.token.tokenType == 0) {
@@ -395,10 +392,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
         // Add GeneratedCommitment to event array
         generatedCommitments[notesIter] = CommitmentPreimage({
-          ypubkey: note.ypubkey,
-          sign: note.sign,
+          npk: note.npk,
           value: base,
-          random: note.random,
           token: note.token
         });
 
@@ -434,7 +429,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     }
 
     // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments);
+    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments, encryptedRandom);
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);

@@ -23,7 +23,7 @@ struct CommitmentCiphertext {
 // Transaction bound parameters
 struct BoundParams {
   uint16 treeNumber;
-  bool withdraw; // Marks the last commitment for withdrawal
+  uint8 withdraw; // > 0 marks the last commitment for withdrawal, 1 for withdraw no override, 2 for withdraw override allowed
   address adaptContract;
   bytes32 adaptParams;
   // For withdraws do not include an element in ciphertext array
@@ -38,17 +38,15 @@ struct Transaction {
   uint256[] nullifiers;
   uint256[] commitments;
   BoundParams boundParams;
-  CommitmentPreimage withdraw;
-  address overrideOutput; // Only allowed if original destination == msg.sender & sign == true
+  CommitmentPreimage withdrawPreimage;
+  address overrideOutput; // Only allowed if original destination == msg.sender & boundParams.withdraw == 2
 }
 
 // Commitment hash preimage
 struct CommitmentPreimage {
-  uint256 ypubkey; // Y coordinate of master public key, used as output eth address for withdraws
-  bool sign; // Public key sign, used to indicate if output override is allowed
-  uint120 value; // Note value
-  uint128 random; // Randomness field
+  uint256 npk; // Poseidon(mpk, random), mpk = Poseidon(spending public key, nullifier)
   TokenData token; // Token field
+  uint120 value; // Note value
 }
 
 struct G1Point {

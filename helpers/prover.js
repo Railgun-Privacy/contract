@@ -8,24 +8,12 @@ const snarkjs = require('snarkjs');
  */
 function formatProof(proof) {
   return {
-    a: [
-      BigInt(proof.pi_a[0]),
-      BigInt(proof.pi_a[1]),
-    ],
-    b: [
-      [
-        BigInt(proof.pi_b[0][1]),
-        BigInt(proof.pi_b[0][0]),
-      ],
-      [
-        BigInt(proof.pi_b[1][1]),
-        BigInt(proof.pi_b[1][0]),
-      ],
-    ],
-    c: [
-      BigInt(proof.pi_c[0]),
-      BigInt(proof.pi_c[1]),
-    ],
+    a: { x: BigInt(proof.pi_a[0]), y: BigInt(proof.pi_a[1]) },
+    b: {
+      x: [BigInt(proof.pi_b[0][1]), BigInt(proof.pi_b[0][0])],
+      y: [BigInt(proof.pi_b[1][1]), BigInt(proof.pi_b[1][0])],
+    },
+    c: { x: BigInt(proof.pi_c[0]), y: BigInt(proof.pi_c[1]) },
   };
 }
 
