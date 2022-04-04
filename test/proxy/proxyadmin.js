@@ -1,4 +1,5 @@
-/* global describe it beforeEach ethers */
+/* global describe it beforeEach */
+const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 

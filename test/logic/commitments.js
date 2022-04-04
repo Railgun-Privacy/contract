@@ -1,5 +1,6 @@
 /* eslint-disable func-names */
-/* global describe it beforeEach ethers */
+/* global describe it beforeEach */
+const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 
@@ -58,10 +59,11 @@ describe('Logic/Commitments', () => {
     }
   });
 
-  it('Should incrementally insert elements', async () => {
+  it('Should incrementally insert elements', async function () {
     let loops = 10n;
 
     if (process.env.LONG_TESTS) {
+      this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
 

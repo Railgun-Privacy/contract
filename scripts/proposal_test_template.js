@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
-/* global ethers */
+const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 

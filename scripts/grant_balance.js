@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
-/* global ethers */
+const { ethers } = require('hardhat');
+
 const TOKEN_ADDRESS = '0xe76C6c83af64e4C60245D8C7dE953DF673a7A33D';
 const BALANCE_SLOT = 1;
 

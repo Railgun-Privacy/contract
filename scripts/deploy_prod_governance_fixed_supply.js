@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
-/* global ethers */
 const hre = require('hardhat');
+const { ethers } = require('hardhat');
 
 async function main() {
   // Get build artifacts

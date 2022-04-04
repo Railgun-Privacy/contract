@@ -17,9 +17,10 @@ class MerkleTree {
    * Merkle Tree
    *
    * @class Contract
+   * @param {number} [treeNumber = 0] - merkle tree number
    * @param {number} [depth = TREE_DEPTH] - merkle tree depth
    */
-  constructor(depth = 16) {
+  constructor(treeNumber = 0, depth = 16) {
     // Set depth
     /**
      * @type {number}
@@ -41,6 +42,9 @@ class MerkleTree {
 
     // Set empty tree root
     this.tree[depth] = [MerkleTree.hashLeftRight(this.zeros[depth - 1], this.zeros[depth - 1])];
+
+    // Set treenumber
+    this.treeNumber = treeNumber;
   }
 
   /**

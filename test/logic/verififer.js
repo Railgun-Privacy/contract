@@ -1,4 +1,7 @@
-/* global hre describe it beforeEach ethers */
+/* eslint-disable func-names */
+/* global describe it beforeEach */
+const hre = require('hardhat');
+const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 
@@ -7,6 +10,9 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 const artifacts = require('../../helpers/snarkKeys');
+const babyjubjub = require('../../helpers/babyjubjub');
+const MerkleTree = require('../../helpers/merkletree');
+const Note = require('../../helpers/note');
 const transaction = require('../../helpers/transaction');
 
 let verifier;
@@ -53,7 +59,95 @@ describe('Logic/Verifier', () => {
     expect(key.ic[0].x).to.equal(solidityVkey.ic[0].x);
   });
 
-  it('Should verify proof', async () => {
-    const tx = transaction.transact();
+  it('Should hash bound parameters', async function () {
+    let loops = 10n;
+
+    if (process.env.LONG_TESTS) {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 1000n;
+    }
+
+    for (let i = 0n; i < loops; i += 1n) {
+      const vector = {
+        treeNumber: 0n,
+        withdraw: 1n,
+        adaptContract: ethers.utils.keccak256(
+          ethers.BigNumber.from(i * loops).toHexString(),
+        ).slice(0, 42),
+        adaptParams: ethers.utils.keccak256(ethers.BigNumber.from(i).toHexString()),
+        commitmentCiphertext: new Array(i).fill({
+          ciphertext: [
+            ethers.utils.keccak256(ethers.BigNumber.from(i + loops * 0n).toHexString()),
+            ethers.utils.keccak256(ethers.BigNumber.from(i + loops * 1n).toHexString()),
+            ethers.utils.keccak256(ethers.BigNumber.from(i + loops * 2n).toHexString()),
+            ethers.utils.keccak256(ethers.BigNumber.from(i + loops * 3n).toHexString()),
+          ],
+          ephemeralKeys: [
+            ethers.utils.keccak256(ethers.BigNumber.from(i + loops * 4n).toHexString()),
+            ethers.utils.keccak256(ethers.BigNumber.from(i + loops * 5n).toHexString()),
+          ],
+          memo: new Array(i - 1n).fill(
+            ethers.utils.keccak256(ethers.BigNumber.from(i + loops * 6n).toHexString()),
+          ),
+        }),
+      };
+
+      const jsHash = transaction.hashBoundParams(vector);
+
+      // eslint-disable-next-line no-await-in-loop
+      const contractHash = await verifier.hashBoundParams(vector);
+
+      expect(contractHash).to.equal(jsHash);
+    }
+  });
+
+  it('Should verify proof', async function () {
+    this.timeout(5 * 60 * 60 * 1000);
+    if (!process.env.LONG_TESTS) {
+      this.skip();
+    }
+
+    const n1c2 = artifacts.getKeys(1, 2).solidityVkey;
+    const n2c3 = artifacts.getKeys(1, 2).solidityVkey;
+    await verifier.setVerificationKey(1, 2, n1c2);
+    await verifier.setVerificationKey(1, 2, n2c3);
+
+    let notesIn = [
+      new Note(
+        babyjubjub.genRandomPrivateKey(),
+        babyjubjub.genRandomPrivateKey(),
+        100n,
+        1231343524353254n,
+        4235435n,
+      ),
+    ];
+
+    let notesOut = [
+      new Note(
+        babyjubjub.genRandomPrivateKey(),
+        babyjubjub.genRandomPrivateKey(),
+        100n,
+        1231343524353254n,
+        4235435n,
+      ),
+      new Note(
+        babyjubjub.genRandomPrivateKey(),
+        babyjubjub.genRandomPrivateKey(),
+        100n,
+        1231343524353254n,
+        4235435n,
+      ),
+    ]
+
+    let merkletree = new MerkleTree();
+    merkletree.insertLeaves(notesIn.map((note) => note.hash));
+
+    const tx = transaction.transact(
+      merkletree,
+      0n,
+      '0x0000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000,',
+      notesIn,
+    );
   });
 });
