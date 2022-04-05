@@ -3,30 +3,9 @@ const artifacts = require('./snarkKeys');
 const prover = require('./prover');
 const { SNARK_SCALAR_FIELD } = require('./constants');
 const MerkleTree = require('./merkletree');
-const Note = require('./note');
+const { Note, WithdrawNote } = require('./note');
 
 const abiCoder = ethers.utils.defaultAbiCoder;
-
-/*
-Prover Inputs:
-
-Public:
-- merkleRoot
-- boundParamsHash
-- nullifiers
-- commitmentsOut
-
-Private:
-- token
-- publicSpendingKey[2]
-- signature[3]
-- packedIn[numIn]
-- merkleTreeElements[numIn * treeDepth]
-- merkleTreeIndicies[numIn]
-- nullifyingKey[numIn]
-- to[numOut] (master public key of recipient)
-- packedOut[numOut]
-*/
 
 const dummyProof = {
   solidity: {
@@ -58,7 +37,7 @@ function hashBoundParams(boundParams) {
  * @param {string} adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param {bigint} adaptParams - parameter field for use by adapt module
  * @param {Array<Note>} notesIn - transaction inputs
- * @param {Array<Note>} notesOut - transaction outputs
+ * @param {Array<Note | WithdrawNote>} notesOut - transaction outputs
  * @returns {object} inputs
  */
 function formatInputs(
@@ -140,8 +119,8 @@ function formatInputs(
  * @param {string} adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param {bigint} adaptParams - parameter field for use by adapt module
  * @param {Array<Note>} notesIn - transaction inputs
- * @param {Array<Note>} notesOut - transaction outputs
- * @param {Note} withdrawPreimage - withdraw note preimage
+ * @param {Array<Note | WithdrawNote>} notesOut - transaction outputs
+ * @param {object} withdrawPreimage - withdraw note preimage
  * @param {string} overrideOutput - redirect output to address
  * @returns {object} inputs
  */
@@ -190,8 +169,8 @@ function formatPublicInputs(
  * @param {string} adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param {bigint} adaptParams - parameter field for use by adapt module
  * @param {Array<Note>} notesIn - transaction inputs
- * @param {Array<Note>} notesOut - transaction outputs
- * @param {Note} withdrawPreimage - withdraw note preimage
+ * @param {Array<Note | WithdrawNote>} notesOut - transaction outputs
+ * @param {object} withdrawPreimage - withdraw note preimage
  * @param {string} overrideOutput - redirect output to address
  * @returns {object} transaction
  */
@@ -245,8 +224,8 @@ async function transact(
  * @param {string} adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param {bigint} adaptParams - parameter field for use by adapt module
  * @param {Array<Note>} notesIn - transaction inputs
- * @param {Array<Note>} notesOut - transaction outputs
- * @param {Note} withdrawPreimage - withdraw note preimage
+ * @param {Array<Note | WithdrawNote>} notesOut - transaction outputs
+ * @param {WithdrawNote} withdrawPreimage - withdraw note preimage
  * @param {string} overrideOutput - redirect output to address
  * @returns {object} transaction
  */

@@ -12,7 +12,7 @@ const { expect } = chai;
 const artifacts = require('../../helpers/snarkKeys');
 const babyjubjub = require('../../helpers/babyjubjub');
 const MerkleTree = require('../../helpers/merkletree');
-const Note = require('../../helpers/note');
+const { Note } = require('../../helpers/note');
 const transaction = require('../../helpers/transaction');
 
 let verifier;
@@ -101,41 +101,39 @@ describe('Logic/Verifier', () => {
     }
   });
 
-  it('Should verify proof', async function () {
-    this.timeout(5 * 60 * 60 * 1000);
-    if (!process.env.LONG_TESTS) {
-      this.skip();
-    }
-
+  it('Should verify dummy proofs', async () => {
     const n1c2 = artifacts.getKeys(1, 2).solidityVkey;
     const n2c3 = artifacts.getKeys(2, 3).solidityVkey;
     await verifier.setVerificationKey(1, 2, n1c2);
     await verifier.setVerificationKey(2, 3, n2c3);
 
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
     let notesIn = [
       new Note(
-        babyjubjub.genRandomPrivateKey(),
-        babyjubjub.genRandomPrivateKey(),
+        spendingKey,
+        viewingKey,
         100n,
-        1231343524353254n,
-        4235435n,
+        babyjubjub.genRandomPrivateKey(),
+        1n,
       ),
     ];
 
     let notesOut = [
       new Note(
+        spendingKey,
+        viewingKey,
+        50n,
         babyjubjub.genRandomPrivateKey(),
-        babyjubjub.genRandomPrivateKey(),
-        100n,
-        1231343524353254n,
         4235435n,
       ),
       new Note(
+        spendingKey,
+        viewingKey,
+        50n,
         babyjubjub.genRandomPrivateKey(),
-        babyjubjub.genRandomPrivateKey(),
-        100n,
-        1231343524353254n,
-        4235435n,
+        1n,
       ),
     ];
 
@@ -149,6 +147,7 @@ describe('Logic/Verifier', () => {
       '0x0000000000000000000000000000000000000000000000000000000000000000,',
       notesIn,
       notesOut,
+      new Note(0n, 0n, 0n, 0n, 0n),
     );
   });
 });

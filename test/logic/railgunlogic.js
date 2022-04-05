@@ -9,7 +9,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 const babyjubjub = require('../../helpers/babyjubjub');
-const Note = require('../../helpers/note');
+const { Note } = require('../../helpers/note');
 
 let railgunLogic;
 let primaryAccount;

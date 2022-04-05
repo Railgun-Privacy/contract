@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 const { poseidon, eddsa } = require('circomlib');
 const babyjubjubHelper = require('./babyjubjub');
 
@@ -108,4 +109,35 @@ class Note {
   }
 }
 
-module.exports = Note;
+class WithdrawNote {
+  /**
+   * Create Note object
+   *
+   * @param {bigint} withdrawAddress - address to withdraw to
+   * @param {bigint} value - note value
+   * @param {bigint} token - note token
+   */
+  constructor(withdrawAddress, value, token) {
+    this.withdrawAddress = withdrawAddress;
+    this.value = value;
+    this.token = token;
+  }
+
+  /**
+   * Get note hash
+   *
+   * @returns {bigint} hash
+   */
+  get hash() {
+    return poseidon([
+      this.withdrawAddress,
+      this.token,
+      this.value,
+    ]);
+  }
+}
+
+module.exports = {
+  Note,
+  WithdrawNote,
+};
