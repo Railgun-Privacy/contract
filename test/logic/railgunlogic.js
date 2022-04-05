@@ -51,14 +51,14 @@ describe('Logic/RailgunLogic', () => {
 
     for (let i = 0n; i < loops; i += 1n) {
       const privateKey = babyjubjub.genRandomPrivateKey();
-      const nullifyingKey = babyjubjub.genRandomPrivateKey();
+      const viewingKey = babyjubjub.genRandomPrivateKey();
       const token = ethers.utils.keccak256(
         ethers.BigNumber.from(i * loops).toHexString(),
       ).slice(0, 42);
 
       const note = new Note(
         privateKey,
-        nullifyingKey,
+        viewingKey,
         i,
         BigInt(ethers.utils.keccak256(ethers.BigNumber.from(i).toHexString())),
         BigInt(`${token}`),
