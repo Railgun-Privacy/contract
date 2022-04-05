@@ -52,13 +52,16 @@ describe('Logic/RailgunLogic', () => {
     for (let i = 0n; i < loops; i += 1n) {
       const privateKey = babyjubjub.genRandomPrivateKey();
       const nullifyingKey = babyjubjub.genRandomPrivateKey();
+      const token = ethers.utils.keccak256(
+        ethers.BigNumber.from(i * loops).toHexString(),
+      ).slice(0, 42);
 
       const note = new Note(
         privateKey,
         nullifyingKey,
         i,
         BigInt(ethers.utils.keccak256(ethers.BigNumber.from(i).toHexString())),
-        BigInt(ethers.utils.keccak256(ethers.BigNumber.from(i * loops).toHexString()).slice(0, 42)),
+        BigInt(`${token}`),
       );
 
       // eslint-disable-next-line no-await-in-loop
@@ -66,7 +69,7 @@ describe('Logic/RailgunLogic', () => {
         npk: note.notePublicKey,
         token: {
           tokenType: 0,
-          tokenAddress: ethers.BigNumber.from(note.token).toHexString(),
+          tokenAddress: token,
           tokenSubID: 0,
         },
         value: note.value,
