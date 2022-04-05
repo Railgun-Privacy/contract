@@ -5,14 +5,14 @@ class Note {
   /**
    * Create Note object
    *
-   * @param {bigint} babyjubjubPrivateKey - spending private key
+   * @param {bigint} spendingKey - spending private key
    * @param {bigint} viewingKey - viewing key
    * @param {bigint} value - note value
    * @param {bigint} random - note random field
    * @param {bigint} token - note token
    */
-  constructor(babyjubjubPrivateKey, viewingKey, value, random, token) {
-    this.babyjubjubPrivateKey = babyjubjubPrivateKey;
+  constructor(spendingKey, viewingKey, value, random, token) {
+    this.spendingKey = spendingKey;
     this.viewingKey = viewingKey;
     this.value = value;
     this.random = random;
@@ -29,13 +29,21 @@ class Note {
   }
 
   /**
+   * Get note spending public key
+   *
+   * @returns {bigint} spending public key
+   */
+  get spendingPublicKey() {
+    return babyjubjubHelper.privateKeyToPublicKey(this.babyjubjubPrivateKey);
+  }
+
+  /**
    * Get note master public key
    *
    * @returns {bigint} master public key
    */
   get masterPublicKey() {
-    const babyJubJubPublicKey = babyjubjubHelper.privateKeyToPublicKey(this.babyjubjubPrivateKey);
-    return poseidon([...babyJubJubPublicKey, this.nullifyingKey]);
+    return poseidon([...this.spendingPublicKey, this.nullifyingKey]);
   }
 
   /**
