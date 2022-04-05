@@ -1,6 +1,5 @@
 /* eslint-disable func-names */
 /* global describe it beforeEach */
-const hre = require('hardhat');
 const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
@@ -42,7 +41,7 @@ describe('Logic/RailgunLogic', () => {
     );
   });
 
-  it('Should hash note preimages', async () => {
+  it('Should hash note preimages', async function () {
     let loops = 10n;
 
     if (process.env.LONG_TESTS) {
