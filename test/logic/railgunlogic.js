@@ -62,8 +62,6 @@ describe('Logic/RailgunLogic', () => {
         BigInt(ethers.utils.keccak256(ethers.BigNumber.from(i * loops).toHexString()).slice(0, 42)),
       );
 
-      console.log(note);
-
       // eslint-disable-next-line no-await-in-loop
       const contractHash = await railgunLogic.hashCommitment({
         npk: note.notePublicKey,
@@ -74,9 +72,6 @@ describe('Logic/RailgunLogic', () => {
         },
         value: note.value,
       });
-
-      console.log(note.hash);
-      console.log(contractHash);
 
       expect(contractHash).to.equal(note.hash);
     }
