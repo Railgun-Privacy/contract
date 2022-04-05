@@ -47,7 +47,6 @@ function formatInputs(
   adaptParams,
   notesIn,
   notesOut,
-  publicSpendingKey,
 ) {
   const merkleRoot = merkletree.root;
   const { treeNumber } = merkletree;
@@ -123,7 +122,6 @@ async function transact(
   notesOut,
   withdrawPreimage,
   overrideOutput,
-  publicSpendingKey,
 ) {
   const artifact = artifacts.getKeys(notesIn.length, notesOut.length);
 
@@ -134,7 +132,6 @@ async function transact(
     adaptParams,
     notesIn,
     notesOut,
-    publicSpendingKey,
   );
 
   const proof = prover.prove(

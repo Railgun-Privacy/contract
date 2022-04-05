@@ -108,9 +108,9 @@ describe('Logic/Verifier', () => {
     }
 
     const n1c2 = artifacts.getKeys(1, 2).solidityVkey;
-    const n2c3 = artifacts.getKeys(1, 2).solidityVkey;
+    const n2c3 = artifacts.getKeys(2, 3).solidityVkey;
     await verifier.setVerificationKey(1, 2, n1c2);
-    await verifier.setVerificationKey(1, 2, n2c3);
+    await verifier.setVerificationKey(2, 3, n2c3);
 
     let notesIn = [
       new Note(
@@ -137,7 +137,7 @@ describe('Logic/Verifier', () => {
         1231343524353254n,
         4235435n,
       ),
-    ]
+    ];
 
     let merkletree = new MerkleTree();
     merkletree.insertLeaves(notesIn.map((note) => note.hash));
@@ -148,6 +148,7 @@ describe('Logic/Verifier', () => {
       '0x0000000000000000000000000000000000000000',
       '0x0000000000000000000000000000000000000000000000000000000000000000,',
       notesIn,
+      notesOut,
     );
   });
 });

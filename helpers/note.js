@@ -26,7 +26,8 @@ class Note {
    */
   get masterPublicKey() {
     const babyJubJubPublicKey = babyjubjubHelper.privateKeyToPublicKey(this.babyjubjubPrivateKey);
-    return poseidon([babyJubJubPublicKey, this.nullifyingKey]);
+    const nullifier = poseidon([this.nullifyingKey]);
+    return poseidon([...babyJubJubPublicKey, nullifier]);
   }
 
   /**

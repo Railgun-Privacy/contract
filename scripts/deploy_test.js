@@ -44,17 +44,6 @@ async function main() {
   // Deploy Proxy
   const proxy = await Proxy.deploy((await ethers.getSigners())[0].address);
 
-  // Deploy Poseidon library
-  await overwriteArtifact(
-    'PoseidonT3',
-    poseidonGenContract.createCode(2),
-  );
-
-  await overwriteArtifact(
-    'PoseidonT4',
-    poseidonGenContract.createCode(3),
-  );
-
   // Deploy Poseidon libraries
   const poseidonT3 = await PoseidonT3.deploy();
   const poseidonT4 = await PoseidonT4.deploy();
