@@ -103,6 +103,7 @@ class Note {
       ...commitmentsOut,
     ]);
 
+    // TODO: Fix signPoseidon call
     return eddsa.signPoseidon(this.babyjubjubPrivateKey, hash);
   }
 }
