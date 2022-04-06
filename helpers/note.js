@@ -1,5 +1,5 @@
 /* eslint-disable max-classes-per-file */
-const { poseidon, eddsa } = require('circomlib');
+const { poseidon, eddsa } = require('circomlibjs');
 const babyjubjubHelper = require('./babyjubjub');
 
 class Note {

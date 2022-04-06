@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
 const crypto = require('crypto');
 const { ethers } = require('hardhat');
-const { babyJub, eddsa, poseidon } = require('circomlib');
+const { babyJub, eddsa, poseidon } = require('circomlibjs');
 
 /**
  * Generates random babyjubjub privateKey

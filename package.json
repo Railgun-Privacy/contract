@@ -14,7 +14,7 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "chai": "^4.3.0",
     "chai-as-promised": "^7.1.1",
-    "circomlib": "0.5.1",
+    "circomlibjs": "0.0.8",
     "eslint": "^7.20.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.22.1",

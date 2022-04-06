@@ -1,6 +1,6 @@
 /* global task hre runSuper */
 const ethers = require('@nomiclabs/hardhat-ethers');
-const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
+const { poseidon_gencontract } = require('circomlibjs');
 require('@nomiclabs/hardhat-etherscan');
 require('@nomiclabs/hardhat-waffle');
 require('hardhat-contract-sizer');
@@ -32,12 +32,12 @@ task('compile', 'Compiles the entire project, building all artifacts and injecti
 
   await hre.overwriteArtifact(
     'PoseidonT3',
-    poseidonGenContract.createCode(2),
+    poseidon_gencontract.createCode(2),
   );
 
   await hre.overwriteArtifact(
     'PoseidonT4',
-    poseidonGenContract.createCode(3),
+    poseidon_gencontract.createCode(3),
   );
 });
 

@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-const { poseidon } = require('circomlib');
+const { poseidon } = require('circomlibjs');
 
 const MerkleTree = require('../../helpers/merkletree');
 
