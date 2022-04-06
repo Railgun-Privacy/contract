@@ -2,7 +2,6 @@
 /* eslint-disable jsdoc/require-jsdoc */
 /* global overwriteArtifact */
 const { ethers } = require('hardhat');
-const poseidonGenContract = require('circomlib/src/poseidon_gencontract');
 
 async function main() {
   // Get build artifacts

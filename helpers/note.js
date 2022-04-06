@@ -35,7 +35,7 @@ class Note {
    * @returns {bigint} spending public key
    */
   get spendingPublicKey() {
-    return babyjubjubHelper.privateKeyToPublicKey(this.babyjubjubPrivateKey);
+    return babyjubjubHelper.privateKeyToPublicKey(this.spendingKey);
   }
 
   /**
@@ -105,7 +105,7 @@ class Note {
     ]);
 
     // TODO: Fix signPoseidon call
-    return eddsa.signPoseidon(this.babyjubjubPrivateKey, hash);
+    return eddsa.signPoseidon(this.spendingKey, hash);
   }
 }
 
