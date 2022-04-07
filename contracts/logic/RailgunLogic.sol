@@ -238,7 +238,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       );
 
       if (transaction.boundParams.withdraw > 0) {
-        // First output is marked as withdraw, process
+        // Last output is marked as withdraw, process
         // Hash the withdraw commitment preimage
         uint256 commitmentHash = hashCommitment(transaction.withdrawPreimage);
 
