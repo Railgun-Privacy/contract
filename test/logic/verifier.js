@@ -140,14 +140,16 @@ describe('Logic/Verifier', () => {
     let merkletree = new MerkleTree();
     merkletree.insertLeaves(notesIn.map((note) => note.hash));
 
-    const tx = transaction.transact(
+    const tx = await transaction.transact(
       merkletree,
       0n,
       '0x0000000000000000000000000000000000000000',
-      '0x0000000000000000000000000000000000000000000000000000000000000000,',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
       notesIn,
       notesOut,
       new Note(0n, 0n, 0n, 0n, 0n),
     );
+
+    expect(await verifier.verify(tx)).to.equal(true);
   });
 });

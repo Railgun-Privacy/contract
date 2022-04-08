@@ -1,4 +1,5 @@
 /* eslint-disable max-classes-per-file */
+const { ethers } = require('hardhat');
 const { poseidon, eddsa } = require('circomlibjs');
 const babyjubjubHelper = require('./babyjubjub');
 
@@ -104,8 +105,12 @@ class Note {
       ...commitmentsOut,
     ]);
 
-    // TODO: Fix signPoseidon call
-    return eddsa.signPoseidon(this.spendingKey, hash);
+    const sigPreimage = Buffer.from(
+      ethers.BigNumber.from(hash).toHexString().slice(2),
+      'hex',
+    );
+
+    return eddsa.signPoseidon(this.spendingKey, sigPreimage);
   }
 }
 

@@ -62,7 +62,7 @@ function formatInputs(
     const merkleProof = merkletree.generateProof(note.hash);
     return note.getNullifier(merkleProof.indices);
   });
-  const commitmentsOut = notesOut.forEach((note) => note.hash);
+  const commitmentsOut = notesOut.map((note) => note.hash);
 
   // PRIVATE INPUTS
   const { token } = notesIn[0];
