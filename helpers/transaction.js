@@ -50,7 +50,7 @@ function formatInputs(
 ) {
   // PUBLIC INPUTS
   const merkleRoot = merkletree.root;
-  const { treeNumber } = merkletree;
+  const treeNumber = BigInt(merkletree.treeNumber);
   const boundParamsHash = hashBoundParams({
     treeNumber,
     withdraw,
@@ -85,7 +85,7 @@ function formatInputs(
   });
   const { nullifyingKey } = notesIn[0];
   const npkOut = notesOut.map((note) => note.notePublicKey);
-  const valueOut = notesOut.map();
+  const valueOut = notesOut.map((note) => note.value);
 
   return {
     // PUBLIC INPUTS
@@ -136,10 +136,10 @@ function formatPublicInputs(
   overrideOutput,
 ) {
   const merkleRoot = merkletree.root;
-  const { treeNumber } = merkletree;
+  const treeNumber = BigInt(merkletree.treeNumber);
   const nullifiers = notesIn.map((note) => {
     const merkleProof = merkletree.generateProof(note.hash);
-    return note.getNullifier(merkleProof.indicies);
+    return note.getNullifier(merkleProof.indices);
   });
   const commitments = notesOut.map((note) => note.hash);
 
@@ -155,7 +155,15 @@ function formatPublicInputs(
       adaptParams,
       commitmentCiphertext: [],
     },
-    withdrawPreimage,
+    withdrawPreimage: {
+      npk: withdrawPreimage.notePublicKey,
+      token: {
+        tokenType: 0n,
+        tokenAddress: `0x${withdrawPreimage.token.toString(16).padStart(40, '0')}`,
+        tokenSubID: 0n,
+      },
+      value: withdrawPreimage.value,
+    },
     overrideOutput,
   };
 }
@@ -252,7 +260,6 @@ async function dummyTransact(
     withdrawPreimage,
     overrideOutput,
   );
-
   return publicInputs;
 }
 

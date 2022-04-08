@@ -43,16 +43,10 @@ function formatVKey(vkey) {
         BigInt(vkey.vk_delta_2[1][0]),
       ],
     },
-    ic: [
-      {
-        x: BigInt(vkey.IC[0][0]),
-        y: BigInt(vkey.IC[0][1]),
-      },
-      {
-        x: BigInt(vkey.IC[1][0]),
-        y: BigInt(vkey.IC[1][1]),
-      },
-    ],
+    ic: vkey.IC.map((icEl) => ({
+      x: BigInt(icEl[0]),
+      y: BigInt(icEl[1]),
+    })),
   };
 }
 

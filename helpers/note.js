@@ -105,12 +105,12 @@ class Note {
       ...commitmentsOut,
     ]);
 
-    const sigPreimage = Buffer.from(
-      ethers.BigNumber.from(hash).toHexString().slice(2),
+    const key = Buffer.from(
+      ethers.BigNumber.from(this.spendingKey).toHexString().slice(2),
       'hex',
     );
 
-    return eddsa.signPoseidon(this.spendingKey, sigPreimage);
+    return eddsa.signPoseidon(key, hash);
   }
 }
 

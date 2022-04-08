@@ -101,7 +101,7 @@ describe('Logic/Verifier', () => {
     }
   });
 
-  it('Should verify dummy proofs', async () => {
+  it('Should verify proofs', async () => {
     const n1c2 = artifacts.getKeys(1, 2).solidityVkey;
     const n2c3 = artifacts.getKeys(2, 3).solidityVkey;
     await verifier.setVerificationKey(1, 2, n1c2);
@@ -148,8 +148,62 @@ describe('Logic/Verifier', () => {
       notesIn,
       notesOut,
       new Note(0n, 0n, 0n, 0n, 0n),
+      '0x0000000000000000000000000000000000000000',
     );
 
     expect(await verifier.verify(tx)).to.equal(true);
+  });
+
+  it('Should verify dummy proofs', async () => {
+    const n1c2 = artifacts.getKeys(1, 2).solidityVkey;
+    const n2c3 = artifacts.getKeys(2, 3).solidityVkey;
+    await verifier.setVerificationKey(1, 2, n1c2);
+    await verifier.setVerificationKey(2, 3, n2c3);
+
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
+    let notesIn = [
+      new Note(
+        spendingKey,
+        viewingKey,
+        100n,
+        babyjubjub.genRandomPrivateKey(),
+        1n,
+      ),
+    ];
+
+    let notesOut = [
+      new Note(
+        spendingKey,
+        viewingKey,
+        50n,
+        babyjubjub.genRandomPrivateKey(),
+        4235435n,
+      ),
+      new Note(
+        spendingKey,
+        viewingKey,
+        50n,
+        babyjubjub.genRandomPrivateKey(),
+        1n,
+      ),
+    ];
+
+    let merkletree = new MerkleTree();
+    merkletree.insertLeaves(notesIn.map((note) => note.hash));
+
+    const tx = await transaction.dummyTransact(
+      merkletree,
+      0n,
+      '0x0000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      notesIn,
+      notesOut,
+      new Note(0n, 0n, 0n, 0n, 0n),
+      '0x0000000000000000000000000000000000000000',
+    );
+
+    expect(await verifierBypassSigner.verify(tx)).to.equal(true);
   });
 });
