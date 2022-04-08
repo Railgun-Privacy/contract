@@ -90,7 +90,6 @@ function formatInputs(
   return {
     // PUBLIC INPUTS
     merkleRoot,
-    treeNumber,
     boundParamsHash,
     nullifiers,
     commitmentsOut,

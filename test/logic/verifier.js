@@ -126,7 +126,7 @@ describe('Logic/Verifier', () => {
         viewingKey,
         50n,
         babyjubjub.genRandomPrivateKey(),
-        4235435n,
+        1n,
       ),
       new Note(
         spendingKey,
@@ -179,7 +179,7 @@ describe('Logic/Verifier', () => {
         viewingKey,
         50n,
         babyjubjub.genRandomPrivateKey(),
-        4235435n,
+        1n,
       ),
       new Note(
         spendingKey,

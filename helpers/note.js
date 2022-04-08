@@ -110,7 +110,9 @@ class Note {
       'hex',
     );
 
-    return eddsa.signPoseidon(key, hash);
+    const sig = eddsa.signPoseidon(key, hash);
+
+    return [...sig.R8, sig.S];
   }
 }
 
