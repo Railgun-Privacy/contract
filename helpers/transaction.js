@@ -203,7 +203,7 @@ async function transact(
     notesOut,
   );
 
-  const proof = prover.prove(
+  const proof = await prover.prove(
     artifact,
     inputs,
   );
