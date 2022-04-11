@@ -140,22 +140,25 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _feeBP - Fee basis points
    * @return base, fee
    */
-  function getFee(uint120 _amount, bool _isInclusive, uint120 _feeBP) public pure returns (uint120, uint120) {
+  function getFee(uint136 _amount, bool _isInclusive, uint120 _feeBP) public pure returns (uint120, uint120) {
+    // Expand width of amount to uint136 to accomodate full size of (2**120-1)*BASIS_POINTS
+    uint136 amountExpanded = _amount;
+
     // Base is the amount deposited into the railgun contract or withdrawn to the target eth address
     // for deposits and withdraws respectively
-    uint120 base;
+    uint136 base;
     // Fee is the amount sent to the treasury
-    uint120 fee;
+    uint136 fee;
 
     if (_isInclusive) {
-      base = (_amount * BASIS_POINTS) / (BASIS_POINTS + _feeBP);
-      fee = _amount - base;
+      base = (amountExpanded * BASIS_POINTS) / (BASIS_POINTS + _feeBP);
+      fee = amountExpanded - base;
     } else {
-      base = _amount;
-      fee = (_amount * _feeBP) / BASIS_POINTS;
+      base = amountExpanded;
+      fee = (amountExpanded * _feeBP) / BASIS_POINTS;
     }
 
-    return (base, fee);
+    return (uint120(base), uint120(fee));
   }
 
   /**
@@ -186,6 +189,90 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       getTokenField(_commitmentPreimage.token),
       _commitmentPreimage.value
     ]);
+  }
+
+  /**
+   * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
+   * @param _notes - list of commitments to deposit
+   */
+  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata encryptedRandom) external payable {
+    // Get notes length
+    uint256 notesLength = _notes.length;
+
+    // Insertion and event arrays
+    uint256[] memory insertionLeaves = new uint256[](notesLength);
+    CommitmentPreimage[] memory generatedCommitments = new CommitmentPreimage[](notesLength);
+
+    for (uint256 notesIter = 0; notesIter < notesLength; notesIter++) {
+      // Retrieve note
+      CommitmentPreimage calldata note = _notes[notesIter];
+
+      // Check deposit amount is not 0
+      require(note.value > 0, "RailgunLogic: Cannot deposit 0 tokens");
+
+      // Check if token is on the blacklist
+      require(
+        !TokenBlacklist.tokenBlacklist[note.token.tokenAddress],
+        "RailgunLogic: Token is blacklisted"
+      );
+
+      // Check ypubkey is in snark scalar field
+      require(note.npk < SNARK_SCALAR_FIELD, "RailgunLogic: npk out of range");
+
+      // Process deposit request
+      if (note.token.tokenType == 0) {
+        // ERC20
+        require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
+
+        // Get ERC20 interface
+        IERC20 token = IERC20(address(uint160(note.token.tokenAddress)));
+
+        // Get base and fee amounts
+        (uint120 base, uint120 fee) = getFee(note.value, true, depositFee);
+
+        // Add GeneratedCommitment to event array
+        generatedCommitments[notesIter] = CommitmentPreimage({
+          npk: note.npk,
+          value: base,
+          token: note.token
+        });
+
+        // Calculate commitment hash
+        uint256 hash = hashCommitment(generatedCommitments[notesIter]);
+
+        // Add to insertion array
+        insertionLeaves[notesIter] = hash;
+
+        // Transfer base to output address
+        token.safeTransferFrom(
+          address(msg.sender),
+          address(this),
+          base
+        );
+
+        // Transfer fee to treasury
+        token.safeTransferFrom(
+          address(msg.sender),
+          treasury,
+          fee
+        );
+      } else if (note.token.tokenType == 1) {
+        // ERC721 token
+        revert("RailgunLogic: ERC721 not yet supported");
+      } else if (note.token.tokenType == 2) {
+        // ERC1155 token
+        revert("RailgunLogic: ERC1155 not yet supported");
+      } else {
+        // Invalid token type, revert
+        revert("RailgunLogic: Unknown token type");
+      }
+    }
+
+    // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
+    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments, encryptedRandom);
+
+    // Push new commitments to merkle tree
+    Commitments.insertLeaves(insertionLeaves);
   }
 
   /**
@@ -273,7 +360,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
           IERC20 token = IERC20(address(uint160(transaction.withdrawPreimage.token.tokenAddress)));
 
           // Get base and fee amounts
-          (uint256 base, uint256 fee) = getFee(transaction.withdrawPreimage.value, true, withdrawFee);
+          (uint120 base, uint120 fee) = getFee(transaction.withdrawPreimage.value, true, withdrawFee);
 
           // Transfer base to output address
           token.safeTransfer(
@@ -350,89 +437,5 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
     // Push new commitments to merkle tree after event due to insertLeaves causing side effects
     Commitments.insertLeaves(hashes);
-  }
-
-  /**
-   * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
-   * @param _notes - list of commitments to deposit
-   */
-  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata encryptedRandom) external payable {
-    // Get notes length
-    uint256 notesLength = _notes.length;
-
-    // Insertion and event arrays
-    uint256[] memory insertionLeaves = new uint256[](notesLength);
-    CommitmentPreimage[] memory generatedCommitments = new CommitmentPreimage[](notesLength);
-
-    for (uint256 notesIter = 0; notesIter < notesLength; notesIter++) {
-      // Retrieve note
-      CommitmentPreimage calldata note = _notes[notesIter];
-
-      // Check deposit amount is not 0
-      require(note.value > 0, "RailgunLogic: Cannot deposit 0 tokens");
-
-      // Check if token is on the blacklist
-      require(
-        !TokenBlacklist.tokenBlacklist[note.token.tokenAddress],
-        "RailgunLogic: Token is blacklisted"
-      );
-
-      // Check ypubkey is in snark scalar field
-      require(note.npk < SNARK_SCALAR_FIELD, "RailgunLogic: npk out of range");
-
-      // Process deposit request
-      if (note.token.tokenType == 0) {
-        // ERC20
-        require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
-
-        // Get ERC20 interface
-        IERC20 token = IERC20(address(uint160(note.token.tokenAddress)));
-
-        // Get base and fee amounts
-        (uint120 base, uint120 fee) = getFee(note.value, true, depositFee);
-
-        // Add GeneratedCommitment to event array
-        generatedCommitments[notesIter] = CommitmentPreimage({
-          npk: note.npk,
-          value: base,
-          token: note.token
-        });
-
-        // Calculate commitment hash
-        uint256 hash = hashCommitment(generatedCommitments[notesIter]);
-
-        // Add to insertion array
-        insertionLeaves[notesIter] = hash;
-
-        // Transfer base to output address
-        token.safeTransferFrom(
-          address(msg.sender),
-          address(this),
-          base
-        );
-
-        // Transfer fee to treasury
-        token.safeTransferFrom(
-          address(msg.sender),
-          treasury,
-          fee
-        );
-      } else if (note.token.tokenType == 1) {
-        // ERC721 token
-        revert("RailgunLogic: ERC721 not yet supported");
-      } else if (note.token.tokenType == 2) {
-        // ERC1155 token
-        revert("RailgunLogic: ERC1155 not yet supported");
-      } else {
-        // Invalid token type, revert
-        revert("RailgunLogic: Unknown token type");
-      }
-    }
-
-    // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments, encryptedRandom);
-
-    // Push new commitments to merkle tree
-    Commitments.insertLeaves(insertionLeaves);
   }
 }
