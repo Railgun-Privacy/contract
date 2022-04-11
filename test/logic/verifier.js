@@ -107,13 +107,26 @@ describe('Logic/Verifier', () => {
    * @param {ethers.Contract} verifierContract - verifier Contract
    */
   async function loadAllArtifacts(verifierContract) {
-    await Promise.all(
-      artifacts.allArtifacts().map(
-        async (x, nullifiers) => Promise.all(x.map(async (y, commitments) => {
-          await verifierContract.setVerificationKey(nullifiers, commitments, y.solidityVkey);
-        })),
-      ),
-    );
+    const artifactsList = artifacts.allArtifacts();
+
+    let nullifiers = 1;
+
+    for (nullifiers; nullifiers < artifactsList.length; nullifiers += 1) {
+      let commitments = 1;
+
+      if (artifactsList[nullifiers]) {
+        for (commitments; commitments < artifactsList[nullifiers].lenght; commitments += 1) {
+          if (artifactsList[nullifiers][commitments]) {
+            // eslint-disable-next-line no-await-in-loop
+            await verifierContract.setVerificationKey(
+              nullifiers,
+              commitments,
+              artifactsList[nullifiers][commitments].solidityVkey,
+            );
+          }
+        }
+      }
+    }
   }
 
   it('Should verify dummy proofs', async () => {
@@ -156,6 +169,7 @@ describe('Logic/Verifier', () => {
             new Note(0n, 0n, 0n, 0n, 0n),
             ethers.constants.AddressZero,
           );
+
           expect(await verifierBypassSigner.verify(tx)).to.equal(true);
         })),
       ),
@@ -211,5 +225,62 @@ describe('Logic/Verifier', () => {
         })),
       ),
     );
+  });
+
+  it('Should throw error if circuit artifacts don\'t exist', async () => {
+    const limit = 20;
+
+    const artifactsList = artifacts.allArtifacts();
+    await loadAllArtifacts(verifier);
+
+    let nullifiers = 1;
+
+    for (nullifiers; nullifiers < limit; nullifiers += 1) {
+      let commitments = 1;
+      for (commitments; commitments < limit; commitments += 1) {
+        if (!artifactsList[nullifiers]?.[commitments]) {
+          const spendingKey = babyjubjub.genRandomPrivateKey();
+          const viewingKey = babyjubjub.genRandomPrivateKey();
+
+          const txTotal = BigInt(nullifiers) * BigInt(commitments);
+
+          // eslint-disable-next-line no-loop-func
+          const notesIn = new Array(nullifiers).fill(1).map(() => new Note(
+            spendingKey,
+            viewingKey,
+            txTotal / BigInt(nullifiers),
+            babyjubjub.genRandomPoint(),
+            1n,
+          ));
+
+          // eslint-disable-next-line no-loop-func
+          const notesOut = new Array(commitments).fill(1).map(() => new Note(
+            babyjubjub.genRandomPrivateKey(),
+            babyjubjub.genRandomPrivateKey(),
+            txTotal / BigInt(commitments),
+            babyjubjub.genRandomPoint(),
+            1n,
+          ));
+
+          const merkletree = new MerkleTree();
+          merkletree.insertLeaves(notesIn.map((note) => note.hash));
+
+          // eslint-disable-next-line no-await-in-loop
+          const tx = await transaction.dummyTransact(
+            merkletree,
+            0n,
+            ethers.constants.AddressZero,
+            ethers.constants.HashZero,
+            notesIn,
+            notesOut,
+            new Note(0n, 0n, 0n, 0n, 0n),
+            ethers.constants.AddressZero,
+          );
+
+          // eslint-disable-next-line no-await-in-loop
+          await expect(verifierBypassSigner.verify(tx)).to.eventually.throw('Verifier: Key not set');
+        }
+      }
+    }
   });
 });
