@@ -20,7 +20,7 @@
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-jsdoc": "^32.3.0",
     "ethereum-waffle": "^3.2.2",
-    "ethers": "^5.0.31",
+    "ethers": "^5.6.2",
     "hardhat": "^2.0.9",
     "hardhat-artifactor": "^0.2.0",
     "hardhat-contract-sizer": "^2.5.1",
