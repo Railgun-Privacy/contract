@@ -67,7 +67,7 @@ async function main() {
   // Give deployer address full permissions
   await delegator.setPermission(
     (await ethers.getSigners())[0].address,
-    '0x0000000000000000000000000000000000000000',
+    ethers.constants.AddressZero,
     '0x00000000',
     true,
   );

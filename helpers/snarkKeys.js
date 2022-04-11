@@ -64,7 +64,21 @@ function getKeys(nullifiers, commitments) {
   return artifact;
 }
 
+/**
+ * Returns all artifacts available
+ *
+ * @returns {Array<Array<object>>} nullifier -> commitments -> keys
+ */
+function allArtifacts() {
+  return artifacts.map((x) => x.map((y) => {
+    // eslint-disable-next-line no-param-reassign
+    y.solidityVkey = formatVKey(y.vkey);
+    return y;
+  }));
+}
+
 module.exports = {
   formatVKey,
   getKeys,
+  allArtifacts,
 };

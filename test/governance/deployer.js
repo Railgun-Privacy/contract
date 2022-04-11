@@ -19,7 +19,7 @@ describe('Governance/Deployer', () => {
   });
 
   it('Should deploy contracts at expected address', async () => {
-    const salt = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    const salt = ethers.constants.HashZero;
     const Target = await ethers.getContractFactory('GovernanceTargetConstructorArgumentStub');
 
     await deployer.deploy(

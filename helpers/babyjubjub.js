@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
 const crypto = require('crypto');
 const { ethers } = require('hardhat');
-const { babyJub, eddsa, poseidon } = require('circomlibjs');
+const { eddsa, poseidon } = require('circomlibjs');
 
 /**
  * Generates random babyjubjub privateKey
@@ -20,11 +20,21 @@ function genRandomPrivateKey() {
  */
 function privateKeyToPublicKey(privateKey) {
   return eddsa.prv2pub(
-    Buffer.from(ethers.BigNumber.from(privateKey).toHexString().slice(2), 'hex')
+    Buffer.from(ethers.BigNumber.from(privateKey).toHexString().slice(2), 'hex'),
   );
+}
+
+/**
+ * Generates a random babyJubJub point
+ *
+ * @returns {bigint} random point
+ */
+function genRandomPoint() {
+  return poseidon([genRandomPrivateKey()]);
 }
 
 module.exports = {
   genRandomPrivateKey,
   privateKeyToPublicKey,
+  genRandomPoint,
 };

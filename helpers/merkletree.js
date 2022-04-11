@@ -94,15 +94,12 @@ class MerkleTree {
    * @returns {MerkleProof} proof
    */
   generateProof(element) {
-    // Ensure element is BigInt
-    // eslint-disable-next-line no-param-reassign
-    element = BigInt(element);
-
     // Initialize of proof elements
     const elements = [];
 
     // Get initial index
-    let index = this.tree[0].indexOf(element);
+    const initialIndex = this.tree[0].indexOf(element);
+    let index = initialIndex;
 
     if (index === -1) {
       throw new Error(`Couldn't find ${element} in the MerkleTree`);
@@ -125,7 +122,7 @@ class MerkleTree {
     return {
       element,
       elements,
-      indices: BigInt(index),
+      indices: BigInt(initialIndex),
       root: this.root,
     };
   }

@@ -23,9 +23,9 @@ describe('Logic/Verifier', () => {
   beforeEach(async () => {
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
-      params: ['0x0000000000000000000000000000000000000000'],
+      params: [ethers.constants.AddressZero],
     });
-    snarkBypassSigner = await ethers.getSigner('0x0000000000000000000000000000000000000000');
+    snarkBypassSigner = await ethers.getSigner(ethers.constants.AddressZero);
 
     const VerifierStub = await ethers.getContractFactory('VerifierStub');
     verifier = await VerifierStub.deploy();
@@ -101,109 +101,115 @@ describe('Logic/Verifier', () => {
     }
   });
 
-  it('Should verify proofs', async () => {
-    const n1c2 = artifacts.getKeys(1, 2).solidityVkey;
-    const n2c3 = artifacts.getKeys(2, 3).solidityVkey;
-    await verifier.setVerificationKey(1, 2, n1c2);
-    await verifier.setVerificationKey(2, 3, n2c3);
-
-    const spendingKey = babyjubjub.genRandomPrivateKey();
-    const viewingKey = babyjubjub.genRandomPrivateKey();
-
-    let notesIn = [
-      new Note(
-        spendingKey,
-        viewingKey,
-        100n,
-        babyjubjub.genRandomPrivateKey(),
-        1n,
+  /**
+   * Loads all available artifacts into verifier contract
+   *
+   * @param {ethers.Contract} verifierContract - verifier Contract
+   */
+  async function loadAllArtifacts(verifierContract) {
+    await Promise.all(
+      artifacts.allArtifacts().map(
+        async (x, nullifiers) => Promise.all(x.map(async (y, commitments) => {
+          await verifierContract.setVerificationKey(nullifiers, commitments, y.solidityVkey);
+        })),
       ),
-    ];
-
-    let notesOut = [
-      new Note(
-        spendingKey,
-        viewingKey,
-        50n,
-        babyjubjub.genRandomPrivateKey(),
-        1n,
-      ),
-      new Note(
-        spendingKey,
-        viewingKey,
-        50n,
-        babyjubjub.genRandomPrivateKey(),
-        1n,
-      ),
-    ];
-
-    let merkletree = new MerkleTree();
-    merkletree.insertLeaves(notesIn.map((note) => note.hash));
-
-    const tx = await transaction.transact(
-      merkletree,
-      0n,
-      '0x0000000000000000000000000000000000000000',
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
-      notesIn,
-      notesOut,
-      new Note(0n, 0n, 0n, 0n, 0n),
-      '0x0000000000000000000000000000000000000000',
     );
-
-    expect(await verifier.verify(tx)).to.equal(true);
-  });
+  }
 
   it('Should verify dummy proofs', async () => {
-    const n1c2 = artifacts.getKeys(1, 2).solidityVkey;
-    const n2c3 = artifacts.getKeys(2, 3).solidityVkey;
-    await verifier.setVerificationKey(1, 2, n1c2);
-    await verifier.setVerificationKey(2, 3, n2c3);
+    await loadAllArtifacts(verifier);
 
-    const spendingKey = babyjubjub.genRandomPrivateKey();
-    const viewingKey = babyjubjub.genRandomPrivateKey();
+    await Promise.all(
+      artifacts.allArtifacts().map(
+        async (x, nullifiers) => Promise.all(x.map(async (y, commitments) => {
+          const spendingKey = babyjubjub.genRandomPrivateKey();
+          const viewingKey = babyjubjub.genRandomPrivateKey();
 
-    let notesIn = [
-      new Note(
-        spendingKey,
-        viewingKey,
-        100n,
-        babyjubjub.genRandomPrivateKey(),
-        1n,
+          const txTotal = BigInt(nullifiers) * BigInt(commitments);
+
+          const notesIn = new Array(nullifiers).fill(1).map(() => new Note(
+            spendingKey,
+            viewingKey,
+            txTotal / BigInt(nullifiers),
+            babyjubjub.genRandomPoint(),
+            1n,
+          ));
+
+          const notesOut = new Array(commitments).fill(1).map(() => new Note(
+            babyjubjub.genRandomPrivateKey(),
+            babyjubjub.genRandomPrivateKey(),
+            txTotal / BigInt(commitments),
+            babyjubjub.genRandomPoint(),
+            1n,
+          ));
+
+          const merkletree = new MerkleTree();
+          merkletree.insertLeaves(notesIn.map((note) => note.hash));
+
+          const tx = await transaction.dummyTransact(
+            merkletree,
+            0n,
+            ethers.constants.AddressZero,
+            ethers.constants.HashZero,
+            notesIn,
+            notesOut,
+            new Note(0n, 0n, 0n, 0n, 0n),
+            ethers.constants.AddressZero,
+          );
+          expect(await verifierBypassSigner.verify(tx)).to.equal(true);
+        })),
       ),
-    ];
-
-    let notesOut = [
-      new Note(
-        spendingKey,
-        viewingKey,
-        50n,
-        babyjubjub.genRandomPrivateKey(),
-        1n,
-      ),
-      new Note(
-        spendingKey,
-        viewingKey,
-        50n,
-        babyjubjub.genRandomPrivateKey(),
-        1n,
-      ),
-    ];
-
-    let merkletree = new MerkleTree();
-    merkletree.insertLeaves(notesIn.map((note) => note.hash));
-
-    const tx = await transaction.dummyTransact(
-      merkletree,
-      0n,
-      '0x0000000000000000000000000000000000000000',
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
-      notesIn,
-      notesOut,
-      new Note(0n, 0n, 0n, 0n, 0n),
-      '0x0000000000000000000000000000000000000000',
     );
+  });
 
-    expect(await verifierBypassSigner.verify(tx)).to.equal(true);
+  it('Should verify proofs', async function () {
+    if (!process.env.LONG_TESTS) {
+      this.skip();
+    }
+
+    await loadAllArtifacts(verifier);
+
+    await Promise.all(
+      artifacts.allArtifacts().map(
+        async (x, nullifiers) => Promise.all(x.map(async (y, commitments) => {
+          const spendingKey = babyjubjub.genRandomPrivateKey();
+          const viewingKey = babyjubjub.genRandomPrivateKey();
+
+          const txTotal = BigInt(nullifiers) * BigInt(commitments);
+
+          const notesIn = new Array(nullifiers).fill(1).map(() => new Note(
+            spendingKey,
+            viewingKey,
+            txTotal / BigInt(nullifiers),
+            babyjubjub.genRandomPoint(),
+            1n,
+          ));
+
+          const notesOut = new Array(commitments).fill(1).map(() => new Note(
+            babyjubjub.genRandomPrivateKey(),
+            babyjubjub.genRandomPrivateKey(),
+            txTotal / BigInt(commitments),
+            babyjubjub.genRandomPoint(),
+            1n,
+          ));
+
+          const merkletree = new MerkleTree();
+          merkletree.insertLeaves(notesIn.map((note) => note.hash));
+
+          const tx = await transaction.transact(
+            merkletree,
+            0n,
+            ethers.constants.AddressZero,
+            ethers.constants.HashZero,
+            notesIn,
+            notesOut,
+            new Note(0n, 0n, 0n, 0n, 0n),
+            ethers.constants.AddressZero,
+          );
+
+          expect(await verifier.verify(tx)).to.equal(true);
+        })),
+      ),
+    );
   });
 });

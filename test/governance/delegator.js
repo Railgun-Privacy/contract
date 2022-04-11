@@ -66,7 +66,7 @@ describe('Governance/Delegator', () => {
   it('Should be able to call function with wildcard contract permission', async () => {
     await delegatorAdmin.setPermission(
       (await ethers.getSigners())[0].address,
-      '0x0000000000000000000000000000000000000000',
+      ethers.constants.AddressZero,
       targetAlpha.interface.getSighash('a()'),
       true,
     );
