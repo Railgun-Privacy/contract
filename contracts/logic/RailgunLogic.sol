@@ -135,11 +135,12 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   /**
    * @notice Get base and fee amount
-   * @param _amount - Amount to calculate
+   * @param _amount - Amount to calculate for
    * @param _isInclusive - Whether the amount passed in is inclusive of the fee
+   * @param _feeBP - Fee basis points
    * @return base, fee
    */
-  function getFee(uint120 _amount, bool _isInclusive) public view returns (uint120, uint120) {
+  function getFee(uint120 _amount, bool _isInclusive, uint120 _feeBP) public pure returns (uint120, uint120) {
     // Base is the amount deposited into the railgun contract or withdrawn to the target eth address
     // for deposits and withdraws respectively
     uint120 base;
@@ -147,11 +148,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint120 fee;
 
     if (_isInclusive) {
-      base = _amount * BASIS_POINTS / (BASIS_POINTS + withdrawFee);
+      base = (_amount * BASIS_POINTS) / (BASIS_POINTS + _feeBP);
       fee = _amount - base;
     } else {
-      fee = _amount * depositFee / BASIS_POINTS;
       base = _amount;
+      fee = (_amount * _feeBP) / BASIS_POINTS;
     }
 
     return (base, fee);
@@ -272,7 +273,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
           IERC20 token = IERC20(address(uint160(transaction.withdrawPreimage.token.tokenAddress)));
 
           // Get base and fee amounts
-          (uint256 base, uint256 fee) = getFee(transaction.withdrawPreimage.value, true);
+          (uint256 base, uint256 fee) = getFee(transaction.withdrawPreimage.value, true, withdrawFee);
 
           // Transfer base to output address
           token.safeTransfer(
@@ -388,7 +389,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         IERC20 token = IERC20(address(uint160(note.token.tokenAddress)));
 
         // Get base and fee amounts
-        (uint120 base, uint120 fee) = getFee(note.value, true);
+        (uint120 base, uint120 fee) = getFee(note.value, true, depositFee);
 
         // Add GeneratedCommitment to event array
         generatedCommitments[notesIter] = CommitmentPreimage({
