@@ -1,4 +1,5 @@
 const artifacts = require('railgun-artifacts-node');
+const { ethers } = require('hardhat');
 
 /**
  * Formats vkey for solidity input
@@ -77,8 +78,37 @@ function allArtifacts() {
   }));
 }
 
+/**
+ * Loads all available artifacts into verifier contract
+ *
+ * @param {ethers.Contract} verifierContract - verifier Contract
+ */
+async function loadAllArtifacts(verifierContract) {
+  const artifactsList = allArtifacts();
+
+  let nullifiers = 1;
+
+  for (nullifiers; nullifiers < artifactsList.length; nullifiers += 1) {
+    let commitments = 1;
+
+    if (artifactsList[nullifiers]) {
+      for (commitments; commitments < artifactsList[nullifiers].length; commitments += 1) {
+        if (artifactsList[nullifiers][commitments]) {
+          // eslint-disable-next-line no-await-in-loop
+          await verifierContract.setVerificationKey(
+            nullifiers,
+            commitments,
+            artifactsList[nullifiers][commitments].solidityVkey,
+          );
+        }
+      }
+    }
+  }
+}
+
 module.exports = {
   formatVKey,
   getKeys,
   allArtifacts,
+  loadAllArtifacts,
 };

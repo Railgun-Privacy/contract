@@ -101,36 +101,8 @@ describe('Logic/Verifier', () => {
     }
   });
 
-  /**
-   * Loads all available artifacts into verifier contract
-   *
-   * @param {ethers.Contract} verifierContract - verifier Contract
-   */
-  async function loadAllArtifacts(verifierContract) {
-    const artifactsList = artifacts.allArtifacts();
-
-    let nullifiers = 1;
-
-    for (nullifiers; nullifiers < artifactsList.length; nullifiers += 1) {
-      let commitments = 1;
-
-      if (artifactsList[nullifiers]) {
-        for (commitments; commitments < artifactsList[nullifiers].length; commitments += 1) {
-          if (artifactsList[nullifiers][commitments]) {
-            // eslint-disable-next-line no-await-in-loop
-            await verifierContract.setVerificationKey(
-              nullifiers,
-              commitments,
-              artifactsList[nullifiers][commitments].solidityVkey,
-            );
-          }
-        }
-      }
-    }
-  }
-
   it('Should verify dummy proofs', async () => {
-    await loadAllArtifacts(verifier);
+    await artifacts.loadAllArtifacts(verifier);
 
     await Promise.all(
       artifacts.allArtifacts().map(
@@ -182,7 +154,7 @@ describe('Logic/Verifier', () => {
       this.skip();
     }
 
-    await loadAllArtifacts(verifier);
+    await artifacts.loadAllArtifacts(verifier);
 
     await Promise.all(
       artifacts.allArtifacts().map(
@@ -237,7 +209,7 @@ describe('Logic/Verifier', () => {
     const limit = 20;
 
     const artifactsList = artifacts.allArtifacts();
-    await loadAllArtifacts(verifier);
+    await artifacts.loadAllArtifacts(verifier);
 
     let nullifiers = 1;
 

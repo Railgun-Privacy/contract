@@ -10,11 +10,13 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 const babyjubjub = require('../../helpers/babyjubjub');
-const { Note } = require('../../helpers/note');
+const MerkleTree = require('../../helpers/merkletree');
+const { Note, WithdrawNote } = require('../../helpers/note');
 
 let railgunLogic;
 let primaryAccount;
 let treasuryAccount;
+let testERC20;
 
 describe('Logic/RailgunLogic', () => {
   beforeEach(async () => {
@@ -40,6 +42,10 @@ describe('Logic/RailgunLogic', () => {
       25n,
       primaryAccount.address,
     );
+
+    const TestERC20 = await ethers.getContractFactory('TestERC20');
+    testERC20 = await TestERC20.deploy();
+    await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
   });
 
   it('Should change treasury', async () => {
@@ -62,36 +68,36 @@ describe('Logic/RailgunLogic', () => {
     expect(await railgunLogic.nftFee()).to.equal(800n);
   });
 
-  it('Should calculate fee', async function () {
+  /**
+   * Get base and fee amount
+   *
+   * @param {bigint} amount - Amount to calculate for
+   * @param {bigint} isInclusive - Whether the amount passed in is inclusive of the fee
+   * @param {bigint} feeBP - Fee basis points
+   * @returns {Array<bigint>} base, fee
+   */
+  function getFee(amount, isInclusive, feeBP) {
     const BASIS_POINTS = 10000n;
+    let base;
+    let fee;
+
+    if (isInclusive) {
+      base = (amount * BASIS_POINTS) / (BASIS_POINTS + feeBP);
+      fee = amount - base;
+    } else {
+      base = amount;
+      fee = (amount * feeBP) / BASIS_POINTS;
+    }
+
+    return [base, fee];
+  }
+
+  it('Should calculate fee', async function () {
     let loops = 10n;
 
     if (process.env.LONG_TESTS) {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
-    }
-
-    /**
-     * Get base and fee amount
-     *
-     * @param {bigint} amount - Amount to calculate for
-     * @param {bigint} isInclusive - Whether the amount passed in is inclusive of the fee
-     * @param {bigint} feeBP - Fee basis points
-     * @returns {Array<bigint>} base, fee
-     */
-    function getFee(amount, isInclusive, feeBP) {
-      let base;
-      let fee;
-
-      if (isInclusive) {
-        base = (amount * BASIS_POINTS) / (BASIS_POINTS + feeBP);
-        fee = amount - base;
-      } else {
-        base = amount;
-        fee = (amount * feeBP) / BASIS_POINTS;
-      }
-
-      return [base, fee];
     }
 
     for (let feeBP = 0n; feeBP < loops; feeBP += 1n) {
@@ -135,7 +141,7 @@ describe('Logic/RailgunLogic', () => {
     }
   });
 
-  it('Should calculate token tield', async function () {
+  it('Should calculate token field', async function () {
     let loops = 10n;
 
     if (process.env.LONG_TESTS) {
@@ -192,6 +198,83 @@ describe('Logic/RailgunLogic', () => {
       });
 
       expect(contractHash).to.equal(note.hash);
+    }
+  });
+
+  it('Should deposit', async function () {
+    let loops = 10n;
+
+    if (process.env.LONG_TESTS) {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 100n;
+    }
+
+    const merkletree = new MerkleTree();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
+    for (let i = 1n; i < loops; i += 1n) {
+      // eslint-disable-next-line no-loop-func
+      const notes = new Array(Number(i)).fill(1).map((x, index) => new Note(
+        babyjubjub.genRandomPrivateKey(),
+        babyjubjub.genRandomPrivateKey(),
+        i * BigInt(index + 1) * 10n ** 18n,
+        babyjubjub.genRandomPoint(),
+        BigInt(testERC20.address),
+      ));
+
+      const encryptedRandom = new Array(Number(i)).fill(1).map(() => [i, i * 2n]);
+
+      const tokenData = {
+        tokenType: 0,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0,
+      };
+
+      // eslint-disable-next-line no-await-in-loop
+      const tx = await (await railgunLogic.generateDeposit(notes.map((note) => ({
+        npk: note.notePublicKey,
+        token: tokenData,
+        value: note.value,
+      })), encryptedRandom)).wait();
+
+      const insertLeaves = [];
+
+      // eslint-disable-next-line no-loop-func
+      tx.events.forEach((event) => {
+        if (event.address === railgunLogic.address) {
+          expect(event.args.treeNumber).to.equal(0n);
+          expect(event.args.startPosition).to.equal(merkletree.leaves.length);
+
+          event.args.commitments.forEach((commitment, index) => {
+            expect(commitment.npk).to.equal(notes[index].notePublicKey);
+            expect(BigInt(commitment.token.tokenAddress)).to.equal(notes[index].token);
+            expect(commitment.value).to.equal(getFee(
+              notes[index].value,
+              true,
+              depositFee,
+            )[0]);
+
+            insertLeaves.push(new WithdrawNote(
+              BigInt(commitment.npk.toHexString()),
+              BigInt(commitment.value.toHexString()),
+              BigInt(commitment.token.tokenAddress),
+            ));
+          });
+
+          event.args.encryptedRandom.forEach((encrypted) => {
+            expect(encrypted[0]).to.equal(encrypted[0]);
+            expect(encrypted[1]).to.equal(encrypted[1]);
+          });
+        }
+      });
+
+      merkletree.insertLeaves(insertLeaves.map((note) => note.hash));
+
+      expect(insertLeaves.length).to.be.greaterThan(0);
+
+      // eslint-disable-next-line no-await-in-loop
+      expect(await railgunLogic.merkleRoot()).to.equal(merkletree.root);
     }
   });
 });
