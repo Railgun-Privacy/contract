@@ -81,6 +81,9 @@ async function main() {
   await (await proxy.upgrade(railgunLogic.address)).wait();
   await (await proxy.unpause()).wait();
 
+  // Transfer proxy ownership
+  await (await proxy.transferOwnership(proxyAdmin.address)).wait();
+
   // Get Railgun Proxy object
   const railgun = RailgunLogic.attach(proxy.address);
 
@@ -97,11 +100,8 @@ async function main() {
   // Deploy all snark keys
   await artifacts.loadAllArtifacts(railgun);
 
-  // Transfer proxy ownership
-  await proxy.transferOwnership(proxyAdmin.address);
-
   // Transfer Railgun logic ownership
-  await (await proxy.transferOwnership(delegator.address)).wait();
+  await (await railgun.transferOwnership(delegator.address)).wait();
 
   console.log('RailToken:', rail.address);
   console.log('Staking:', staking.address);
