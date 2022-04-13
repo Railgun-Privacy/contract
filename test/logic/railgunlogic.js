@@ -168,7 +168,7 @@ describe('Logic/RailgunLogic', () => {
 
     if (process.env.LONG_TESTS) {
       this.timeout(5 * 60 * 60 * 1000);
-      loops = 1000n;
+      loops = 100n;
     }
 
     for (let i = 0n; i < loops; i += 1n) {
@@ -213,6 +213,9 @@ describe('Logic/RailgunLogic', () => {
 
     const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
 
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
     for (let i = 1n; i < loops; i += 1n) {
       // eslint-disable-next-line no-loop-func
       const notes = new Array(Number(i)).fill(1).map((x, index) => new Note(
@@ -247,19 +250,24 @@ describe('Logic/RailgunLogic', () => {
           expect(event.args.startPosition).to.equal(merkletree.leaves.length);
 
           event.args.commitments.forEach((commitment, index) => {
-            expect(commitment.npk).to.equal(notes[index].notePublicKey);
-            expect(BigInt(commitment.token.tokenAddress)).to.equal(notes[index].token);
-            expect(commitment.value).to.equal(getFee(
+            const [base, fee] = getFee(
               notes[index].value,
               true,
               depositFee,
-            )[0]);
+            );
+
+            expect(commitment.npk).to.equal(notes[index].notePublicKey);
+            expect(BigInt(commitment.token.tokenAddress)).to.equal(notes[index].token);
+            expect(commitment.value).to.equal(base);
 
             insertLeaves.push(new WithdrawNote(
               BigInt(commitment.npk.toHexString()),
               BigInt(commitment.value.toHexString()),
               BigInt(commitment.token.tokenAddress),
             ));
+
+            cumulativeBase += base;
+            cumulativeFee += fee;
           });
 
           event.args.encryptedRandom.forEach((encrypted) => {
@@ -269,12 +277,17 @@ describe('Logic/RailgunLogic', () => {
         }
       });
 
-      merkletree.insertLeaves(insertLeaves.map((note) => note.hash));
-
       expect(insertLeaves.length).to.be.greaterThan(0);
+
+      merkletree.insertLeaves(insertLeaves.map((note) => note.hash));
 
       // eslint-disable-next-line no-await-in-loop
       expect(await railgunLogic.merkleRoot()).to.equal(merkletree.root);
+
+      // eslint-disable-next-line no-await-in-loop
+      expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
+      // eslint-disable-next-line no-await-in-loop
+      expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
     }
   });
 });
