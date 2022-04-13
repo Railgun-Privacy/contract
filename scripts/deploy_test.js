@@ -1,7 +1,8 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
-/* global overwriteArtifact */
 const { ethers } = require('hardhat');
+
+const artifacts = require('../helpers/snarkKeys');
 
 async function main() {
   // Get build artifacts
@@ -92,6 +93,9 @@ async function main() {
     delegator.address,
     { gasLimit: 2000000 },
   )).wait();
+
+  // Deploy all snark keys
+  await artifacts.loadAllArtifacts(railgun);
 
   // Transfer proxy ownership
   await (await proxy.transferOwnership(proxyAdmin.address)).wait();
