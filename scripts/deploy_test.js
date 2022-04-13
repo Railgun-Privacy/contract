@@ -16,6 +16,8 @@ async function main() {
   const ProxyAdmin = await ethers.getContractFactory('ProxyAdmin');
   const Proxy = await ethers.getContractFactory('PausableUpgradableProxy');
 
+  console.log('Deploying governance contracts...');
+
   // Deploy RailToken
   const rail = await RailToken.deploy(
     (await ethers.getSigners())[0].address,
@@ -44,6 +46,8 @@ async function main() {
   // Deploy Proxy
   const proxy = await Proxy.deploy((await ethers.getSigners())[0].address);
 
+  console.log('Deploying logic contract...');
+
   // Deploy Poseidon libraries
   const poseidonT3 = await PoseidonT3.deploy();
   const poseidonT4 = await PoseidonT4.deploy();
@@ -59,11 +63,15 @@ async function main() {
   // Deploy Railgun Logic
   const railgunLogic = await RailgunLogic.deploy();
 
+  console.log('Waiting for deployment transactions to be mined...');
+
   // Wait for contracts to be deployed
   await rail.deployTransaction.wait();
   await delegator.deployTransaction.wait();
   await railgunLogic.deployTransaction.wait();
   await proxy.deployTransaction.wait();
+
+  console.log(`Giving full permissions to ${(await ethers.getSigners())[0].address}`);
 
   // Give deployer address full permissions
   await delegator.setPermission(
@@ -73,13 +81,19 @@ async function main() {
     true,
   );
 
+  console.log('Transferring ownership of governance contracts...');
+
   // Transfer ownerships
   await delegator.transferOwnership(voting.address);
   await rail.transferOwnership(delegator.address);
 
+  console.log('Setting implementation on proxy...');
+
   // Set proxy implementation
   await (await proxy.upgrade(railgunLogic.address)).wait();
   await (await proxy.unpause()).wait();
+
+  console.log('Transferring proxy ownership...');
 
   // Transfer proxy ownership
   await (await proxy.transferOwnership(proxyAdmin.address)).wait();
@@ -87,21 +101,29 @@ async function main() {
   // Get Railgun Proxy object
   const railgun = RailgunLogic.attach(proxy.address);
 
+  console.log('Initializing logic contract...');
+
   // Initialize Railgun Logic
   await (await railgun.initializeRailgunLogic(
     treasury.address,
     25n,
     25n,
-    0n,
+    25n,
     (await ethers.getSigners())[0].address,
     { gasLimit: 2000000 },
   )).wait();
 
+  console.log('Setting snark verification keys...');
+
   // Deploy all snark keys
   await artifacts.loadAllArtifacts(railgun);
 
+  console.log('Transferring logic contract ownership..');
+
   // Transfer Railgun logic ownership
   await (await railgun.transferOwnership(delegator.address)).wait();
+
+  console.log('\n\nDEPLOYMENT COMPLETE\n\n');
 
   console.log('RailToken:', rail.address);
   console.log('Staking:', staking.address);
