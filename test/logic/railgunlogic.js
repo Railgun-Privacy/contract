@@ -201,7 +201,7 @@ describe('Logic/RailgunLogic', () => {
     }
   });
 
-  it('Should deposit', async function () {
+  it('Should deposit ERC20', async function () {
     let loops = 10n;
 
     if (process.env.LONG_TESTS) {
