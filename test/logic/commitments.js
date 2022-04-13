@@ -43,10 +43,12 @@ describe('Logic/Commitments', () => {
   });
 
   it('Should hash left/right pairs', async () => {
-    let loops = 10n;
+    let loops = 1n;
 
-    if (process.env.LONG_TESTS) {
-      loops = 1000n;
+    if (process.env.LONG_TESTS === '1') {
+      loops = 10n;
+    } else if (process.env.LONG_TESTS === '2') {
+      loops = 100n;
     }
 
     for (let i = 0n; i < loops; i += 1n) {
@@ -60,9 +62,12 @@ describe('Logic/Commitments', () => {
   });
 
   it('Should incrementally insert elements', async function () {
-    let loops = 10n;
+    let loops = 5n;
 
-    if (process.env.LONG_TESTS) {
+    if (process.env.LONG_TESTS === '1') {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 10n;
+    } else if (process.env.LONG_TESTS === '2') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -82,7 +87,7 @@ describe('Logic/Commitments', () => {
 
   it('Should roll over to new tree', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (!process.env.LONG_TESTS) {
+    if (process.env.LONG_TESTS !== '2') {
       this.skip();
     }
 
@@ -90,10 +95,13 @@ describe('Logic/Commitments', () => {
 
     expect(await commitmentsStub.treeNumber()).to.equal(0n);
 
+    console.log('\n      FILLING TREE\n');
     for (let i = 0; i < 2 ** 16; i += steps) {
+      console.log(`      Filled ${i}/${2 ** 16}`);
       // eslint-disable-next-line no-await-in-loop
       await commitmentsStub.insertLeavesStub((new Array(steps)).fill(1n));
     }
+    console.log('\n      TREE FILLED\n');
 
     await commitmentsStub.insertLeavesStub((new Array(steps)).fill(1n));
     expect(await commitmentsStub.treeNumber()).to.equal(1n);
