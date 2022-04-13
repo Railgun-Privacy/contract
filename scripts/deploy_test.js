@@ -90,7 +90,7 @@ async function main() {
     25n,
     25n,
     0n,
-    delegator.address,
+    (await ethers.getSigners())[0].address,
     { gasLimit: 2000000 },
   )).wait();
 
@@ -98,7 +98,10 @@ async function main() {
   await artifacts.loadAllArtifacts(railgun);
 
   // Transfer proxy ownership
-  await (await proxy.transferOwnership(proxyAdmin.address)).wait();
+  await proxy.transferOwnership(proxyAdmin.address);
+
+  // Transfer Railgun logic ownership
+  await (await proxy.transferOwnership(delegator.address)).wait();
 
   console.log('RailToken:', rail.address);
   console.log('Staking:', staking.address);
