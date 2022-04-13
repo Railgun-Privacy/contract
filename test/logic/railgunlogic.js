@@ -1,5 +1,6 @@
 /* eslint-disable func-names */
 /* global describe it beforeEach */
+const hre = require('hardhat');
 const { ethers } = require('hardhat');
 const crypto = require('crypto');
 const chai = require('chai');
@@ -9,17 +10,27 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
+const artifacts = require('../../helpers/snarkKeys');
 const babyjubjub = require('../../helpers/babyjubjub');
 const MerkleTree = require('../../helpers/merkletree');
 const { Note, WithdrawNote } = require('../../helpers/note');
+const transaction = require('../../helpers/transaction');
 
+let snarkBypassSigner;
 let railgunLogic;
+let railgunLogicBypassSigner;
 let primaryAccount;
 let treasuryAccount;
 let testERC20;
 
 describe('Logic/RailgunLogic', () => {
   beforeEach(async () => {
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [ethers.constants.AddressZero],
+    });
+    snarkBypassSigner = await ethers.getSigner(ethers.constants.AddressZero);
+
     const accounts = await ethers.getSigners();
     [primaryAccount, treasuryAccount] = accounts;
 
@@ -42,6 +53,7 @@ describe('Logic/RailgunLogic', () => {
       25n,
       primaryAccount.address,
     );
+    railgunLogicBypassSigner = railgunLogic.connect(snarkBypassSigner);
 
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     testERC20 = await TestERC20.deploy();
@@ -93,9 +105,12 @@ describe('Logic/RailgunLogic', () => {
   }
 
   it('Should calculate fee', async function () {
-    let loops = 10n;
+    let loops = 5n;
 
-    if (process.env.LONG_TESTS) {
+    if (process.env.LONG_TESTS === '1') {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 10n;
+    } else if (process.env.LONG_TESTS === '2') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -141,13 +156,8 @@ describe('Logic/RailgunLogic', () => {
     }
   });
 
-  it('Should calculate token field', async function () {
-    let loops = 10n;
-
-    if (process.env.LONG_TESTS) {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 1000n;
-    }
+  it('Should calculate token field', async () => {
+    const loops = 3n;
 
     for (let i = 0n; i < loops; i += 1n) {
       const tokenData = {
@@ -164,9 +174,12 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should hash note preimages', async function () {
-    let loops = 10n;
+    let loops = 1n;
 
-    if (process.env.LONG_TESTS) {
+    if (process.env.LONG_TESTS === '1') {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 10n;
+    } else if (process.env.LONG_TESTS === '2') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -202,9 +215,12 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should deposit ERC20', async function () {
-    let loops = 10n;
+    let loops = 2n;
 
-    if (process.env.LONG_TESTS) {
+    if (process.env.LONG_TESTS === '1') {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 10n;
+    } else if (process.env.LONG_TESTS === '2') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -288,6 +304,50 @@ describe('Logic/RailgunLogic', () => {
       expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
       // eslint-disable-next-line no-await-in-loop
       expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+    }
+  });
+
+  it('Should transfer and withdraw ERC20', async function () {
+    let loops = 2n;
+    let transactionCreator = transaction.dummyTransact;
+    let railgunLoginContract = railgunLogicBypassSigner;
+
+    const artifactsList = [];
+    artifacts.allArtifacts().forEach((x, nullifiers) => {
+      x.forEach((y, commitments) => {
+        artifactsList.push({ nullifiers, commitments });
+      });
+    });
+
+    if (process.env.LONG_TESTS === '1') {
+      this.timeout(5 * 60 * 60 * 1000);
+      transactionCreator = transaction.transact;
+      railgunLoginContract = railgunLogic;
+      loops = 2n;
+    } else if (process.env.LONG_TESTS === '2') {
+      this.timeout(5 * 60 * 60 * 1000);
+      transactionCreator = transaction.transact;
+      railgunLoginContract = railgunLogic;
+      loops = 10n;
+    }
+
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
+    for (let i = 1n; i < loops; i += 1n) {
+      for (let j = 0; j < artifactsList.length; j += 1) {
+        const spendingKey = babyjubjub.genRandomPrivateKey();
+        const viewingKey = babyjubjub.genRandomPrivateKey();
+
+        // eslint-disable-next-line no-loop-func
+        const notes = new Array(Number(i)).fill(1).map((x, index) => new Note(
+          spendingKey,
+          viewingKey,
+          i * BigInt(index + 1) * 10n ** 18n,
+          babyjubjub.genRandomPoint(),
+          BigInt(testERC20.address),
+        ));
+      }
     }
   });
 });
