@@ -71,7 +71,7 @@ async function main() {
   await railgunLogic.deployTransaction.wait();
   await proxy.deployTransaction.wait();
 
-  console.log(`Giving full permissions to ${(await ethers.getSigners())[0].address}`);
+  console.log(`Giving full governance permissions to ${(await ethers.getSigners())[0].address}`);
 
   // Give deployer address full permissions
   await delegator.setPermission(
@@ -98,10 +98,10 @@ async function main() {
   // Transfer proxy ownership
   await (await proxy.transferOwnership(proxyAdmin.address)).wait();
 
+  console.log('Initializing logic contract...');
+
   // Get Railgun Proxy object
   const railgun = RailgunLogic.attach(proxy.address);
-
-  console.log('Initializing logic contract...');
 
   // Initialize Railgun Logic
   await (await railgun.initializeRailgunLogic(
@@ -118,7 +118,7 @@ async function main() {
   // Deploy all snark keys
   await artifacts.loadAllArtifacts(railgun);
 
-  console.log('Transferring logic contract ownership..');
+  console.log('Transferring logic contract ownership...');
 
   // Transfer Railgun logic ownership
   await (await railgun.transferOwnership(delegator.address)).wait();
