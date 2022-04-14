@@ -195,13 +195,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _notes - list of commitments to deposit
    */
-  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata encryptedRandom) external payable {
+  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata _encryptedRandom) external payable {
     // Get notes length
     uint256 notesLength = _notes.length;
 
     // Insertion and event arrays
     uint256[] memory insertionLeaves = new uint256[](notesLength);
     CommitmentPreimage[] memory generatedCommitments = new CommitmentPreimage[](notesLength);
+
+    require(_notes.length == _encryptedRandom.length, "RailgunLogic: notes and encrypted random length doesn't match");
 
     for (uint256 notesIter = 0; notesIter < notesLength; notesIter++) {
       // Retrieve note
@@ -269,7 +271,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     }
 
     // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments, encryptedRandom);
+    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments, _encryptedRandom);
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
