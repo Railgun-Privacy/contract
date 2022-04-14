@@ -20,6 +20,10 @@ contract Verifier is OwnableUpgradeable {
   // add new variables to the bottom of the list and decrement __gap
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
+  // Snark bypass address, can't be address(0) as many burn prevention mechanisms will disallow transfers to 0
+  // Use 0x000000000000000000000000000000000000dEaD as an alternative
+  address constant public SNARK_BYPASS = 0x000000000000000000000000000000000000dEaD;
+
   // Verifying key set event
   event VerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey verifyingKey);
 
@@ -129,7 +133,7 @@ contract Verifier is OwnableUpgradeable {
     // Always return true in gas estimation transaction
     // This is so relayer fees can be calculated without needing to compute a proof
     // solhint-disable-next-line avoid-tx-origin
-    if (tx.origin == address(0)) {
+    if (tx.origin == SNARK_BYPASS) {
       return true;
     } else {
       return validity;

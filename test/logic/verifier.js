@@ -23,9 +23,9 @@ describe('Logic/Verifier', () => {
   beforeEach(async () => {
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
-      params: [ethers.constants.AddressZero],
+      params: ['0x000000000000000000000000000000000000dEaD'],
     });
-    snarkBypassSigner = await ethers.getSigner(ethers.constants.AddressZero);
+    snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
     const VerifierStub = await ethers.getContractFactory('VerifierStub');
     verifier = await VerifierStub.deploy();

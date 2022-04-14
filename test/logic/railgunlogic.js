@@ -22,14 +22,19 @@ let railgunLogicBypassSigner;
 let primaryAccount;
 let treasuryAccount;
 let testERC20;
+let testERC20BypassSigner;
 
 describe('Logic/RailgunLogic', () => {
   beforeEach(async () => {
     await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [ethers.constants.AddressZero],
+      method: 'hardhat_setBalance',
+      params: ['0x000000000000000000000000000000000000dEaD', '0x56BC75E2D63100000'],
     });
-    snarkBypassSigner = await ethers.getSigner(ethers.constants.AddressZero);
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: ['0x000000000000000000000000000000000000dEaD'],
+    });
+    snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
     const accounts = await ethers.getSigners();
     [primaryAccount, treasuryAccount] = accounts;
@@ -57,7 +62,10 @@ describe('Logic/RailgunLogic', () => {
 
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     testERC20 = await TestERC20.deploy();
+    testERC20BypassSigner = testERC20.connect(snarkBypassSigner);
+    await testERC20.transfer('0x000000000000000000000000000000000000dEaD', 2n ** 256n / 2n);
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
+    await testERC20BypassSigner.approve(railgunLogic.address, 2n ** 256n - 1n);
   });
 
   it('Should change treasury', async () => {
@@ -310,7 +318,7 @@ describe('Logic/RailgunLogic', () => {
   it('Should transfer and withdraw ERC20', async function () {
     let loops = 2n;
     let transactionCreator = transaction.dummyTransact;
-    let railgunLoginContract = railgunLogicBypassSigner;
+    let railgunLogicContract = railgunLogicBypassSigner;
 
     const artifactsList = [];
     artifacts.allArtifacts().forEach((x, nullifiers) => {
@@ -322,12 +330,12 @@ describe('Logic/RailgunLogic', () => {
     if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
       transactionCreator = transaction.transact;
-      railgunLoginContract = railgunLogic;
+      railgunLogicContract = railgunLogic;
       loops = 2n;
     } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       transactionCreator = transaction.transact;
-      railgunLoginContract = railgunLogic;
+      railgunLogicContract = railgunLogic;
       loops = 10n;
     }
 
@@ -339,6 +347,7 @@ describe('Logic/RailgunLogic', () => {
 
     let cumulativeBase = 0n;
     let cumulativeFee = 0n;
+    const merkletree = new MerkleTree();
 
     for (let i = 1n; i - 1n < loops; i += 1n) {
       for (let j = 0; j < artifactsList.length; j += 1) {
@@ -363,11 +372,49 @@ describe('Logic/RailgunLogic', () => {
         const encryptedRandom = new Array(artifactConfig.nullifiers).fill(1).map(() => [0n, 0n]);
 
         // eslint-disable-next-line
-        await railgunLogic.generateDeposit(depositNotes.map((note) => ({
+        const depositTx = await(await railgunLogicContract.generateDeposit(depositNotes.map((note) => ({
           npk: note.notePublicKey,
           token: tokenData,
           value: note.value,
-        })), encryptedRandom);
+        })), encryptedRandom)).wait();
+
+        // eslint-disable-next-line no-loop-func
+        depositTx.events.forEach((event) => {
+          if (event.address === railgunLogicContract.address) {
+            event.args.commitments.forEach((commitment) => {
+              merkletree.insertLeaves([new WithdrawNote(
+                BigInt(commitment.npk.toHexString()),
+                BigInt(commitment.value.toHexString()),
+                BigInt(commitment.token.tokenAddress),
+              ).hash]);
+            });
+          }
+        });
+
+        const transferNotes = new Array(artifactConfig.commitments - 1).fill(1).map(
+          // eslint-disable-next-line no-loop-func
+          () => new Note(
+            spendingKey,
+            viewingKey,
+            total / BigInt(artifactConfig.commitments),
+            babyjubjub.genRandomPoint(),
+            BigInt(testERC20.address),
+          ),
+        );
+
+        // eslint-disable-next-line no-await-in-loop
+        const tx = await transactionCreator(
+          merkletree,
+          0n,
+          ethers.constants.AddressZero,
+          ethers.constants.HashZero,
+          depositNotes,
+          transferNotes,
+          new Note(0n, 0n, 0n, 0n, 0n),
+          ethers.constants.AddressZero,
+        );
+
+        console.log(tx);
       }
     }
   });
