@@ -62,10 +62,10 @@ describe('Logic/Verifier', () => {
   it('Should hash bound parameters', async function () {
     let loops = 10n;
 
-    if (process.env.LONG_TESTS === '1') {
+    if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
-    } else if (process.env.LONG_TESTS === '2') {
+    } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 1000n;
     }

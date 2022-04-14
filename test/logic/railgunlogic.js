@@ -107,10 +107,10 @@ describe('Logic/RailgunLogic', () => {
   it('Should calculate fee', async function () {
     let loops = 5n;
 
-    if (process.env.LONG_TESTS === '1') {
+    if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 10n;
-    } else if (process.env.LONG_TESTS === '2') {
+    } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -176,10 +176,10 @@ describe('Logic/RailgunLogic', () => {
   it('Should hash note preimages', async function () {
     let loops = 1n;
 
-    if (process.env.LONG_TESTS === '1') {
+    if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 10n;
-    } else if (process.env.LONG_TESTS === '2') {
+    } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -217,10 +217,10 @@ describe('Logic/RailgunLogic', () => {
   it('Should deposit ERC20', async function () {
     let loops = 2n;
 
-    if (process.env.LONG_TESTS === '1') {
+    if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 10n;
-    } else if (process.env.LONG_TESTS === '2') {
+    } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -319,34 +319,55 @@ describe('Logic/RailgunLogic', () => {
       });
     });
 
-    if (process.env.LONG_TESTS === '1') {
+    if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
       transactionCreator = transaction.transact;
       railgunLoginContract = railgunLogic;
       loops = 2n;
-    } else if (process.env.LONG_TESTS === '2') {
+    } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       transactionCreator = transaction.transact;
       railgunLoginContract = railgunLogic;
       loops = 10n;
     }
 
+    const tokenData = {
+      tokenType: 0,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0,
+    };
+
     let cumulativeBase = 0n;
     let cumulativeFee = 0n;
 
-    for (let i = 1n; i < loops; i += 1n) {
+    for (let i = 1n; i - 1n < loops; i += 1n) {
       for (let j = 0; j < artifactsList.length; j += 1) {
+        const artifactConfig = artifactsList[j];
         const spendingKey = babyjubjub.genRandomPrivateKey();
         const viewingKey = babyjubjub.genRandomPrivateKey();
 
-        // eslint-disable-next-line no-loop-func
-        const notes = new Array(Number(i)).fill(1).map((x, index) => new Note(
-          spendingKey,
-          viewingKey,
-          i * BigInt(index + 1) * 10n ** 18n,
-          babyjubjub.genRandomPoint(),
-          BigInt(testERC20.address),
-        ));
+        const total = BigInt(artifactConfig.nullifiers) * BigInt(artifactConfig.commitments)
+          * i * 10n ** 18n;
+
+        const depositNotes = new Array(artifactConfig.nullifiers).fill(1).map(
+          // eslint-disable-next-line no-loop-func
+          () => new Note(
+            spendingKey,
+            viewingKey,
+            total / BigInt(artifactConfig.nullifiers),
+            babyjubjub.genRandomPoint(),
+            BigInt(testERC20.address),
+          ),
+        );
+
+        const encryptedRandom = new Array(artifactConfig.nullifiers).fill(1).map(() => [0n, 0n]);
+
+        // eslint-disable-next-line
+        await railgunLogic.generateDeposit(depositNotes.map((note) => ({
+          npk: note.notePublicKey,
+          token: tokenData,
+          value: note.value,
+        })), encryptedRandom);
       }
     }
   });

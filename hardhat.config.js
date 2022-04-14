@@ -42,6 +42,15 @@ task('compile', 'Compiles the entire project, building all artifacts and injecti
   );
 });
 
+task('test', 'Runs test suite')
+  .addOptionalParam('longtests', 'extra = longer tests enabled; complete = full test suite enabled')
+  .setAction(async (taskArguments) => {
+    if (taskArguments.longtests === 'extra' || taskArguments.longtests === 'complete') {
+      process.env.LONG_TESTS = taskArguments.longtests;
+    }
+    await runSuper();
+  });
+
 task('accounts', 'Prints the list of accounts', async () => {
   const accounts = await ethers.getSigners();
 

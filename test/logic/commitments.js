@@ -45,9 +45,9 @@ describe('Logic/Commitments', () => {
   it('Should hash left/right pairs', async () => {
     let loops = 1n;
 
-    if (process.env.LONG_TESTS === '1') {
+    if (process.env.LONG_TESTS === 'extra') {
       loops = 10n;
-    } else if (process.env.LONG_TESTS === '2') {
+    } else if (process.env.LONG_TESTS === 'complete') {
       loops = 100n;
     }
 
@@ -64,10 +64,10 @@ describe('Logic/Commitments', () => {
   it('Should incrementally insert elements', async function () {
     let loops = 5n;
 
-    if (process.env.LONG_TESTS === '1') {
+    if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 10n;
-    } else if (process.env.LONG_TESTS === '2') {
+    } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 100n;
     }
@@ -87,7 +87,7 @@ describe('Logic/Commitments', () => {
 
   it('Should roll over to new tree', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (process.env.LONG_TESTS !== '2') {
+    if (process.env.LONG_TESTS !== 'complete') {
       this.skip();
     }
 
