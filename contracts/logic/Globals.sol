@@ -17,7 +17,7 @@ struct TokenData {
 struct CommitmentCiphertext {
   uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
   uint256[2] ephemeralKeys; // Sender first, receipient second (packed points 32 bytes each)
-  bytes32[] memo;
+  uint256[] memo;
 }
 
 // Transaction bound parameters

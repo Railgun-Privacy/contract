@@ -4,6 +4,7 @@ const prover = require('./prover');
 const { SNARK_SCALAR_FIELD } = require('./constants');
 const MerkleTree = require('./merkletree');
 const { Note, WithdrawNote } = require('./note');
+const babyjubjub = require('./babyjubjub');
 
 const abiCoder = ethers.utils.defaultAbiCoder;
 
@@ -142,6 +143,8 @@ function formatPublicInputs(
   });
   const commitments = notesOut.map((note) => note.hash);
 
+  const ciphertextLength = withdraw === 0n ? notesOut.length : notesOut.length - 1;
+
   return {
     proof: proof.solidity,
     merkleRoot,
@@ -152,7 +155,13 @@ function formatPublicInputs(
       withdraw,
       adaptContract,
       adaptParams,
-      commitmentCiphertext: [],
+      commitmentCiphertext: new Array(ciphertextLength).fill(1).map(() => ({
+        ciphertext: new Array(4).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
+        ephemeralKeys: new Array(2).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
+        memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(
+          () => babyjubjub.genRandomPrivateKey(),
+        ),
+      })),
     },
     withdrawPreimage: {
       npk: withdrawPreimage.notePublicKey,

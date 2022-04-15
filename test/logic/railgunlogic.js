@@ -307,6 +307,8 @@ describe('Logic/RailgunLogic', () => {
 
       // eslint-disable-next-line no-await-in-loop
       expect(await railgunLogic.merkleRoot()).to.equal(merkletree.root);
+      // eslint-disable-next-line no-await-in-loop
+      expect(await railgunLogic.rootHistory(0, merkletree.root)).to.equal(true);
 
       // eslint-disable-next-line no-await-in-loop
       expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
@@ -315,7 +317,7 @@ describe('Logic/RailgunLogic', () => {
     }
   });
 
-  it('Should transfer and withdraw ERC20', async function () {
+  it('Should transfer ERC20', async function () {
     let loops = 2n;
     let transactionCreator = transaction.dummyTransact;
     let railgunLogicContract = railgunLogicBypassSigner;
@@ -339,15 +341,20 @@ describe('Logic/RailgunLogic', () => {
       loops = 10n;
     }
 
+    await artifacts.loadAllArtifacts(railgunLogic);
+
     const tokenData = {
       tokenType: 0,
       tokenAddress: testERC20.address,
       tokenSubID: 0,
     };
 
+    const merkletree = new MerkleTree();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
     let cumulativeBase = 0n;
     let cumulativeFee = 0n;
-    const merkletree = new MerkleTree();
 
     for (let i = 1n; i - 1n < loops; i += 1n) {
       for (let j = 0; j < artifactsList.length; j += 1) {
@@ -378,20 +385,40 @@ describe('Logic/RailgunLogic', () => {
           value: note.value,
         })), encryptedRandom)).wait();
 
+        const insertLeavesDeposit = [];
+
         // eslint-disable-next-line no-loop-func
         depositTx.events.forEach((event) => {
           if (event.address === railgunLogicContract.address) {
-            event.args.commitments.forEach((commitment) => {
-              merkletree.insertLeaves([new WithdrawNote(
+            event.args.commitments.forEach((commitment, index) => {
+              const [base, fee] = getFee(
+                depositNotes[index].value,
+                true,
+                depositFee,
+              );
+
+              insertLeavesDeposit.push(new WithdrawNote(
                 BigInt(commitment.npk.toHexString()),
                 BigInt(commitment.value.toHexString()),
                 BigInt(commitment.token.tokenAddress),
-              ).hash]);
+              ));
+
+              depositNotes[index].value = base;
+
+              cumulativeBase += base;
+              cumulativeFee += fee;
             });
           }
         });
 
-        const transferNotes = new Array(artifactConfig.commitments - 1).fill(1).map(
+        merkletree.insertLeaves(insertLeavesDeposit.map((note) => note.hash));
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+
+        const transferNotes = new Array(artifactConfig.commitments).fill(1).map(
           // eslint-disable-next-line no-loop-func
           () => new Note(
             spendingKey,
@@ -414,7 +441,26 @@ describe('Logic/RailgunLogic', () => {
           ethers.constants.AddressZero,
         );
 
-        console.log(tx);
+        // eslint-disable-next-line no-await-in-loop
+        const result = await (await railgunLogicContract.transact([tx])).wait();
+
+        const insertLeavesTx = [];
+
+        // eslint-disable-next-line no-loop-func
+        result.events.forEach((event) => {
+          if (event.address === railgunLogicContract.address && event.event === 'CommitmentBatch') {
+            insertLeavesTx.push(...event.args.hash.map(
+              (hash) => BigInt(hash.toHexString()),
+            ));
+          }
+        });
+
+        merkletree.insertLeaves(insertLeavesTx);
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
       }
     }
   });
