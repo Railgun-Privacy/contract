@@ -24,7 +24,7 @@ const dummyProof = {
  */
 function hashBoundParams(boundParams) {
   const hash = ethers.utils.keccak256(abiCoder.encode([
-    'tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, bytes32[] memo)[] commitmentCiphertext) _boundParams',
+    'tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',
   ], [boundParams]));
 
   return BigInt(hash) % SNARK_SCALAR_FIELD;
@@ -39,6 +39,7 @@ function hashBoundParams(boundParams) {
  * @param {bigint} adaptParams - parameter field for use by adapt module
  * @param {Array<Note>} notesIn - transaction inputs
  * @param {Array<Note | WithdrawNote>} notesOut - transaction outputs
+ * @param {Array} commitmentCiphertext - commitment ciphertext
  * @returns {object} inputs
  */
 function formatInputs(
@@ -48,6 +49,7 @@ function formatInputs(
   adaptParams,
   notesIn,
   notesOut,
+  commitmentCiphertext,
 ) {
   // PUBLIC INPUTS
   const merkleRoot = merkletree.root;
@@ -57,7 +59,7 @@ function formatInputs(
     withdraw,
     adaptContract,
     adaptParams,
-    commitmentCiphertext: [],
+    commitmentCiphertext,
   });
   const nullifiers = notesIn.map((note) => {
     const merkleProof = merkletree.generateProof(note.hash);
@@ -122,6 +124,7 @@ function formatInputs(
  * @param {Array<Note | WithdrawNote>} notesOut - transaction outputs
  * @param {object} withdrawPreimage - withdraw note preimage
  * @param {string} overrideOutput - redirect output to address
+ * @param {Array} commitmentCiphertext - commitment ciphertext
  * @returns {object} inputs
  */
 function formatPublicInputs(
@@ -134,6 +137,7 @@ function formatPublicInputs(
   notesOut,
   withdrawPreimage,
   overrideOutput,
+  commitmentCiphertext,
 ) {
   const merkleRoot = merkletree.root;
   const treeNumber = BigInt(merkletree.treeNumber);
@@ -142,8 +146,6 @@ function formatPublicInputs(
     return note.getNullifier(merkleProof.indices);
   });
   const commitments = notesOut.map((note) => note.hash);
-
-  const ciphertextLength = withdraw === 0n ? notesOut.length : notesOut.length - 1;
 
   return {
     proof: proof.solidity,
@@ -155,13 +157,7 @@ function formatPublicInputs(
       withdraw,
       adaptContract,
       adaptParams,
-      commitmentCiphertext: new Array(ciphertextLength).fill(1).map(() => ({
-        ciphertext: new Array(4).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
-        ephemeralKeys: new Array(2).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
-        memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(
-          () => babyjubjub.genRandomPrivateKey(),
-        ),
-      })),
+      commitmentCiphertext,
     },
     withdrawPreimage: {
       npk: withdrawPreimage.notePublicKey,
@@ -202,6 +198,16 @@ async function transact(
 ) {
   const artifact = artifacts.getKeys(notesIn.length, notesOut.length);
 
+  const ciphertextLength = withdraw === 0n ? notesOut.length : notesOut.length - 1;
+
+  const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
+    ciphertext: new Array(4).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
+    ephemeralKeys: new Array(2).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
+    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(
+      () => babyjubjub.genRandomPrivateKey(),
+    ),
+  }));
+
   const inputs = formatInputs(
     merkletree,
     withdraw,
@@ -209,6 +215,7 @@ async function transact(
     adaptParams,
     notesIn,
     notesOut,
+    commitmentCiphertext,
   );
 
   const proof = await prover.prove(
@@ -226,6 +233,7 @@ async function transact(
     notesOut,
     withdrawPreimage,
     overrideOutput,
+    commitmentCiphertext,
   );
 
   return publicInputs;
@@ -257,6 +265,16 @@ async function dummyTransact(
 ) {
   const proof = dummyProof;
 
+  const ciphertextLength = withdraw === 0n ? notesOut.length : notesOut.length - 1;
+
+  const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
+    ciphertext: new Array(4).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
+    ephemeralKeys: new Array(2).fill(1).map(() => babyjubjub.genRandomPrivateKey()),
+    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(
+      () => babyjubjub.genRandomPrivateKey(),
+    ),
+  }));
+
   const publicInputs = formatPublicInputs(
     proof,
     merkletree,
@@ -267,6 +285,7 @@ async function dummyTransact(
     notesOut,
     withdrawPreimage,
     overrideOutput,
+    commitmentCiphertext,
   );
   return publicInputs;
 }
