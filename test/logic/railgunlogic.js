@@ -461,6 +461,9 @@ describe('Logic/RailgunLogic', () => {
         expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
         // eslint-disable-next-line no-await-in-loop
         expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+
+        // Shouldn't be able to double spend
+        expect(railgunLogicContract.transact([tx])).to.eventually.be.rejectedWith('RailgunLogic: Nullifier already seen');
       }
     }
   });
