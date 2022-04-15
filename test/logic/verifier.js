@@ -205,11 +205,18 @@ describe('Logic/Verifier', () => {
 
   it('Should throw error if circuit artifacts don\'t exist', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (!process.env.LONG_TESTS) {
+
+    let limit = 2;
+
+    if (process.env.LONG_TESTS === 'extra') {
+      this.timeout(5 * 60 * 60 * 1000);
+      limit = 2;
+    } else if (process.env.LONG_TESTS === 'complete') {
+      this.timeout(5 * 60 * 60 * 1000);
+      limit = 20;
+    } else {
       this.skip();
     }
-
-    const limit = 20;
 
     const artifactsList = artifacts.allArtifacts();
     await artifacts.loadAllArtifacts(verifier);
