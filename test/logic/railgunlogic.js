@@ -328,14 +328,15 @@ describe('Logic/RailgunLogic', () => {
 
     const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
 
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
     let cumulativeBase = 0n;
     let cumulativeFee = 0n;
 
     for (let i = 1n; i - 1n < loops; i += 1n) {
       for (let j = 0; j < artifactsList.length; j += 1) {
         const artifactConfig = artifactsList[j];
-        const spendingKey = babyjubjub.genRandomPrivateKey();
-        const viewingKey = babyjubjub.genRandomPrivateKey();
 
         const total = BigInt(artifactConfig.nullifiers) * BigInt(artifactConfig.commitments)
           * i * 10n ** 18n;
