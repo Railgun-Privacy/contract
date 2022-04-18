@@ -13,8 +13,9 @@ const { expect } = chai;
 const artifacts = require('../../helpers/snarkKeys');
 const babyjubjub = require('../../helpers/babyjubjub');
 const MerkleTree = require('../../helpers/merkletree');
-const { Note, WithdrawNote } = require('../../helpers/note');
+const { Note } = require('../../helpers/note');
 const transaction = require('../../helpers/transaction');
+const NoteRegistry = require('../../helpers/noteregistry');
 
 let snarkBypassSigner;
 let railgunLogic;
@@ -88,30 +89,6 @@ describe('Logic/RailgunLogic', () => {
     expect(await railgunLogic.nftFee()).to.equal(800n);
   });
 
-  /**
-   * Get base and fee amount
-   *
-   * @param {bigint} amount - Amount to calculate for
-   * @param {bigint} isInclusive - Whether the amount passed in is inclusive of the fee
-   * @param {bigint} feeBP - Fee basis points
-   * @returns {Array<bigint>} base, fee
-   */
-  function getFee(amount, isInclusive, feeBP) {
-    const BASIS_POINTS = 10000n;
-    let base;
-    let fee;
-
-    if (isInclusive) {
-      base = (amount * BASIS_POINTS) / (BASIS_POINTS + feeBP);
-      fee = amount - base;
-    } else {
-      base = amount;
-      fee = (amount * feeBP) / BASIS_POINTS;
-    }
-
-    return [base, fee];
-  }
-
   it('Should calculate fee', async function () {
     let loops = 5n;
 
@@ -126,7 +103,7 @@ describe('Logic/RailgunLogic', () => {
     for (let feeBP = 0n; feeBP < loops; feeBP += 1n) {
       for (let i = 1n; i <= 15n; i += 1n) {
         const baseExclusive = BigInt(`0x${crypto.randomBytes(Number(i)).toString('hex')}`);
-        const feeExclusive = getFee(baseExclusive, false, feeBP)[1];
+        const feeExclusive = transaction.getFee(baseExclusive, false, feeBP)[1];
 
         // eslint-disable-next-line no-await-in-loop
         const resultExclusive = await railgunLogic.getFee(baseExclusive, false, feeBP);
@@ -134,7 +111,7 @@ describe('Logic/RailgunLogic', () => {
         expect(resultExclusive[1]).to.equal(feeExclusive);
 
         const totalInclusive = baseExclusive + feeExclusive;
-        const [baseInclusive, feeInclusive] = getFee(totalInclusive, true, feeBP);
+        const [baseInclusive, feeInclusive] = transaction.getFee(totalInclusive, true, feeBP);
 
         if (totalInclusive < 2n ** 120n) {
           // eslint-disable-next-line no-await-in-loop
@@ -145,7 +122,7 @@ describe('Logic/RailgunLogic', () => {
       }
 
       const baseExclusive = 2n ** 120n - 1n;
-      const feeExclusive = getFee(baseExclusive, false, feeBP)[1];
+      const feeExclusive = transaction.getFee(baseExclusive, false, feeBP)[1];
 
       // eslint-disable-next-line no-await-in-loop
       const resultExclusive = await railgunLogic.getFee(baseExclusive, false, feeBP);
@@ -153,7 +130,7 @@ describe('Logic/RailgunLogic', () => {
       expect(resultExclusive[1]).to.equal(feeExclusive);
 
       const totalInclusive = baseExclusive + feeExclusive;
-      const [baseInclusive, feeInclusive] = getFee(totalInclusive, true, feeBP);
+      const [baseInclusive, feeInclusive] = transaction.getFee(totalInclusive, true, feeBP);
 
       if (totalInclusive < 2n ** 120n) {
         // eslint-disable-next-line no-await-in-loop
@@ -234,6 +211,7 @@ describe('Logic/RailgunLogic', () => {
     }
 
     const merkletree = new MerkleTree();
+    const testERC20noteregistry = new NoteRegistry();
 
     const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
 
@@ -265,16 +243,17 @@ describe('Logic/RailgunLogic', () => {
         value: note.value,
       })), encryptedRandom)).wait();
 
-      const insertLeaves = [];
+      let eventCounter = 0;
 
       // eslint-disable-next-line no-loop-func
       tx.events.forEach((event) => {
-        if (event.address === railgunLogic.address) {
+        if (event.event === 'GeneratedCommitmentBatch') {
+          eventCounter += 1;
           expect(event.args.treeNumber).to.equal(0n);
           expect(event.args.startPosition).to.equal(merkletree.leaves.length);
 
           event.args.commitments.forEach((commitment, index) => {
-            const [base, fee] = getFee(
+            const [base, fee] = transaction.getFee(
               notes[index].value,
               true,
               depositFee,
@@ -283,12 +262,6 @@ describe('Logic/RailgunLogic', () => {
             expect(commitment.npk).to.equal(notes[index].notePublicKey);
             expect(BigInt(commitment.token.tokenAddress)).to.equal(notes[index].token);
             expect(commitment.value).to.equal(base);
-
-            insertLeaves.push(new WithdrawNote(
-              BigInt(commitment.npk.toHexString()),
-              BigInt(commitment.value.toHexString()),
-              BigInt(commitment.token.tokenAddress),
-            ));
 
             cumulativeBase += base;
             cumulativeFee += fee;
@@ -301,9 +274,10 @@ describe('Logic/RailgunLogic', () => {
         }
       });
 
-      expect(insertLeaves.length).to.be.greaterThan(0);
+      expect(eventCounter).to.equal(1);
 
-      merkletree.insertLeaves(insertLeaves.map((note) => note.hash));
+      // Parse events
+      testERC20noteregistry.parseEvents(tx, merkletree);
 
       // eslint-disable-next-line no-await-in-loop
       expect(await railgunLogic.merkleRoot()).to.equal(merkletree.root);
@@ -350,6 +324,7 @@ describe('Logic/RailgunLogic', () => {
     };
 
     const merkletree = new MerkleTree();
+    const testERC20noteregistry = new NoteRegistry();
 
     const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
 
@@ -385,48 +360,22 @@ describe('Logic/RailgunLogic', () => {
           value: note.value,
         })), encryptedRandom)).wait();
 
-        const insertLeavesDeposit = [];
-
-        // eslint-disable-next-line no-loop-func
-        depositTx.events.forEach((event) => {
-          if (event.address === railgunLogicContract.address) {
-            event.args.commitments.forEach((commitment, index) => {
-              const [base, fee] = getFee(
-                depositNotes[index].value,
-                true,
-                depositFee,
-              );
-
-              insertLeavesDeposit.push(new WithdrawNote(
-                BigInt(commitment.npk.toHexString()),
-                BigInt(commitment.value.toHexString()),
-                BigInt(commitment.token.tokenAddress),
-              ));
-
-              depositNotes[index].value = base;
-
-              cumulativeBase += base;
-              cumulativeFee += fee;
-            });
-          }
-        });
-
-        merkletree.insertLeaves(insertLeavesDeposit.map((note) => note.hash));
+        // Parse events
+        testERC20noteregistry.parseEvents(depositTx, merkletree);
+        const [base, fee] = testERC20noteregistry.loadNotesWithFees(depositNotes, depositFee);
+        cumulativeBase += base;
+        cumulativeFee += fee;
 
         // eslint-disable-next-line no-await-in-loop
         expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
         // eslint-disable-next-line no-await-in-loop
         expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
 
-        const transferNotes = new Array(artifactConfig.commitments).fill(1).map(
-          // eslint-disable-next-line no-loop-func
-          () => new Note(
-            spendingKey,
-            viewingKey,
-            total / BigInt(artifactConfig.commitments),
-            babyjubjub.genRandomPoint(),
-            BigInt(testERC20.address),
-          ),
+        const [transferNotesIn, transferNotesOut] = testERC20noteregistry.getNotes(
+          artifactConfig.nullifiers,
+          artifactConfig.commitments,
+          spendingKey,
+          viewingKey,
         );
 
         // eslint-disable-next-line no-await-in-loop
@@ -435,8 +384,8 @@ describe('Logic/RailgunLogic', () => {
           0n,
           ethers.constants.AddressZero,
           ethers.constants.HashZero,
-          depositNotes,
-          transferNotes,
+          transferNotesIn,
+          transferNotesOut,
           new Note(0n, 0n, 0n, 0n, 0n),
           ethers.constants.AddressZero,
         );
@@ -444,18 +393,14 @@ describe('Logic/RailgunLogic', () => {
         // eslint-disable-next-line no-await-in-loop
         const result = await (await railgunLogicContract.transact([tx])).wait();
 
-        const insertLeavesTx = [];
+        // Parse events
+        testERC20noteregistry.parseEvents(result, merkletree);
+        testERC20noteregistry.loadNotes(transferNotesOut);
 
-        // eslint-disable-next-line no-loop-func
-        result.events.forEach((event) => {
-          if (event.address === railgunLogicContract.address && event.event === 'CommitmentBatch') {
-            insertLeavesTx.push(...event.args.hash.map(
-              (hash) => BigInt(hash.toHexString()),
-            ));
-          }
-        });
-
-        merkletree.insertLeaves(insertLeavesTx);
+        // eslint-disable-next-line no-await-in-loop
+        expect(await railgunLogic.merkleRoot()).to.equal(merkletree.root);
+        // eslint-disable-next-line no-await-in-loop
+        expect(await railgunLogic.rootHistory(0, merkletree.root)).to.equal(true);
 
         // eslint-disable-next-line no-await-in-loop
         expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);

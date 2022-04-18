@@ -290,10 +290,35 @@ async function dummyTransact(
   return publicInputs;
 }
 
+/**
+ * Get base and fee amount
+ *
+ * @param {bigint} amount - Amount to calculate for
+ * @param {bigint} isInclusive - Whether the amount passed in is inclusive of the fee
+ * @param {bigint} feeBP - Fee basis points
+ * @returns {Array<bigint>} base, fee
+ */
+function getFee(amount, isInclusive, feeBP) {
+  const BASIS_POINTS = 10000n;
+  let base;
+  let fee;
+
+  if (isInclusive) {
+    base = (amount * BASIS_POINTS) / (BASIS_POINTS + feeBP);
+    fee = amount - base;
+  } else {
+    base = amount;
+    fee = (amount * feeBP) / BASIS_POINTS;
+  }
+
+  return [base, fee];
+}
+
 module.exports = {
   dummyProof,
   hashBoundParams,
   formatInputs,
   transact,
   dummyTransact,
+  getFee,
 };

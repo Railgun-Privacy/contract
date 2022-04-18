@@ -79,6 +79,25 @@ class MerkleTree {
   }
 
   /**
+   * Loads leaves into tree at specific index
+   *
+   * @param {number} startingIndex - starting index to load leaves in
+   * @param {Array<bigint>} leaves - leaves to load
+   */
+  loadToPosition(startingIndex, leaves) {
+    // If array isn't long enough, extend it
+    if (this.tree[0].length < startingIndex + leaves.length) {
+      this.tree[0].length = startingIndex + leaves.length;
+    }
+
+    // Splice in leaves
+    this.tree[0].splice(startingIndex, startingIndex + leaves.length, ...leaves);
+
+    // REebuild tree
+    this.rebuildSparseTree();
+  }
+
+  /**
    * Returns leaves of the tree
    *
    * @returns {Array<bigint>} leaves
