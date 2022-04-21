@@ -522,6 +522,9 @@ describe('Logic/RailgunLogic', () => {
           ethers.constants.AddressZero,
         );
 
+        // eslint-disable-next-line no-await-in-loop
+        const result = await (await railgunLogicContract.transact([tx])).wait();
+
         tx.overrideOutput = redirectAccount.address;
 
         // Shouldn't be able to redirect unless specified
@@ -541,9 +544,6 @@ describe('Logic/RailgunLogic', () => {
         expect(railgunLogicContract.transact([tx])).to.eventually.be.rejectedWith('Withdraw commitment preimage is invalid');
 
         tx.withdrawPreimage.token.tokenAddress = originalToken;
-
-        // eslint-disable-next-line no-await-in-loop
-        const result = await (await railgunLogicContract.transact([tx])).wait();
 
         // Parse events
         testERC20noteregistry.parseEvents(result, merkletree);
