@@ -123,6 +123,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       || _withdrawFee != withdrawFee
       || nftFee != _nftFee
     ) {
+      require(_depositFee <= BASIS_POINTS, "RailgunLogic: Deposit Fee exceeds 100%");
+      require(_withdrawFee <= BASIS_POINTS, "RailgunLogic: Withdraw Fee exceeds 100%");
+
       // Change fee
       depositFee = _depositFee;
       withdrawFee = _withdrawFee;
