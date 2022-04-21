@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { SNARK_SCALAR_FIELD, TokenData, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD, TokenType, WithdrawType, TokenData, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
@@ -170,11 +170,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @return token field
    */
   function getTokenField(TokenData memory _tokenData) public pure returns (uint256) {
-    if (_tokenData.tokenType == 0) {
+    if (_tokenData.tokenType == TokenType.ERC20) {
       return uint256(uint160(_tokenData.tokenAddress));
-    } else if (_tokenData.tokenType == 1) {
+    } else if (_tokenData.tokenType == TokenType.ERC721) {
       revert("RailgunLogic: ERC721 not yet supported");
-    } else if (_tokenData.tokenType == 2) {
+    } else if (_tokenData.tokenType == TokenType.ERC1155) {
       revert("RailgunLogic: ERC1155 not yet supported");
     } else {
       revert("RailgunLogic: Unknown token type");
@@ -225,7 +225,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       require(note.npk < SNARK_SCALAR_FIELD, "RailgunLogic: npk out of range");
 
       // Process deposit request
-      if (note.token.tokenType == 0) {
+      if (note.token.tokenType == TokenType.ERC20) {
         // ERC20
         require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
 
@@ -261,10 +261,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
           treasury,
           fee
         );
-      } else if (note.token.tokenType == 1) {
+      } else if (note.token.tokenType == TokenType.ERC721) {
         // ERC721 token
         revert("RailgunLogic: ERC721 not yet supported");
-      } else if (note.token.tokenType == 2) {
+      } else if (note.token.tokenType == TokenType.ERC1155) {
         // ERC1155 token
         revert("RailgunLogic: ERC1155 not yet supported");
       } else {
@@ -330,7 +330,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         "RailgunLogic: Invalid SNARK proof"
       );
 
-      if (transaction.boundParams.withdraw > 0) {
+      if (transaction.boundParams.withdraw != WithdrawType.NONE) {
         // Last output is marked as withdraw, process
         // Hash the withdraw commitment preimage
         uint256 commitmentHash = hashCommitment(transaction.withdrawPreimage);
@@ -348,7 +348,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         if(transaction.overrideOutput != address(0)) {
           // Withdraw must == 2 and msg.sender must be the original recepient to change the output destination
           require(
-            msg.sender == output && transaction.boundParams.withdraw == 2,
+            msg.sender == output && transaction.boundParams.withdraw == WithdrawType.REDIRECT,
             "RailgunLogic: Can't override destination address"
           );
 
@@ -357,7 +357,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         }
 
         // Process withdrawal request
-        if (transaction.withdrawPreimage.token.tokenType == 0) {
+        if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC20) {
           // ERC20
           require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
 
@@ -378,10 +378,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
             treasury,
             fee
           );
-        } else if (transaction.withdrawPreimage.token.tokenType == 1) {
+        } else if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC721) {
           // ERC721 token
           revert("RailgunLogic: ERC721 not yet supported");
-        } else if (transaction.withdrawPreimage.token.tokenType == 2) {
+        } else if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC1155) {
           // ERC1155 token
           revert("RailgunLogic: ERC1155 not yet supported");
         } else {
