@@ -131,6 +131,15 @@ class WithdrawNote {
   }
 
   /**
+   * Return withdraw address as npk
+   *
+   * @returns {bigint} npk
+   */
+  get notePublicKey() {
+    return this.withdrawAddress;
+  }
+
+  /**
    * Get note hash
    *
    * @returns {bigint} hash

@@ -124,6 +124,31 @@ class NoteRegistry {
 
     return [inputs, outputs];
   }
+
+  /**
+   * Generates a test vector set of notes for withdraws
+   *
+   * @param {string} address - withdraw address
+   * @param {number} nullifiers - nullifier count
+   * @param {number} commitments - commitments count
+   * @param {bigint} spendingKey - note spending key
+   * @param {bigint} viewingKey - note viewing key
+   * @param {bigint} feeBP - fee basis points
+   * @returns {Array<Array<Note>, Array<Note>, bigint, bigint>} input notes, output notes, base, fee
+   */
+  getNotesWithdraw(address, nullifiers, commitments, spendingKey, viewingKey, feeBP) {
+    const [inputs, outputs] = this.getNotes(nullifiers, commitments, spendingKey, viewingKey);
+
+    outputs[outputs.length - 1] = new WithdrawNote(
+      BigInt(address),
+      outputs[outputs.length - 1].value,
+      outputs[outputs.length - 1].token,
+    );
+
+    const [base, fee] = getFee(outputs[outputs.length - 1].value, true, feeBP);
+
+    return [inputs, outputs, base, fee];
+  }
 }
 
 module.exports = NoteRegistry;
