@@ -2,7 +2,6 @@
 /* global describe it beforeEach */
 const hre = require('hardhat');
 const { ethers } = require('hardhat');
-const crypto = require('crypto');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 
@@ -10,12 +9,12 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-const artifacts = require('../../helpers/snarkKeys');
-const babyjubjub = require('../../helpers/babyjubjub');
-const MerkleTree = require('../../helpers/merkletree');
-const { Note } = require('../../helpers/note');
-const transaction = require('../../helpers/transaction');
-const NoteRegistry = require('../../helpers/noteregistry');
+const artifacts = require('../../../helpers/snarkKeys');
+const babyjubjub = require('../../../helpers/babyjubjub');
+const MerkleTree = require('../../../helpers/merkletree');
+const { Note } = require('../../../helpers/note');
+const transaction = require('../../../helpers/transaction');
+const NoteRegistry = require('../../../helpers/noteregistry');
 
 let snarkBypassSigner;
 let railgunLogic;
@@ -26,7 +25,7 @@ let redirectAccount;
 let testERC20;
 let testERC20BypassSigner;
 
-describe('Logic/RailgunLogic', () => {
+describe('Logic/RailgunLogic/ERC20', () => {
   beforeEach(async () => {
     await hre.network.provider.request({
       method: 'hardhat_setBalance',
@@ -68,78 +67,6 @@ describe('Logic/RailgunLogic', () => {
     await testERC20.transfer('0x000000000000000000000000000000000000dEaD', 2n ** 256n / 2n);
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
     await testERC20BypassSigner.approve(railgunLogic.address, 2n ** 256n - 1n);
-  });
-
-  it('Should change treasury', async () => {
-    expect(await railgunLogic.treasury()).to.equal(treasuryAccount.address);
-    await railgunLogic.changeTreasury(ethers.constants.AddressZero);
-    expect(await railgunLogic.treasury()).to.equal(ethers.constants.AddressZero);
-    await railgunLogic.changeTreasury(primaryAccount.address);
-    expect(await railgunLogic.treasury()).to.equal(primaryAccount.address);
-  });
-
-  it('Should change fee', async () => {
-    expect(await railgunLogic.depositFee()).to.equal(25n);
-    expect(await railgunLogic.withdrawFee()).to.equal(25n);
-    expect(await railgunLogic.nftFee()).to.equal(25n);
-
-    await railgunLogic.changeFee(5n, 12n, 800n);
-
-    expect(await railgunLogic.depositFee()).to.equal(5n);
-    expect(await railgunLogic.withdrawFee()).to.equal(12n);
-    expect(await railgunLogic.nftFee()).to.equal(800n);
-  });
-
-  it('Should calculate fee', async function () {
-    let loops = 5n;
-
-    if (process.env.LONG_TESTS === 'extra') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 10n;
-    } else if (process.env.LONG_TESTS === 'complete') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 100n;
-    }
-
-    for (let feeBP = 0n; feeBP < loops; feeBP += 1n) {
-      for (let i = 1n; i <= 15n; i += 1n) {
-        const baseExclusive = BigInt(`0x${crypto.randomBytes(Number(i)).toString('hex')}`);
-        const feeExclusive = transaction.getFee(baseExclusive, false, feeBP)[1];
-
-        // eslint-disable-next-line no-await-in-loop
-        const resultExclusive = await railgunLogic.getFee(baseExclusive, false, feeBP);
-        expect(resultExclusive[0]).to.equal(baseExclusive);
-        expect(resultExclusive[1]).to.equal(feeExclusive);
-
-        const totalInclusive = baseExclusive + feeExclusive;
-        const [baseInclusive, feeInclusive] = transaction.getFee(totalInclusive, true, feeBP);
-
-        if (totalInclusive < 2n ** 120n) {
-          // eslint-disable-next-line no-await-in-loop
-          const resultInclusive = await railgunLogic.getFee(totalInclusive, true, feeBP);
-          expect(resultInclusive[0]).to.equal(baseInclusive);
-          expect(resultInclusive[1]).to.equal(feeInclusive);
-        }
-      }
-
-      const baseExclusive = 2n ** 120n - 1n;
-      const feeExclusive = transaction.getFee(baseExclusive, false, feeBP)[1];
-
-      // eslint-disable-next-line no-await-in-loop
-      const resultExclusive = await railgunLogic.getFee(baseExclusive, false, feeBP);
-      expect(resultExclusive[0]).to.equal(baseExclusive);
-      expect(resultExclusive[1]).to.equal(feeExclusive);
-
-      const totalInclusive = baseExclusive + feeExclusive;
-      const [baseInclusive, feeInclusive] = transaction.getFee(totalInclusive, true, feeBP);
-
-      if (totalInclusive < 2n ** 120n) {
-        // eslint-disable-next-line no-await-in-loop
-        const resultInclusive = await railgunLogic.getFee(totalInclusive, true, feeBP);
-        expect(resultInclusive[0]).to.equal(baseInclusive);
-        expect(resultInclusive[1]).to.equal(feeInclusive);
-      }
-    }
   });
 
   it('Should calculate token field', async () => {
@@ -552,6 +479,148 @@ describe('Logic/RailgunLogic', () => {
         // eslint-disable-next-line no-await-in-loop
         const balanceAfterWithdraw = await testERC20.balanceOf(
           railgunLogicContract.signer.address,
+        );
+
+        // Subtract base and fee
+        cumulativeBase -= baseWithdraw;
+        cumulativeBase -= feeWithdraw;
+        cumulativeFee += feeWithdraw;
+
+        expect(balanceAfterWithdraw.sub(balanceBeforeWithdraw)).to.equal(baseWithdraw);
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await railgunLogicContract.merkleRoot()).to.equal(merkletree.root);
+        // eslint-disable-next-line no-await-in-loop
+        expect(await railgunLogicContract.rootHistory(0, merkletree.root)).to.equal(true);
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(railgunLogicContract.address)).to.equal(cumulativeBase);
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+      }
+    }
+  });
+
+  it('Should withdraw ERC20 redirected', async function () {
+    let loops = 2n;
+    let transactionCreator = transaction.dummyTransact;
+    let railgunLogicContract = railgunLogicBypassSigner;
+
+    const artifactsList = [];
+    artifacts.allArtifacts().forEach((x, nullifiers) => {
+      x.forEach((y, commitments) => {
+        artifactsList.push({ nullifiers, commitments });
+      });
+    });
+
+    if (process.env.LONG_TESTS === 'extra') {
+      this.timeout(5 * 60 * 60 * 1000);
+      transactionCreator = transaction.transact;
+      railgunLogicContract = railgunLogic;
+      loops = 2n;
+    } else if (process.env.LONG_TESTS === 'complete') {
+      this.timeout(5 * 60 * 60 * 1000);
+      transactionCreator = transaction.transact;
+      railgunLogicContract = railgunLogic;
+      loops = 10n;
+    }
+
+    await artifacts.loadAllArtifacts(railgunLogic);
+
+    const tokenData = {
+      tokenType: 0,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0,
+    };
+
+    const merkletree = new MerkleTree();
+    const testERC20noteregistry = new NoteRegistry();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
+    for (let i = 1n; i - 1n < loops; i += 1n) {
+      for (let j = 0; j < artifactsList.length; j += 1) {
+        const artifactConfig = artifactsList[j];
+
+        const depositNotes = new Array(artifactConfig.nullifiers).fill(1).map(
+          // eslint-disable-next-line no-loop-func
+          () => new Note(
+            spendingKey,
+            viewingKey,
+            i * 10n ** 18n,
+            babyjubjub.genRandomPoint(),
+            BigInt(testERC20.address),
+          ),
+        );
+
+        const encryptedRandom = new Array(artifactConfig.nullifiers).fill(1).map(() => [0n, 0n]);
+
+        // eslint-disable-next-line
+        const depositTx = await(await railgunLogicContract.generateDeposit(depositNotes.map((note) => ({
+          npk: note.notePublicKey,
+          token: tokenData,
+          value: note.value,
+        })), encryptedRandom)).wait();
+
+        // Parse events
+        testERC20noteregistry.parseEvents(depositTx, merkletree);
+        const [base, fee] = testERC20noteregistry.loadNotesWithFees(depositNotes, depositFee);
+        cumulativeBase += base;
+        cumulativeFee += fee;
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
+        // eslint-disable-next-line no-await-in-loop
+        expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+
+        const [
+          transferNotesIn,
+          transferNotesOut,
+          baseWithdraw,
+          feeWithdraw,
+        ] = testERC20noteregistry.getNotesWithdraw(
+          railgunLogicContract.signer.address,
+          artifactConfig.nullifiers,
+          artifactConfig.commitments,
+          spendingKey,
+          viewingKey,
+          withdrawFee,
+        );
+
+        // eslint-disable-next-line no-await-in-loop
+        const balanceBeforeWithdraw = await testERC20.balanceOf(
+          redirectAccount.address,
+        );
+
+        // eslint-disable-next-line no-await-in-loop
+        const tx = await transactionCreator(
+          merkletree,
+          2n,
+          ethers.constants.AddressZero,
+          ethers.constants.HashZero,
+          transferNotesIn,
+          transferNotesOut,
+          transferNotesOut[transferNotesOut.length - 1],
+          redirectAccount.address,
+        );
+
+        // eslint-disable-next-line no-await-in-loop
+        const result = await (await railgunLogicContract.transact([tx])).wait();
+
+        // Parse events
+        testERC20noteregistry.parseEvents(result, merkletree);
+        testERC20noteregistry.loadNotes(transferNotesOut.slice(0, -1));
+
+        // eslint-disable-next-line no-await-in-loop
+        const balanceAfterWithdraw = await testERC20.balanceOf(
+          redirectAccount.address,
         );
 
         // Subtract base and fee
