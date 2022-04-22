@@ -107,48 +107,52 @@ describe('Logic/Verifier', () => {
   it('Should verify dummy proofs', async () => {
     await artifacts.loadAllArtifacts(verifier);
 
-    await Promise.all(
-      artifacts.allArtifacts().map(
-        async (x, nullifiers) => Promise.all(x.map(async (y, commitments) => {
-          const spendingKey = babyjubjub.genRandomPrivateKey();
-          const viewingKey = babyjubjub.genRandomPrivateKey();
+    const artifactsList = artifacts.artifactConfigs();
 
-          const txTotal = BigInt(nullifiers) * BigInt(commitments);
+    for (let i = 0; i < artifactsList.length; i += 1) {
+      const artifactConfig = artifactsList[i];
 
-          const notesIn = new Array(nullifiers).fill(1).map(() => new Note(
-            spendingKey,
-            viewingKey,
-            txTotal / BigInt(nullifiers),
-            babyjubjub.genRandomPoint(),
-            1n,
-          ));
+      const spendingKey = babyjubjub.genRandomPrivateKey();
+      const viewingKey = babyjubjub.genRandomPrivateKey();
 
-          const notesOut = new Array(commitments).fill(1).map(() => new Note(
-            babyjubjub.genRandomPrivateKey(),
-            babyjubjub.genRandomPrivateKey(),
-            txTotal / BigInt(commitments),
-            babyjubjub.genRandomPoint(),
-            1n,
-          ));
+      const txTotal = BigInt(artifactConfig.nullifiers) * BigInt(artifactConfig.commitments);
 
-          const merkletree = new MerkleTree();
-          merkletree.insertLeaves(notesIn.map((note) => note.hash));
+      // eslint-disable-next-line no-loop-func
+      const notesIn = new Array(artifactConfig.nullifiers).fill(1).map(() => new Note(
+        spendingKey,
+        viewingKey,
+        txTotal / BigInt(artifactConfig.nullifiers),
+        babyjubjub.genRandomPoint(),
+        1n,
+      ));
 
-          const tx = await transaction.dummyTransact(
-            merkletree,
-            0n,
-            ethers.constants.AddressZero,
-            ethers.constants.HashZero,
-            notesIn,
-            notesOut,
-            new Note(0n, 0n, 0n, 0n, 0n),
-            ethers.constants.AddressZero,
-          );
+      // eslint-disable-next-line no-loop-func
+      const notesOut = new Array(artifactConfig.commitments).fill(1).map(() => new Note(
+        babyjubjub.genRandomPrivateKey(),
+        babyjubjub.genRandomPrivateKey(),
+        txTotal / BigInt(artifactConfig.commitments),
+        babyjubjub.genRandomPoint(),
+        1n,
+      ));
 
-          expect(await verifierBypassSigner.verify(tx)).to.equal(true);
-        })),
-      ),
-    );
+      const merkletree = new MerkleTree();
+      merkletree.insertLeaves(notesIn.map((note) => note.hash));
+
+      // eslint-disable-next-line no-await-in-loop
+      const tx = await transaction.dummyTransact(
+        merkletree,
+        0n,
+        ethers.constants.AddressZero,
+        ethers.constants.HashZero,
+        notesIn,
+        notesOut,
+        new Note(0n, 0n, 0n, 0n, 0n),
+        ethers.constants.AddressZero,
+      );
+
+      // eslint-disable-next-line no-await-in-loop
+      expect(await verifierBypassSigner.verify(tx)).to.equal(true);
+    }
   });
 
   it('Should verify proofs', async function () {
@@ -210,71 +214,61 @@ describe('Logic/Verifier', () => {
 
     if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
-      limit = 2;
+      limit = 4;
     } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
       limit = 20;
-    } else {
-      this.skip();
     }
 
-    const artifactsList = artifacts.allArtifacts();
-    await artifacts.loadAllArtifacts(verifier);
+    for (let nullifiers = 1; nullifiers < limit; nullifiers += 1) {
+      for (let commitments = 1; commitments < limit; commitments += 1) {
+        const spendingKey = babyjubjub.genRandomPrivateKey();
+        const viewingKey = babyjubjub.genRandomPrivateKey();
 
-    let nullifiers = 1;
+        const txTotal = BigInt(nullifiers) * BigInt(commitments);
 
-    for (nullifiers; nullifiers < limit; nullifiers += 1) {
-      let commitments = 1;
-      for (commitments; commitments < limit; commitments += 1) {
-        if (!artifactsList[nullifiers]?.[commitments]) {
-          const spendingKey = babyjubjub.genRandomPrivateKey();
-          const viewingKey = babyjubjub.genRandomPrivateKey();
+        // eslint-disable-next-line no-loop-func
+        const notesIn = new Array(nullifiers).fill(1).map(() => new Note(
+          spendingKey,
+          viewingKey,
+          txTotal / BigInt(nullifiers),
+          babyjubjub.genRandomPoint(),
+          1n,
+        ));
 
-          const txTotal = BigInt(nullifiers) * BigInt(commitments);
+        // eslint-disable-next-line no-loop-func
+        const notesOut = new Array(commitments).fill(1).map(() => new Note(
+          babyjubjub.genRandomPrivateKey(),
+          babyjubjub.genRandomPrivateKey(),
+          txTotal / BigInt(commitments),
+          babyjubjub.genRandomPoint(),
+          1n,
+        ));
 
-          // eslint-disable-next-line no-loop-func
-          const notesIn = new Array(nullifiers).fill(1).map(() => new Note(
-            spendingKey,
-            viewingKey,
-            txTotal / BigInt(nullifiers),
-            babyjubjub.genRandomPoint(),
-            1n,
-          ));
+        const merkletree = new MerkleTree();
+        merkletree.insertLeaves(notesIn.map((note) => note.hash));
 
-          // eslint-disable-next-line no-loop-func
-          const notesOut = new Array(commitments).fill(1).map(() => new Note(
-            babyjubjub.genRandomPrivateKey(),
-            babyjubjub.genRandomPrivateKey(),
-            txTotal / BigInt(commitments),
-            babyjubjub.genRandomPoint(),
-            1n,
-          ));
+        // eslint-disable-next-line no-await-in-loop
+        const tx = await transaction.dummyTransact(
+          merkletree,
+          0n,
+          ethers.constants.AddressZero,
+          ethers.constants.HashZero,
+          notesIn,
+          notesOut,
+          new Note(0n, 0n, 0n, 0n, 0n),
+          ethers.constants.AddressZero,
+        );
 
-          const merkletree = new MerkleTree();
-          merkletree.insertLeaves(notesIn.map((note) => note.hash));
-
-          // eslint-disable-next-line no-await-in-loop
-          const tx = await transaction.dummyTransact(
-            merkletree,
-            0n,
-            ethers.constants.AddressZero,
-            ethers.constants.HashZero,
-            notesIn,
-            notesOut,
-            new Note(0n, 0n, 0n, 0n, 0n),
-            ethers.constants.AddressZero,
-          );
-
-          // eslint-disable-next-line max-len
-          // await expect(verifierBypassSigner.verify(tx)).to.eventually.throw('Verifier: Key not set');
-          // eslint-disable-next-line no-await-in-loop
-          await expect(verifierBypassSigner.verify(tx)).to.eventually.throw;
-          // NOTE:
-          // This is throwing the expected error but due to https://github.com/ethers-io/ethers.js/discussions/2849
-          // The error message from hardhat isn't being parsed correctly
-          // Switch back to error checking when patched
-          // @todo
-        }
+        // eslint-disable-next-line max-len
+        // await expect(verifierBypassSigner.verify(tx)).to.eventually.throw('Verifier: Key not set');
+        // eslint-disable-next-line no-await-in-loop
+        await expect(verifierBypassSigner.verify(tx)).to.eventually.throw;
+        // NOTE:
+        // This is throwing the expected error but due to https://github.com/ethers-io/ethers.js/discussions/2849
+        // The error message from hardhat isn't being parsed correctly
+        // Switch back to error checking when patched
+        // @todo
       }
     }
   });

@@ -220,16 +220,11 @@ describe('Logic/RailgunLogic/ERC20', () => {
   });
 
   it('Should transfer ERC20', async function () {
-    let loops = 2n;
+    let loops = 1n;
     let transactionCreator = transaction.dummyTransact;
     let railgunLogicContract = railgunLogicBypassSigner;
 
-    const artifactsList = [];
-    artifacts.allArtifacts().forEach((x, nullifiers) => {
-      x.forEach((y, commitments) => {
-        artifactsList.push({ nullifiers, commitments });
-      });
-    });
+    const artifactsList = artifacts.artifactConfigs();
 
     if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
@@ -340,16 +335,11 @@ describe('Logic/RailgunLogic/ERC20', () => {
   });
 
   it('Should withdraw ERC20', async function () {
-    let loops = 2n;
+    let loops = 1n;
     let transactionCreator = transaction.dummyTransact;
     let railgunLogicContract = railgunLogicBypassSigner;
 
-    const artifactsList = [];
-    artifacts.allArtifacts().forEach((x, nullifiers) => {
-      x.forEach((y, commitments) => {
-        artifactsList.push({ nullifiers, commitments });
-      });
-    });
+    const artifactsList = artifacts.artifactConfigs();
 
     if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
@@ -506,12 +496,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
     let transactionCreator = transaction.dummyTransact;
     let railgunLogicContract = railgunLogicBypassSigner;
 
-    const artifactsList = [];
-    artifacts.allArtifacts().forEach((x, nullifiers) => {
-      x.forEach((y, commitments) => {
-        artifactsList.push({ nullifiers, commitments });
-      });
-    });
+    const artifactsList = artifacts.artifactConfigs();
 
     if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);

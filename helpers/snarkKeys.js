@@ -106,9 +106,25 @@ async function loadAllArtifacts(verifierContract) {
   }
 }
 
+/**
+ * Returns all artifact configs as single array
+ *
+ * @returns {Array<object>} artifact configs
+ */
+function artifactConfigs() {
+  const artifactsList = [];
+  allArtifacts().forEach((x, nullifiers) => {
+    x.forEach((y, commitments) => {
+      artifactsList.push({ nullifiers, commitments });
+    });
+  });
+  return artifactsList;
+}
+
 module.exports = {
   formatVKey,
   getKeys,
   allArtifacts,
   loadAllArtifacts,
+  artifactConfigs,
 };
