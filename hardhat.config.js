@@ -10,6 +10,8 @@ require('hardhat-artifactor');
 require('hardhat-tracer');
 require('hardhat-docgen');
 
+const mocharc = require('./.mocharc.json');
+
 let networks;
 
 try {
@@ -95,9 +97,7 @@ module.exports = {
       },
     },
   },
-  mocha: {
-    timeout: 10 * 60 * 1000, // 10 minutes
-  },
+  mocha: mocharc,
   docgen: {
     path: './docs',
     clear: true,
