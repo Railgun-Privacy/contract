@@ -69,64 +69,6 @@ describe('Logic/RailgunLogic/ERC20', () => {
     await testERC20BypassSigner.approve(railgunLogic.address, 2n ** 256n - 1n);
   });
 
-  it('Should calculate token field', async () => {
-    const loops = 3n;
-
-    for (let i = 0n; i < loops; i += 1n) {
-      const tokenData = {
-        tokenType: 0,
-        tokenAddress: ethers.utils.keccak256(
-          ethers.BigNumber.from(i * loops).toHexString(),
-        ).slice(0, 42),
-        tokenSubID: i,
-      };
-
-      // eslint-disable-next-line no-await-in-loop
-      expect(await railgunLogic.getTokenField(tokenData)).to.equal(tokenData.tokenAddress);
-    }
-  });
-
-  it('Should hash note preimages', async function () {
-    let loops = 1n;
-
-    if (process.env.LONG_TESTS === 'extra') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 10n;
-    } else if (process.env.LONG_TESTS === 'complete') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 100n;
-    }
-
-    for (let i = 0n; i < loops; i += 1n) {
-      const privateKey = babyjubjub.genRandomPrivateKey();
-      const viewingKey = babyjubjub.genRandomPrivateKey();
-      const token = ethers.utils.keccak256(
-        ethers.BigNumber.from(i * loops).toHexString(),
-      ).slice(0, 42);
-
-      const note = new Note(
-        privateKey,
-        viewingKey,
-        i,
-        BigInt(ethers.utils.keccak256(ethers.BigNumber.from(i).toHexString())),
-        BigInt(`${token}`),
-      );
-
-      // eslint-disable-next-line no-await-in-loop
-      const contractHash = await railgunLogic.hashCommitment({
-        npk: note.notePublicKey,
-        token: {
-          tokenType: 0,
-          tokenAddress: token,
-          tokenSubID: 0,
-        },
-        value: note.value,
-      });
-
-      expect(contractHash).to.equal(note.hash);
-    }
-  });
-
   it('Should deposit ERC20', async function () {
     let loops = 2n;
 
