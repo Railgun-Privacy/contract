@@ -28,6 +28,7 @@ contract Treasury is Ownable {
    */
   function transferETH(address payable _to, uint256 _amount) external onlyOwner {
     require(_to != address(0), "Treasury: Preventing potential accidental burn");
+    //solhint-disable-next-line avoid-low-level-calls
     (bool sent,) = _to.call{value: _amount}("");
     require(sent, "Failed to send Ether");
   }

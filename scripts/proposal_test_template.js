@@ -125,6 +125,7 @@ async function passProposal(proposalID) {
   await voting.executeProposal(proposalID);
 }
 
+// eslint-disable-next-line no-unused-vars
 async function main() {
   await prep();
   await becomeWhale();
@@ -138,6 +139,7 @@ async function main() {
   console.log(calls);
 }
 
+// eslint-disable-next-line no-unused-vars
 async function submit() {
   await prep();
   const calls = await getProposalCalls();

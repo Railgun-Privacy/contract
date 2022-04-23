@@ -76,6 +76,7 @@ task('fastforward', 'Fast forwards time')
     await hre.ethers.provider.send('evm_increaseTime', [
       Math.round(86400 * taskArguments.days),
     ]);
+    // eslint-disable-next-line no-console
     console.log(`Fast forwarded ${Math.round(86400 * taskArguments.days)} seconds`);
     await hre.ethers.provider.send('evm_mine');
   });

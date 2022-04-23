@@ -95,12 +95,15 @@ describe('Logic/Commitments', () => {
 
     expect(await commitmentsStub.treeNumber()).to.equal(0n);
 
+    // eslint-disable-next-line no-console
     console.log('\n      FILLING TREE\n');
     for (let i = 0; i < 2 ** 16; i += steps) {
+      // eslint-disable-next-line no-console
       console.log(`      Filled ${i}/${2 ** 16}`);
       // eslint-disable-next-line no-await-in-loop
       await commitmentsStub.insertLeavesStub((new Array(steps)).fill(1n));
     }
+    // eslint-disable-next-line no-console
     console.log('\n      TREE FILLED\n');
 
     await commitmentsStub.insertLeavesStub((new Array(steps)).fill(1n));

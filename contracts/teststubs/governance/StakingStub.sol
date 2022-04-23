@@ -6,6 +6,7 @@ import { Staking } from "../../governance/Staking.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract StakingStub is Staking {
+  //solhint-disable-next-line no-empty-blocks
   constructor(IERC20 _stakingToken) Staking(_stakingToken) {}
 
   function snapshotStub(address _account) public {

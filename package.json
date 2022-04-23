@@ -6,7 +6,11 @@
   "scripts": {
     "lint": "solhint 'contracts/**/*.sol' && eslint .",
     "clean": "hardhat clean",
-    "compile": "npm run lint && npm run clean && hardhat compile"
+    "compile": "npm run lint && npm run clean && hardhat compile",
+    "test": "hardhat test",
+    "test:extra": "hardhat test --longtests extra",
+    "test:complete": "hardhat test --longtests complete",
+    "analyze": "npm run lint && npm run clean && ./slither.sh"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",

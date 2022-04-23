@@ -198,7 +198,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _notes - list of commitments to deposit
    */
-  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata _encryptedRandom) external payable {
+  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata _encryptedRandom) external {
     // Get notes length
     uint256 notesLength = _notes.length;
 
@@ -227,7 +227,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Process deposit request
       if (note.token.tokenType == TokenType.ERC20) {
         // ERC20
-        require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
 
         // Get ERC20 interface
         IERC20 token = IERC20(address(uint160(note.token.tokenAddress)));
@@ -286,7 +285,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    */
   function transact(
     Transaction[] calldata _transactions
-  ) external payable {
+  ) external {
     // Accumulate total number of insertion commitments
     uint256 insertionCommitmentCount = 0;
 
@@ -359,7 +358,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         // Process withdrawal request
         if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC20) {
           // ERC20
-          require(msg.value == 0, "RailgunLogic: Preventing accidentally sending unnecessary ETH fee");
 
           // Get ERC20 interface
           IERC20 token = IERC20(address(uint160(transaction.withdrawPreimage.token.tokenAddress)));
