@@ -8,3 +8,6 @@ then
 fi
 
 slither .
+
+slither-check-upgradeability . RailgunLogic
+# Move original contract to legacy folder and add --new-contract-name RailgunLogicV2 when writing proxy upgrade
