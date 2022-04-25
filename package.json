@@ -36,7 +36,9 @@
     "solhint": "^3.3.2"
   },
   "dependencies": {
+    "@noble/hashes": "^1.0.0",
     "@openzeppelin/contracts": "4.5.0",
-    "@openzeppelin/contracts-upgradeable": "4.5.0"
+    "@openzeppelin/contracts-upgradeable": "4.5.0",
+    "xchacha20-js": "^0.3.1"
   }
 }
