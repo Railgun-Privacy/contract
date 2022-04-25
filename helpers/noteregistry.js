@@ -25,7 +25,7 @@ class NoteRegistry {
   /**
    * Load notes into map
    *
-   * @param {Note} notes - notes to lead into registry
+   * @param {Array<Note>} notes - notes to lead into registry
    */
   loadNotes(notes) {
     notes.forEach((note) => {
