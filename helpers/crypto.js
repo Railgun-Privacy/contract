@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const { blake3 } = require('@noble/hashes/blake3');
 const { XChaCha20 } = require('xchacha20-js');
 
+/* @todo FOR V2 */
+
 /**
  * Encrypts message with key
  *
