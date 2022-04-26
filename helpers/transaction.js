@@ -294,7 +294,7 @@ async function dummyTransact(
  * Get base and fee amount
  *
  * @param {bigint} amount - Amount to calculate for
- * @param {bigint} isInclusive - Whether the amount passed in is inclusive of the fee
+ * @param {boolean} isInclusive - Whether the amount passed in is inclusive of the fee
  * @param {bigint} feeBP - Fee basis points
  * @returns {Array<bigint>} base, fee
  */
