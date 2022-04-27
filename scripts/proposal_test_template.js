@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
+const readline = require('readline');
 const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
@@ -125,7 +126,6 @@ async function passProposal(proposalID) {
   await (await voting.executeProposal(proposalID)).wait();
 }
 
-// eslint-disable-next-line no-unused-vars
 async function main() {
   console.log('\nRUNNING PREP');
   await prep();
@@ -147,7 +147,6 @@ async function main() {
   console.log(calls);
 }
 
-// eslint-disable-next-line no-unused-vars
 async function submit() {
   console.log('\nRUNNING PREP');
   await prep();
@@ -158,12 +157,23 @@ async function submit() {
   console.log('Proposal ID: ', proposalID);
 }
 
-main().then(() => process.exit(0)).catch((error) => {
-  console.error(error);
-  process.exit(1);
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
 });
 
-// submit().then(() => process.exit(0)).catch((error) => {
-//   console.error(error);
-//   process.exit(1);
-// });
+rl.question('Yes = Deploy to live; No = Run tests; [y/N]: ', (answer) => {
+  rl.close();
+
+  if (answer === 'y' || answer === 'Y') {
+    submit().then(() => process.exit(0)).catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+  } else {
+    main().then(() => process.exit(0)).catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+  }
+});
