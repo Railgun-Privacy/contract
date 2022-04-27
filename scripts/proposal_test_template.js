@@ -14,14 +14,14 @@ ethers.provider = new ethers.providers.JsonRpcProvider({
 });
 
 const DEPLOYCONFIG = {
-  rail: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-  staking: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
-  delegator: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
-  voting: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
-  treasury: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
-  implementation: '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318',
-  proxyAdmin: '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707',
-  proxy: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
+  delegator: '0xb6d513f6222ee92fff975e901bd792e2513fb53b',
+  implementation: '0xc6368d9998ea333b37eb869f4e1749b9296e6d09',
+  proxy: '0xbf0Af567D60318f66460Ec78b464589E3f9dA48e',
+  proxyAdmin: '0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8',
+  rail: '0xe76c6c83af64e4c60245d8c7de953df673a7a33d',
+  staking: '0xee6a649aa3766bd117e12c161726b693a1b2ee20',
+  treasury: '0xc851fbe0f07a326ce0326ccc70c2a62732e74d6c',
+  voting: '0xfc4b580c9bda2eef4e94d9fb4bcb1f7a61660cf9',
 };
 
 const PROPOSALDOCUMENT = 'QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D';
@@ -80,18 +80,18 @@ async function stakeAll() {
   const rail = (await ethers.getContractFactory('TestERC20')).attach(DEPLOYCONFIG.rail);
   const staking = (await ethers.getContractFactory('Staking')).attach(DEPLOYCONFIG.staking);
 
-  await rail.approve(
+  (await rail.approve(
     staking.address,
     await rail.balanceOf(
       (await ethers.getSigners())[0].address,
     ),
-  );
+  )).wait();
 
-  await staking.stake(
+  (await staking.stake(
     await rail.balanceOf(
       (await ethers.getSigners())[0].address,
     ),
-  );
+  )).wait();
 }
 
 async function submitProposal(proposalDocument, calls) {
@@ -122,18 +122,26 @@ async function passProposal(proposalID) {
     - Number(votingStartOffset.toString()),
   ]);
 
-  await voting.executeProposal(proposalID);
+  await (await voting.executeProposal(proposalID)).wait();
 }
 
 // eslint-disable-next-line no-unused-vars
 async function main() {
+  console.log('\nRUNNING PREP');
   await prep();
+  console.log('\nINCREASING RAIL BALANCE FOR VOTE');
   await becomeWhale();
+  console.log('\nSTAKING ALL RAIL');
   await stakeAll();
+  console.log('\nFAST FORWARDING TO SNAPSHOT');
   await fastForward(1);
+  console.log('\nGETTING PROPOSAL CALLS');
   const calls = await getProposalCalls();
+  console.log('\nSUBMITTING PROPOSAL');
   const proposalID = await submitProposal(PROPOSALDOCUMENT, calls);
+  console.log('\nPASSING PROPOSAL');
   await passProposal(proposalID);
+  console.log('\nTESTING PROPOSAL');
   await testProposalUpgrade();
   console.log('Tests passed with calls:');
   console.log(calls);
@@ -141,8 +149,11 @@ async function main() {
 
 // eslint-disable-next-line no-unused-vars
 async function submit() {
+  console.log('\nRUNNING PREP');
   await prep();
+  console.log('\nGETTING PROPOSAL CALLS');
   const calls = await getProposalCalls();
+  console.log('\nSUBMITTING PROPOSAL');
   const proposalID = await submitProposal(PROPOSALDOCUMENT, calls);
   console.log('Proposal ID: ', proposalID);
 }
