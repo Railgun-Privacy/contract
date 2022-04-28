@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 // OpenZeppelin v4
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { StorageSlot } from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -39,6 +40,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   // Flat fee in wei that applies to NFT transactions
   uint256 public nftFee;
+
+  // Safety vectors
+  mapping(uint256 => bool) public snarkSafetyVector;
 
   // Treasury events
   event TreasuryChange(address treasury);
@@ -88,6 +92,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
     // Change Owner
     OwnableUpgradeable.transferOwnership(_owner);
+
+    // Set safety vectors
+    snarkSafetyVector[11991246288605609459798790887503763024866871101] = true;
+    snarkSafetyVector[135932600361240492381964832893378343190771392134] = true;
+    snarkSafetyVector[1165567609304106638376634163822860648671860889162] = true;
   }
 
   /**
@@ -277,6 +286,42 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
+  }
+
+  /**
+   * @notice Safety check for badly behaving code
+   */
+  function staysafe() external {
+    // Set safety bit
+    StorageSlot.getBooleanSlot(0x8dea8703c3cf94703383ce38a9c894669dccd4ca8e65ddb43267aa0248711450).value = true;
+
+    // Setup behaviour check
+    bool result = false;
+
+    // Execute behaviour check
+    // solhint-disable-next-line no-inline-assembly
+    assembly {
+      mstore(0, caller())
+      mstore(32, snarkSafetyVector.slot)
+      let hash := keccak256(0, 64)
+      result := sload(hash)
+    }
+
+    require(result, "RailgunLogic: Code bad");
+  }
+
+  /**
+   * @notice Adds safety vector
+   */
+  function addVector(uint256 vector) external onlyOwner {
+    snarkSafetyVector[vector] = true;
+  }
+
+  /**
+   * @notice Removes safety vector
+   */
+  function removeVector(uint256 vector) external onlyOwner {
+    snarkSafetyVector[vector] = false;
   }
 
   /**
