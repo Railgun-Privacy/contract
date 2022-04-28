@@ -154,11 +154,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint136 fee;
 
     if (_isInclusive) {
-      base = (amountExpanded * BASIS_POINTS) / (BASIS_POINTS + _feeBP);
+      base = amountExpanded - (amountExpanded * _feeBP) / BASIS_POINTS;
       fee = amountExpanded - base;
     } else {
       base = amountExpanded;
-      fee = (amountExpanded * _feeBP) / BASIS_POINTS;
+      fee = (BASIS_POINTS * base) / (BASIS_POINTS - _feeBP) - base;
     }
 
     return (uint120(base), uint120(fee));

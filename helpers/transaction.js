@@ -304,11 +304,11 @@ function getFee(amount, isInclusive, feeBP) {
   let fee;
 
   if (isInclusive) {
-    base = (amount * BASIS_POINTS) / (BASIS_POINTS + feeBP);
+    base = amount - (amount * feeBP) / BASIS_POINTS;
     fee = amount - base;
   } else {
     base = amount;
-    fee = (amount * feeBP) / BASIS_POINTS;
+    fee = (BASIS_POINTS * base) / (BASIS_POINTS - feeBP) - base;
   }
 
   return [base, fee];
