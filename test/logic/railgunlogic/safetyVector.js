@@ -51,7 +51,9 @@ describe('Logic/RailgunLogic/SafetyVector', () => {
   it('Should pass safety checks', async () => {
     await expect(railgunLogic.treasury()).to.eventually.be.fulfilled;
     await expect(railgunLogic.staysafe()).to.eventually.be.rejected;
+    await expect(railgunLogic.treasury()).to.eventually.be.fulfilled;
     await railgunLogic.addVector(BigInt(primaryAccount.address));
+    await expect(railgunLogic.treasury()).to.eventually.be.fulfilled;
     await expect(railgunLogic.staysafe()).to.eventually.be.fulfilled;
     await expect(railgunLogic.treasury()).to.eventually.be.rejected;
   });
