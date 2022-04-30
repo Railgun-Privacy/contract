@@ -13,7 +13,7 @@ let primaryAccount;
 let treasuryAccount;
 let proxy;
 
-describe('Logic/RailgunLogic/SafetyVector', () => {
+describe('Logic/RailgunLogic/SnarkSafetyVector', () => {
   beforeEach(async () => {
     const PoseidonT3 = await ethers.getContractFactory('PoseidonT3');
     const PoseidonT4 = await ethers.getContractFactory('PoseidonT4');
@@ -48,13 +48,13 @@ describe('Logic/RailgunLogic/SafetyVector', () => {
     );
   });
 
-  it('Should pass safety checks', async () => {
+  it('Should pass safety vector checks', async () => {
     await expect(railgunLogic.treasury()).to.eventually.be.fulfilled;
-    await expect(railgunLogic.staysafe()).to.eventually.be.rejected;
+    await expect(railgunLogic.checkSafetyVectors()).to.eventually.be.rejected;
     await expect(railgunLogic.treasury()).to.eventually.be.fulfilled;
     await railgunLogic.addVector(BigInt(primaryAccount.address));
     await expect(railgunLogic.treasury()).to.eventually.be.fulfilled;
-    await expect(railgunLogic.staysafe()).to.eventually.be.fulfilled;
+    await expect(railgunLogic.checkSafetyVectors()).to.eventually.be.fulfilled;
     await expect(railgunLogic.treasury()).to.eventually.be.rejected;
   });
 });

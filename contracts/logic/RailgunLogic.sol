@@ -291,7 +291,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Safety check for badly behaving code
    */
-  function staysafe() external {
+  function checkSafetyVectors() external {
     // Set safety bit
     StorageSlot.getBooleanSlot(0x8dea8703c3cf94703383ce38a9c894669dccd4ca8e65ddb43267aa0248711450).value = true;
 
@@ -307,7 +307,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       result := sload(hash)
     }
 
-    require(result, "RailgunLogic: Code bad");
+    require(result, "RailgunLogic: Unsafe vectors");
   }
 
   /**
