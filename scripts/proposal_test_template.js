@@ -9,11 +9,6 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-ethers.provider = new ethers.providers.JsonRpcProvider({
-  url: ethers.provider.connection.url,
-  timeout: 2147483647,
-});
-
 const DEPLOYCONFIG = {
   delegator: '0xb6d513f6222ee92fff975e901bd792e2513fb53b',
   implementation: '0xc6368d9998ea333b37eb869f4e1749b9296e6d09',
@@ -125,7 +120,6 @@ async function passProposal(proposalID) {
 
   await (await voting.executeProposal(proposalID)).wait();
 }
-
 async function main() {
   console.log('\nRUNNING PREP');
   await prep();
@@ -157,16 +151,43 @@ async function submit() {
   console.log('Proposal ID: ', proposalID);
 }
 
+async function adminDeployToRopsten() {
+  console.log('\nRUNNING PREP');
+  await prep();
+  console.log('\nGETTING PROPOSAL CALLS');
+  const calls = await getProposalCalls();
+  console.log('\nRUNNING CALLS');
+  const Delegator = await ethers.getContractFactory('Delegator');
+  const delegator = await Delegator.attach(DEPLOYCONFIG.delegator);
+  console.log(delegator.signer.address);
+  for (let i = 0; i < calls.length; i += 1) {
+    console.log(calls[i]);
+    // eslint-disable-next-line no-await-in-loop
+    await (
+      // eslint-disable-next-line no-await-in-loop
+      await delegator.callContract(calls[i].callContract, calls[i].data, calls[i].value)
+    ).wait();
+  }
+}
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
-rl.question('Yes = Deploy to live; No = Run tests; [y/N]: ', (answer) => {
+console.log('1 = Deploy live');
+console.log('2 = Deploy to ropsten as admin');
+console.log('Other = Run tests locally');
+rl.question('Make a selection: ', (answer) => {
   rl.close();
 
-  if (answer === 'y' || answer === 'Y') {
+  if (answer === '1') {
     submit().then(() => process.exit(0)).catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+  } else if (answer === '2') {
+    adminDeployToRopsten().then(() => process.exit(0)).catch((error) => {
       console.error(error);
       process.exit(1);
     });
