@@ -9,6 +9,11 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
+ethers.provider = new ethers.providers.JsonRpcProvider({
+  url: ethers.provider.connection.url,
+  timeout: 2147483647,
+});
+
 const DEPLOYCONFIG = {
   delegator: '0xb6d513f6222ee92fff975e901bd792e2513fb53b',
   implementation: '0xc6368d9998ea333b37eb869f4e1749b9296e6d09',
