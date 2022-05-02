@@ -218,7 +218,7 @@ contract Commitments is Initializable {
   /**
    * @notice Creates new merkle tree
    */
-  function newTree() private {
+  function newTree() internal {
     // Restore merkleRoot to newTreeRoot
     merkleRoot = newTreeRoot;
 

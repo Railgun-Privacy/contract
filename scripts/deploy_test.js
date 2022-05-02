@@ -53,7 +53,7 @@ async function main() {
   const poseidonT4 = await PoseidonT4.deploy();
 
   // Get Railgun Logic
-  const RailgunLogic = await ethers.getContractFactory('RailgunLogic', {
+  const RailgunLogic = await ethers.getContractFactory('RailgunLogicStub', {
     libraries: {
       PoseidonT3: poseidonT3.address,
       PoseidonT4: poseidonT4.address,
