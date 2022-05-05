@@ -1,7 +1,9 @@
 const fs = require('fs');
 
 if (!process.argv[2] || !process.argv[3] || !process.argv[4]) {
+  // eslint-disable-next-line no-console
   console.log('Usage: node prepProposalIPFSDoc.js [output file] [proposal description markdown file] [proposal title]');
+  // eslint-disable-next-line no-console
   console.log('Example: node prepProposalIPFSDoc.js ./proposalDocument.json ./proposalDescription.md "Example Proposal"');
   process.exit();
 }
