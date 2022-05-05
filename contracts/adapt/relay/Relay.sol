@@ -141,7 +141,7 @@ contract RelayAdapt is ReentrancyGuard {
   function railgunBatch(
     Transaction[] calldata _transactions,
     bytes memory _additionalData
-  ) public guardReenter {
+  ) public {
     bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData);
 
     // Loop through each transaction and ensure adaptID parameters match
