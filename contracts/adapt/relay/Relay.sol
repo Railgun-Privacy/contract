@@ -33,20 +33,21 @@ contract RelayAdapt is ReentrancyGuard {
   RailgunLogic public railgun;
   IWBase public wbase;
 
+  address private allowedCaller;
 
   /**
    * @notice Only allows reentrancy from self
    */
-  modifier onlySelfReenter () {
-    // @todo Modify https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/security/ReentrancyGuard.sol
-    // This prevents malicious contracts that are being interacted with as part of a multicall
-    // from being able to steal funds through reentry or callbacks
+  modifier guardReenter () {
+    // If GeneralAdapt has allowedCaller set this will only allow calls to contract functions
+    // from self or that address
     require(
-      msg.sender == tx.origin
-      || msg.sender == address(this)
-      , "GeneralAdapt: Caller is external contract"
+     allowedCaller == address(this) // Call to self
+     || allowedCaller == address(0) // Allowed caller not set
+     || msg.sender == allowedCaller, // Allowed caller is the one calling
+      "GeneralAdapt: Caller is a reentering contract"
     );
-
+  
     _;
   }
 
@@ -66,7 +67,7 @@ contract RelayAdapt is ReentrancyGuard {
   function multicall(
     bool _requireSuccess,
     Call[] calldata _calls
-  ) public onlySelfReenter returns (Result[] memory) {
+  ) public guardReenter returns (Result[] memory) {
     // Initialize returnData array
     Result[] memory returnData = new Result[](_calls.length);
 
@@ -81,6 +82,7 @@ contract RelayAdapt is ReentrancyGuard {
       // standalone
 
       // Execute call
+      // solhint-disable-next-line avoid-low-level-calls
       (bool success, bytes memory ret) = call.to.call{value: call.value}(call.data);
 
       // If requireSuccess is true, throw on failure
@@ -133,7 +135,7 @@ contract RelayAdapt is ReentrancyGuard {
   function railgunBatch(
     Transaction[] calldata _transactions,
     bytes memory _additionalData
-  ) public onlySelfReenter {
+  ) public guardReenter {
     bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData);
 
     // Loop through each transaction and ensure adaptID parameters match
@@ -155,7 +157,7 @@ contract RelayAdapt is ReentrancyGuard {
     TokenData[] calldata _deposits,
     uint256[2] calldata _encryptedRandom,
     uint256 _npk
-  ) public onlySelfReenter {
+  ) external guardReenter {
     // Loop through each token specified for deposit and deposit our total balance
     // Due to a quirk with the USDT token contract this will fail if it's approval is
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
@@ -208,7 +210,7 @@ contract RelayAdapt is ReentrancyGuard {
    function send(
     IERC20[] calldata _tokens,
     address _to
-  ) public onlySelfReenter {
+  ) external guardReenter {
     // Loop through each token specified for deposit and deposit our total balance
     // Due to a quirk with the USDT token contract this will fail if it's approval is
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
@@ -237,7 +239,7 @@ contract RelayAdapt is ReentrancyGuard {
   /**
    * @notice Wraps all base tokens in contract
    */
-  function wrapAllBase() public onlySelfReenter {
+  function wrapAllBase() external guardReenter {
     // Fetch ETH balance
     uint256 balance = address(this).balance;
 
@@ -248,7 +250,7 @@ contract RelayAdapt is ReentrancyGuard {
   /**
    * @notice Unwraps all wrapped base tokens in contract
    */
-  function unwrapAllBase() public onlySelfReenter {
+  function unwrapAllBase() external guardReenter {
     // Fetch ETH balance
     uint256 balance = wbase.balanceOf(address(this));
 
@@ -297,7 +299,10 @@ contract RelayAdapt is ReentrancyGuard {
     uint256 _random,
     bool _requireSuccess,
     Call[] calldata _calls
-  ) public payable returns (Result[] memory) {
+  ) external payable guardReenter returns (Result[] memory) {
+    // Lock functions to msg.sender to prevent reentrancy
+    allowedCaller = msg.sender;
+
     // Calculate additionalData parameter for adaptID parameters
     bytes memory additionalData = abi.encode(
       _random,
@@ -313,6 +318,9 @@ contract RelayAdapt is ReentrancyGuard {
 
     // To execute a multicall and deposit or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.
+
+    // Release reentrancy lock
+    allowedCaller = address(0);
 
     // Return returnData
     return returnData;
