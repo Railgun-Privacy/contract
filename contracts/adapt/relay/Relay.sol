@@ -230,6 +230,7 @@ contract RelayAdapt is ReentrancyGuard {
         uint256 balance = address(this).balance;
 
         // Send ETH
+        // solhint-disable-next-line avoid-low-level-calls
         (bool sent,) = _to.call{value: balance}("");
         require(sent, "Failed to send Ether");
       } else {
