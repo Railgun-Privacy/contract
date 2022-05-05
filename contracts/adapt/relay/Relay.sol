@@ -68,6 +68,9 @@ contract RelayAdapt is ReentrancyGuard {
     bool _requireSuccess,
     Call[] calldata _calls
   ) public guardReenter returns (Result[] memory) {
+    // Lock functions to msg.sender to prevent reentrancy
+    allowedCaller = msg.sender;
+
     // Initialize returnData array
     Result[] memory returnData = new Result[](_calls.length);
 
@@ -93,6 +96,9 @@ contract RelayAdapt is ReentrancyGuard {
       // Add call result to returnData
       returnData[i] = Result(success, ret);
     }
+
+    // Release reentrancy lock
+    allowedCaller = address(0);
 
     return returnData;
   }
@@ -300,9 +306,6 @@ contract RelayAdapt is ReentrancyGuard {
     bool _requireSuccess,
     Call[] calldata _calls
   ) external payable guardReenter returns (Result[] memory) {
-    // Lock functions to msg.sender to prevent reentrancy
-    allowedCaller = msg.sender;
-
     // Calculate additionalData parameter for adaptID parameters
     bytes memory additionalData = abi.encode(
       _random,
@@ -318,9 +321,6 @@ contract RelayAdapt is ReentrancyGuard {
 
     // To execute a multicall and deposit or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.
-
-    // Release reentrancy lock
-    allowedCaller = address(0);
 
     // Return returnData
     return returnData;
