@@ -5,7 +5,6 @@ pragma abicoder v2;
 // OpenZeppelin v4
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import { IWBase } from "./IWBase.sol";
 import { RailgunLogic, Transaction, CommitmentPreimage, TokenData, TokenType } from "../../logic/RailgunLogic.sol";
@@ -16,7 +15,7 @@ import { RailgunLogic, Transaction, CommitmentPreimage, TokenData, TokenType } f
  * @notice Multicall adapt contract for Railgun with relayer support
  */
 
-contract RelayAdapt is ReentrancyGuard {
+contract RelayAdapt {
   using SafeERC20 for IERC20;
 
   struct Call {
