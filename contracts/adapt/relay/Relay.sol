@@ -7,7 +7,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { IWETH } from "./IWETH.sol";
-import { RailgunLogic, Transaction, CommitmentPreimage } from "../../logic/RailgunLogic.sol";
+import { RailgunLogic, Transaction, CommitmentPreimage, TokenData } from "../../logic/RailgunLogic.sol";
 
 /**
  * @title Relay Adapt
@@ -56,6 +56,32 @@ contract RelayAdapt {
     weth = _weth;
   }
 
+  function getAdaptParamsValue(
+    Transaction[] calldata _transactions,
+    Call[] calldata _calls
+  ) public returns (bytes32) {
+    // Calculate the expected adaptID parameters value
+
+    // The first nullifier is used here to ensure that transactions can't be switched out in the mempool
+    uint256[] memory firstNullifiers = new uint256[](_transactions.length);
+    for (uint256 i = 0; i < _transactions.length; i++) {
+      // Only need first nullifier
+      firstNullifiers[i] = _transactions[i].nullifiers[0];
+    }
+
+    // ABI encode the calls and add to hash
+    bytes memory additionalData = getAdditionDataFromCalls(_calls);
+
+    // Return adapt params value
+    return keccak256(
+      abi.encode(
+        firstNullifiers,
+        _transactions.length,
+        callsEncoded
+      )
+    );
+  }
+
   /**
    * @notice Executes multicall batch
    * @param _requireSuccess - Whether transaction should throw on multicall failure
@@ -74,8 +100,8 @@ contract RelayAdapt {
       Call calldata call = _calls[i];
 
       // NOTE:
-      // If any of these calls are to a Railgun transaction, adaptID contract should be set to this contracts address
-      // adaptID paramemters set to 0. This will ensure that the transaction can't be extracted and submitted
+      // If any of these calls are to a Railgun transaction, adapt contract should be set to this contracts address
+      // and adapt paramemters set to 0. This will ensure that the transaction can't be extracted and submitted
       // standalone
 
       // Execute call
@@ -93,38 +119,23 @@ contract RelayAdapt {
     return returnData;
   }
 
+  function getAdaptParamsValue(_transactions, _additionalData) {
+    
+  }
+
    /**
    * @notice Executes a batch of Railgun transactions
    * @param _transactions - Batch of Railgun transactions to execute
-   * @param _additionalData - additional data for transaction adaptID, if calling this function directly this
-   * should be a random value (shouldn't be reused if resubmitting the same transaction through another relayer)
+   * @param _expectedAdaptParameters - expected value for adapt params
+   * Should be 0 if being executed as part of a multicall step
    */
   function railgunBatch(
     Transaction[] calldata _transactions,
-    bytes memory _additionalData
+    bytes32 _expectedAdaptParameters
   ) public noExternalContract {
-    // Calculate the expected adaptID parameters value
-    // The number of transactions is included here to ensure railgun transactions can't be removed
-    // by an adversary while the transaction is still in the mempool
-    uint256[ _transactions.lenth] memory firstNullifiers;
-    for (uint256 i = 0; i < _transactions.length; i++) {
-      //only need first nullifier
-      firstNullifiers[i] = _transactions[i].nullifier[0];
-    }
-
-    uint256 adaptParams = uint256(
-      sha256(
-        abi.encode(
-          firstNullifiers,
-          _transactions.length,
-          _additionalData
-        )
-      )
-    );
-
     // Loop through each transaction and ensure adaptID parameters match
     for(uint256 i = 0; i < _transactions.length; i++) {
-      require(_transactions[i].boundParams.adaptParams == adaptParams, "GeneralAdapt: AdaptID Parameters Mismatch");
+      require(_transactions[i].boundParams.adaptParams == _expectedAdaptParameters, "GeneralAdapt: AdaptID Parameters Mismatch");
     }
 
     // Execute railgun transactions
@@ -134,20 +145,21 @@ contract RelayAdapt {
   /**
    * @notice Executes a batch of Railgun deposits
    * @param _deposits - ERC20 tokens to deposit
-   * @param _random - Random value (should be less than snark scalar field)
-   * @param _pubkey - public key to deposit tokens to
+   * @param _encryptedRandom - Encrypted random value for deposits
+   * @param _npk - note public key to deposit to
    */
   function deposit(
     IERC20[] calldata _deposits,
-    uint256 _random,
-    uint256[2] calldata _pubkey
+    uint256[2] calldata _encryptedRandom,
+    uint256 _npk
   ) public noExternalContract {
     // Loop through each token specified for deposit and deposit our total balance
     // Due to a quirk with the USDT token contract this will fail if it's approval is
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
     // transaction always succeeds when dealing with USDT/similar tokens make sure the last
     // call in your calls is a call to the token contract with an approval of 0
-    GenerateDepositTX[] memory generatedDeposits = new GenerateDepositTX[](_deposits.length);
+    CommitmentPreimage[] memory commitmentPreimages = new CommitmentPreimage[](_deposits.length);
+    uint256[2][] memory encryptedRandom = new uint256[2][](_deposits.length);
 
     for (uint256 i = 0; i < _deposits.length; i++) {
       IERC20 token = _deposits[i];
@@ -161,19 +173,20 @@ contract RelayAdapt {
         balance
       );
 
-      // Push to deposits array
-      generatedDeposits[i] = GenerateDepositTX({
-        pubkey: _pubkey,
-        random: _random,
-        amount: uint120(balance),
-        tokenType: 0,
-        tokenSubID: 0,
-        token: uint256(uint160(address(token)))
+      // Push to deposits arrays
+      commitmentPreimages[i] = CommitmentPreimage({
+        npk: _npk,
+        value: uint120(balance),
+        token: TokenData({
+          tokenType: 0,
+          tokenAddress: uint256(uint160(address(token))),
+          tokenSubID: 0
+        })
       });
     }
 
     // Deposit back to Railgun
-    railgun.generateDeposit(generatedDeposits);
+    railgun.generateDeposit(commitmentPreimages, encryptedRandom);
   }
 
   /**
@@ -235,11 +248,6 @@ contract RelayAdapt {
    */
   function relay(
     Transaction[] calldata _transactions,
-    // In an edge case where railgun transactions are submitted into the mempool
-    // but not mined followed by a different set of railgun transactions submitted
-    // to the mempool with the same calls, an adversary could mix and match
-    // transactions as long as the total transaction count remains the same
-    // Including the random factor here prevents this from happening
     uint256 _random,
     bool _requireSuccess,
     Call[] calldata _calls
@@ -257,7 +265,7 @@ contract RelayAdapt {
     // Execute multicalls
     Result[] memory returnData = multicall(_requireSuccess, _calls);
 
-    // To execute a multicall and deposit or send the result, encode a call to the relevant function on this
+    // To execute a multicall and deposit or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.
 
     // Return returnData
