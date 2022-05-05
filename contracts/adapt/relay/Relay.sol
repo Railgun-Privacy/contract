@@ -7,7 +7,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { IWETH } from "./IWETH.sol";
-import { RailgunLogic, Transaction, GenerateDepositTX } from "../../logic/RailgunLogic.sol";
+import { RailgunLogic, Transaction, CommitmentPreimage } from "../../logic/RailgunLogic.sol";
 
 /**
  * @title Relay Adapt
@@ -38,7 +38,7 @@ contract RelayAdapt {
    */
   modifier noExternalContract () {
     // This prevents malicious contracts that are being interacted with as part of a multicall
-    // from being able to steal funds via send or deposit via callbacks
+    // from being able to steal funds through reentry or callbacks
     require(
       msg.sender == tx.origin
       || msg.sender == address(this)
@@ -105,14 +105,14 @@ contract RelayAdapt {
   ) public noExternalContract {
     // Calculate the expected adaptID parameters value
     // The number of transactions is included here to ensure railgun transactions can't be removed
-    // by an adversary while the transaction is still in the mempool\
+    // by an adversary while the transaction is still in the mempool
     uint256[ _transactions.lenth] memory firstNullifiers;
     for (uint256 i = 0; i < _transactions.length; i++) {
       //only need first nullifier
       firstNullifiers[i] = _transactions[i].nullifier[0];
     }
 
-    uint256 adaptIDparameters = uint256(
+    uint256 adaptParams = uint256(
       sha256(
         abi.encode(
           firstNullifiers,
@@ -124,7 +124,7 @@ contract RelayAdapt {
 
     // Loop through each transaction and ensure adaptID parameters match
     for(uint256 i = 0; i < _transactions.length; i++) {
-      require(_transactions[i].adaptIDparameters == adaptIDparameters, "GeneralAdapt: AdaptID Parameters Mismatch");
+      require(_transactions[i].boundParams.adaptParams == adaptParams, "GeneralAdapt: AdaptID Parameters Mismatch");
     }
 
     // Execute railgun transactions
