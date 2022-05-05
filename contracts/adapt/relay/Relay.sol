@@ -103,7 +103,7 @@ contract RelayAdapt {
   }
 
   /**
-   * @notice Executes a batch of Railgun transactions
+   * @notice Gets adapt params for Railgun batch
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _additionalData - Additional data
    * Should be 0 if being executed as part of a multicall step
