@@ -104,7 +104,7 @@ contract RelayAdapt is ReentrancyGuard {
   function getAdaptParamsValue(
     Transaction[] calldata _transactions,
     bytes memory _additionalData
-  ) public returns (bytes32) {
+  ) public pure returns (bytes32) {
     // Calculate the expected adaptID parameters value
 
     // The first nullifier is used here to ensure that transactions can't be switched out in the mempool
