@@ -101,7 +101,7 @@ contract RelayAdapt is ReentrancyGuard {
    * @param _additionalData - Additional data
    * Should be 0 if being executed as part of a multicall step
    */
-  function getAdaptParamsValue(
+  function getAdaptParams(
     Transaction[] calldata _transactions,
     bytes memory _additionalData
   ) public pure returns (bytes32) {
@@ -134,7 +134,7 @@ contract RelayAdapt is ReentrancyGuard {
     Transaction[] calldata _transactions,
     bytes memory _additionalData
   ) public onlySelfReenter {
-    bytes32 expectedAdaptParameters = getAdaptParamsValue(_transactions, _additionalData);
+    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData);
 
     // Loop through each transaction and ensure adaptID parameters match
     for(uint256 i = 0; i < _transactions.length; i++) {
@@ -266,12 +266,12 @@ contract RelayAdapt is ReentrancyGuard {
    * @param _requireSuccess - Whether transaction should throw on multicall failure
    * @param _calls - multicall
    */
-  function getAdaptParamsValue(
+  function getRelayAdaptParams(
     Transaction[] calldata _transactions,
     uint256 _random,
     bool _requireSuccess,
     Call[] calldata _calls
-  ) external returns (bytes32) {
+  ) external pure returns (bytes32) {
     // Convenience function to get the expected adaptID parameters value for global
     bytes memory additionalData = abi.encode(
       _random,
@@ -280,7 +280,7 @@ contract RelayAdapt is ReentrancyGuard {
     );
 
     // Return adapt params value
-    return getAdaptParamsValue(_transactions, additionalData);
+    return getAdaptParams(_transactions, additionalData);
   }
 
   /**
