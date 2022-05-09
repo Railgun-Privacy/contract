@@ -33,6 +33,7 @@ contract RelayAdapt {
   IWBase public wbase;
 
   address private allowedCaller;
+  bytes32 private multicallID = 0x0;
 
   /**
    * @notice Only allows reentrancy from self
@@ -103,30 +104,41 @@ contract RelayAdapt {
   }
 
   /**
-   * @notice Gets adapt params for Railgun batch
-   * @param _transactions - Batch of Railgun transactions to execute
-   * @param _additionalData - Additional data
-   * Should be 0 if being executed as part of a multicall step
+   * @notice Gets list of the first nullifiers for a batch of transactions
+   * 
    */
-  function getAdaptParams(
-    Transaction[] calldata _transactions,
-    bytes memory _additionalData
-  ) public pure returns (bytes32) {
-    // Calculate the expected adaptID parameters value
-
-    // The first nullifier is used here to ensure that transactions can't be switched out in the mempool
+  function getFirstNullifiers(
+    Transaction[] calldata _transactions
+  ) public pure returns (uint256[] memory) {
     uint256[] memory firstNullifiers = new uint256[](_transactions.length);
+
     for (uint256 i = 0; i < _transactions.length; i++) {
       // Only need first nullifier
       firstNullifiers[i] = _transactions[i].nullifiers[0];
     }
 
-    // Return adapt params value
+    return firstNullifiers;
+  }
+
+  /**
+   * @notice Gets adapt params for Railgun batch
+   * @param _transactions - Batch of Railgun transactions to execute
+   * @param _additionalData - Additional data
+   * @param _multicallID - multicall binder ID
+   */
+  function getAdaptParams(
+    Transaction[] calldata _transactions,
+    bytes memory _additionalData,
+    bytes32 _multicallID
+  ) public pure returns (bytes32) {
+    uint256[] memory firstNullifiers = getFirstNullifiers(_transactions);
+
     return keccak256(
       abi.encode(
         firstNullifiers,
         _transactions.length,
-        _additionalData
+        _additionalData,
+        _multicallID
       )
     );
   }
@@ -135,13 +147,13 @@ contract RelayAdapt {
    * @notice Executes a batch of Railgun transactions
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _additionalData - Additional data
-   * Should be 0 if being executed as part of a multicall step
+   * Should be 0 if being called directly
    */
   function railgunBatch(
     Transaction[] calldata _transactions,
     bytes memory _additionalData
   ) public {
-    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData);
+    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData, multicallID);
 
     // Loop through each transaction and ensure adaptID parameters match
     for(uint256 i = 0; i < _transactions.length; i++) {
@@ -316,13 +328,18 @@ contract RelayAdapt {
     // Executes railgun batch
     railgunBatch(_transactions, additionalData);
 
+    // Set multicallID to lock proofs
+    multicallID = keccak256(abi.encodePacked(
+
+    ));
+
     // Execute multicalls
     Result[] memory returnData = multicall(_requireSuccess, _calls);
 
     // To execute a multicall and deposit or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.
 
-    // Return returnData
+    // Return results of calls
     return returnData;
   }
 }
