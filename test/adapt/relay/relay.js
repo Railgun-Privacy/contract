@@ -13,7 +13,7 @@ let treasuryAccount;
 let testERC20;
 let railgunLogic;
 
-describe('Logic/Snark', () => {
+describe('Adapt/Relay', () => {
   beforeEach(async () => {
     await hre.network.provider.request({
       method: 'hardhat_setBalance',
@@ -51,7 +51,7 @@ describe('Logic/Snark', () => {
 
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     testERC20 = await TestERC20.deploy();
-    await testERC20.transfer('0x000000000000000000000000000000000000dEaD', 2n ** 256n);
+    await testERC20.transfer('0x000000000000000000000000000000000000dEaD', 2n ** 256n - 1n);
     testERC20 = testERC20.connect(snarkBypassSigner);
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
   });

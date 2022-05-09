@@ -9,11 +9,11 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-const artifacts = require('../../helpers/snarkKeys');
-const babyjubjub = require('../../helpers/babyjubjub');
-const MerkleTree = require('../../helpers/merkletree');
-const { Note } = require('../../helpers/note');
-const transaction = require('../../helpers/transaction');
+const artifacts = require('../../helpers/logic/snarkKeys');
+const babyjubjub = require('../../helpers/logic/babyjubjub');
+const MerkleTree = require('../../helpers/logic/merkletree');
+const { Note } = require('../../helpers/logic/note');
+const transaction = require('../../helpers/logic/transaction');
 
 let verifier;
 let snarkBypassSigner;

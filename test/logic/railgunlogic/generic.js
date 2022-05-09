@@ -10,9 +10,9 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-const babyjubjub = require('../../../helpers/babyjubjub');
-const { Note } = require('../../../helpers/note');
-const transaction = require('../../../helpers/transaction');
+const babyjubjub = require('../../../helpers/logic/babyjubjub');
+const { Note } = require('../../../helpers/logic/note');
+const transaction = require('../../../helpers/logic/transaction');
 
 let snarkBypassSigner;
 let railgunLogic;

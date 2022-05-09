@@ -10,7 +10,7 @@ const { expect } = chai;
 
 const { poseidon } = require('circomlibjs');
 
-const MerkleTree = require('../../helpers/merkletree');
+const MerkleTree = require('../../helpers/logic/merkletree');
 
 let commitmentsStub;
 let merkletree;
