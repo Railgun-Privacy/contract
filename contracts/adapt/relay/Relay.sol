@@ -32,27 +32,16 @@ contract RelayAdapt {
   RailgunLogic public railgun;
   IWBase public wbase;
 
-  address private allowedCaller;
-  bytes32 private multicallID = 0x0;
-
   /**
-   * @notice Only allows reentrancy from self
+   * @notice only allows self calls to these contracts
    */
-  modifier guardReenter () {
-    // If GeneralAdapt has allowedCaller set this will only allow calls to contract functions
-    // from self or that address
-    require(
-     allowedCaller == address(this) // Call to self
-     || allowedCaller == address(0) // Allowed caller not set
-     || msg.sender == allowedCaller, // Allowed caller is the one calling
-      "GeneralAdapt: Caller is a reentering contract"
-    );
-  
+  modifier onlySelf() {
+    require(msg.sender == address(this), "RelayAdapt: External call to onlySelf function");
     _;
   }
 
   /**
-   * @notice Sets Railgun contract and weth address
+   * @notice Sets Railgun contract and wbase address
    */
   constructor(RailgunLogic _railgun, IWBase _wbase) {
     railgun = _railgun;
@@ -60,56 +49,15 @@ contract RelayAdapt {
   }
 
   /**
-   * @notice Executes multicall batch
-   * @param _requireSuccess - Whether transaction should throw on multicall failure
-   * @param _calls - multicall
+   * @notice Gets adapt params for Railgun batch
+   * @param _transactions - Batch of Railgun transactions to execute
+   * @param _additionalData - Additional data
+   * @return adapt params
    */
-  function multicall(
-    bool _requireSuccess,
-    Call[] calldata _calls
-  ) public guardReenter returns (Result[] memory) {
-    // Lock functions to msg.sender to prevent reentrancy
-    allowedCaller = msg.sender;
-
-    // Initialize returnData array
-    Result[] memory returnData = new Result[](_calls.length);
-
-    // Loop through each call
-    for(uint256 i = 0; i < _calls.length; i++) {
-      // Retrieve call
-      Call calldata call = _calls[i];
-
-      // NOTE:
-      // If any of these calls are a direct railgun transaction or railgunBatch, adapt contract should be set to this contracts address
-      // and adapt paramemters set to 0. This will ensure that the transaction can't be extracted and submitted
-      // standalone
-
-      // Execute call
-      // solhint-disable-next-line avoid-low-level-calls
-      (bool success, bytes memory ret) = call.to.call{value: call.value}(call.data);
-
-      // If requireSuccess is true, throw on failure
-      if (_requireSuccess) {
-        require(success, "GeneralAdapt: Call Failed");
-      }
-
-      // Add call result to returnData
-      returnData[i] = Result(success, ret);
-    }
-
-    // Release reentrancy lock
-    allowedCaller = address(0);
-
-    return returnData;
-  }
-
-  /**
-   * @notice Gets list of the first nullifiers for a batch of transactions
-   * 
-   */
-  function getFirstNullifiers(
-    Transaction[] calldata _transactions
-  ) public pure returns (uint256[] memory) {
+  function getAdaptParams(
+    Transaction[] calldata _transactions,
+    bytes memory _additionalData
+  ) public pure returns (bytes32) {
     uint256[] memory firstNullifiers = new uint256[](_transactions.length);
 
     for (uint256 i = 0; i < _transactions.length; i++) {
@@ -117,28 +65,11 @@ contract RelayAdapt {
       firstNullifiers[i] = _transactions[i].nullifiers[0];
     }
 
-    return firstNullifiers;
-  }
-
-  /**
-   * @notice Gets adapt params for Railgun batch
-   * @param _transactions - Batch of Railgun transactions to execute
-   * @param _additionalData - Additional data
-   * @param _multicallID - multicall binder ID
-   */
-  function getAdaptParams(
-    Transaction[] calldata _transactions,
-    bytes memory _additionalData,
-    bytes32 _multicallID
-  ) public pure returns (bytes32) {
-    uint256[] memory firstNullifiers = getFirstNullifiers(_transactions);
-
     return keccak256(
       abi.encode(
         firstNullifiers,
         _transactions.length,
-        _additionalData,
-        _multicallID
+        _additionalData
       )
     );
   }
@@ -147,13 +78,15 @@ contract RelayAdapt {
    * @notice Executes a batch of Railgun transactions
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _additionalData - Additional data
-   * Should be 0 if being called directly
+   * Should be random value if called directly
+   * If called via multicall sub-call this can be extracted and submitted standalone
+   * Be aware of the dangers of this before doing so!
    */
   function railgunBatch(
     Transaction[] calldata _transactions,
     bytes memory _additionalData
   ) public {
-    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData, multicallID);
+    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData);
 
     // Loop through each transaction and ensure adaptID parameters match
     for(uint256 i = 0; i < _transactions.length; i++) {
@@ -174,7 +107,7 @@ contract RelayAdapt {
     TokenData[] calldata _deposits,
     uint256[2] calldata _encryptedRandom,
     uint256 _npk
-  ) external guardReenter {
+  ) external onlySelf {
     // Loop through each token specified for deposit and deposit our total balance
     // Due to a quirk with the USDT token contract this will fail if it's approval is
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
@@ -227,7 +160,7 @@ contract RelayAdapt {
    function send(
     IERC20[] calldata _tokens,
     address _to
-  ) external guardReenter {
+  ) external onlySelf {
     // Loop through each token specified for deposit and deposit our total balance
     // Due to a quirk with the USDT token contract this will fail if it's approval is
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
@@ -257,7 +190,7 @@ contract RelayAdapt {
   /**
    * @notice Wraps all base tokens in contract
    */
-  function wrapAllBase() external guardReenter {
+  function wrapAllBase() external onlySelf {
     // Fetch ETH balance
     uint256 balance = address(this).balance;
 
@@ -268,12 +201,46 @@ contract RelayAdapt {
   /**
    * @notice Unwraps all wrapped base tokens in contract
    */
-  function unwrapAllBase() external guardReenter {
+  function unwrapAllBase() external onlySelf {
     // Fetch ETH balance
     uint256 balance = wbase.balanceOf(address(this));
 
     // Unwrap
     wbase.withdraw(balance);
+  }
+
+  /**
+   * @notice Executes multicall batch
+   * @param _requireSuccess - Whether transaction should throw on call failure
+   * @param _calls - multicall array
+   * @return result of calls
+   */
+  function multicall(
+    bool _requireSuccess,
+    Call[] calldata _calls
+  ) public returns (Result[] memory) {
+    // Initialize returnData array
+    Result[] memory returnData = new Result[](_calls.length);
+
+    // Loop through each call
+    for(uint256 i = 0; i < _calls.length; i++) {
+      // Retrieve call
+      Call calldata call = _calls[i];
+
+      // Execute call
+      // solhint-disable-next-line avoid-low-level-calls
+      (bool success, bytes memory ret) = call.to.call{value: call.value}(call.data);
+
+      // If requireSuccess is true, throw on failure
+      if (_requireSuccess) {
+        require(success, "GeneralAdapt: Call Failed");
+      }
+
+      // Add call result to returnData
+      returnData[i] = Result(success, ret);
+    }
+
+    return returnData;
   }
 
   /**
@@ -317,7 +284,7 @@ contract RelayAdapt {
     uint256 _random,
     bool _requireSuccess,
     Call[] calldata _calls
-  ) external payable guardReenter returns (Result[] memory) {
+  ) external payable returns (Result[] memory) {
     // Calculate additionalData parameter for adaptID parameters
     bytes memory additionalData = abi.encode(
       _random,
@@ -327,11 +294,6 @@ contract RelayAdapt {
 
     // Executes railgun batch
     railgunBatch(_transactions, additionalData);
-
-    // Set multicallID to lock proofs
-    multicallID = keccak256(abi.encodePacked(
-
-    ));
 
     // Execute multicalls
     Result[] memory returnData = multicall(_requireSuccess, _calls);
