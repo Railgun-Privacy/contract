@@ -29,6 +29,7 @@ contract RelayAdapt {
     bytes returnData;
   }
 
+  // External contract addresses
   RailgunLogic public railgun;
   IWBase public wbase;
 
