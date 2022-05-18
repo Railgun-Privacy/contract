@@ -1,6 +1,7 @@
 /* eslint-disable max-classes-per-file */
 const { ethers } = require('hardhat');
 const { poseidon, eddsa } = require('circomlibjs');
+const bigintBuffer = require('bigint-buffer');
 const babyjubjubHelper = require('./babyjubjub');
 const cryptoHelper = require('./crypto');
 
@@ -122,7 +123,10 @@ class Note {
    * @returns {Buffer[]} encrypted random data
    */
   async encryptRandom() {
-    return cryptoHelper.encryptAESGCM([this.random], this.viewingKey);
+    return cryptoHelper.encryptAESGCM(
+      [bigintBuffer.toBufferBE(this.random, 16)],
+      bigintBuffer.toBufferBE(this.viewingKey, 32),
+    );
   }
 }
 
