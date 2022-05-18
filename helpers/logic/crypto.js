@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { blake3 } = require('@noble/hashes/blake3');
 const { XChaCha20 } = require('xchacha20-js');
 
-/* @todo FOR V2 */
+/* @todo FOR V2 SWITCH TO XCHACHA20 */
 
 /**
  * Encrypts message with key
@@ -11,7 +11,7 @@ const { XChaCha20 } = require('xchacha20-js');
  * @param {Buffer} message - message to encrypt
  * @returns {Buffer} encrypted bundle
  */
-async function encrypt(key, message) {
+async function encryptXChaCha20(key, message) {
   // Get nonce
   const nonce = crypto.randomBytes(24);
 
@@ -35,7 +35,7 @@ async function encrypt(key, message) {
  * @param {Buffer} bundle - bundle to decrypt
  * @returns {Buffer} decrypted data
  */
-async function decrypt(key, bundle) {
+async function decryptXChaCha20(key, bundle) {
   // Deconstruct bundle
   const tag = bundle.slice(0, 32);
   const nonce = bundle.slice(32, 56);
@@ -52,7 +52,60 @@ async function decrypt(key, bundle) {
   return plaintext;
 }
 
+/* END TODO */
+
+/**
+ * Encrypt plaintext with AES-GCM-256
+ *
+ * @param {Buffer[]} plaintext - plaintext to encrypt
+ * @param {Buffer} key - key to encrypt with
+ * @returns {Buffer[]} encrypted bundle
+ */
+async function encryptAESGCM(plaintext, key) {
+  const iv = crypto.randomBytes(16);
+
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv, {
+    authTagLength: 16,
+  });
+
+  const data = plaintext
+    .map((block) => cipher.update(block));
+  cipher.final();
+
+  const tag = cipher.getAuthTag();
+
+  return [Buffer.concat([iv, tag]), ...data];
+}
+
+/**
+ * Decrypt encrypted bundle with AES-GCM-256
+ *
+ * @param {Buffer[]} ciphertext - encrypted bundle to decrypt
+ * @param {Buffer} key - key to decrypt with
+ * @returns {Buffer[]} plaintext
+ */
+async function decryptAESGCM(ciphertext, key) {
+  const iv = ciphertext[0].slice(0, 16);
+  const tag = ciphertext[0].slice(16, 32);
+  const encryptedData = ciphertext.slice(1);
+
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv, {
+    authTagLength: 16,
+  });
+
+  decipher.setAuthTag(tag);
+
+  // Loop through ciphertext and decrypt then return
+  const data = encryptedData.slice()
+    .map((block) => decipher.update(block));
+  decipher.final();
+
+  return data;
+}
+
 module.exports = {
-  encrypt,
-  decrypt,
+  encryptXChaCha20,
+  decryptXChaCha20,
+  encryptAESGCM,
+  decryptAESGCM,
 };
