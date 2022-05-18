@@ -2,6 +2,7 @@
 const { ethers } = require('hardhat');
 const { poseidon, eddsa } = require('circomlibjs');
 const babyjubjubHelper = require('./babyjubjub');
+const cryptoHelper = require('./crypto');
 
 class Note {
   /**
@@ -113,6 +114,15 @@ class Note {
     const sig = eddsa.signPoseidon(key, hash);
 
     return [...sig.R8, sig.S];
+  }
+
+  /**
+   * Encrypts note random
+   *
+   * @returns {Buffer[]} encrypted random data
+   */
+  async encryptRandom() {
+    return cryptoHelper.encryptAESGCM([this.random], this.viewingKey);
   }
 }
 

@@ -98,7 +98,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
         BigInt(testERC20.address),
       ));
 
-      const encryptedRandom = new Array(Number(i)).fill(1).map(() => [i, i * 2n]);
+      // eslint-disable-next-line no-await-in-loop
+      const encryptedRandom = await Promise.all(notes.map((note) => note.encryptRandom()));
 
       const tokenData = {
         tokenType: 0,
@@ -214,7 +215,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
           ),
         );
 
-        const encryptedRandom = new Array(artifactConfig.nullifiers).fill(1).map(() => [0n, 0n]);
+        // eslint-disable-next-line no-await-in-loop
+        const encryptedRandom = await Promise.all(depositNotes.map((note) => note.encryptRandom()));
 
         // eslint-disable-next-line
         const depositTx = await(await railgunLogicContract.generateDeposit(depositNotes.map((note) => ({
@@ -330,7 +332,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
           ),
         );
 
-        const encryptedRandom = new Array(artifactConfig.nullifiers).fill(1).map(() => [0n, 0n]);
+        // eslint-disable-next-line no-await-in-loop
+        const encryptedRandom = await Promise.all(depositNotes.map((note) => note.encryptRandom()));
 
         // eslint-disable-next-line
         const depositTx = await(await railgunLogicContract.generateDeposit(depositNotes.map((note) => ({
@@ -487,7 +490,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
           ),
         );
 
-        const encryptedRandom = new Array(artifactConfig.nullifiers).fill(1).map(() => [0n, 0n]);
+        // eslint-disable-next-line no-await-in-loop
+        const encryptedRandom = await Promise.all(depositNotes.map((note) => note.encryptRandom()));
 
         // eslint-disable-next-line
         const depositTx = await(await railgunLogicContract.generateDeposit(depositNotes.map((note) => ({
