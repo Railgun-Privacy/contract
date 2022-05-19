@@ -103,9 +103,21 @@ async function decryptAESGCM(ciphertext, key) {
   return data;
 }
 
+/**
+ * Generates ephemeral keys for
+ *
+ * @param {bigint} random - randomness for ephemeral keys
+ * @param {bigint} senderPrivKey - Private key of sender
+ * @param {bigint[]} receiverPubKey - public key of receiver
+ */
+async function ephemeralKeysGen(random, senderPrivKey, receiverPubKey) {
+
+}
+
 module.exports = {
   encryptXChaCha20,
   decryptXChaCha20,
   encryptAESGCM,
   decryptAESGCM,
+  ephemeralKeysGen,
 };
