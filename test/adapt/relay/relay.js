@@ -116,4 +116,53 @@ describe('Adapt/Relay', () => {
       expect(await relayAdapt.getAdaptParams([tx], '0x')).to.equal(relayAdaptHelper.getAdaptParams([tx], '0x'));
     }
   });
+
+  it('Should calculate relay adapt params', async function () {
+    let loops = 1n;
+
+    if (process.env.LONG_TESTS === 'extra') {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 10n;
+    } else if (process.env.LONG_TESTS === 'complete') {
+      this.timeout(5 * 60 * 60 * 1000);
+      loops = 100n;
+    }
+
+    for (let i = 0n; i < loops; i += 1n) {
+      const merkletree = new MerkleTree();
+      const spendingKey = babyjubjub.genRandomPrivateKey();
+      const viewingKey = babyjubjub.genRandomPrivateKey();
+      const token = ethers.utils.keccak256(
+        ethers.BigNumber.from(i * loops).toHexString(),
+      ).slice(0, 42);
+
+      const notes = new Array(12).fill(1).map(
+        // eslint-disable-next-line no-loop-func
+        () => new Note(
+          spendingKey,
+          viewingKey,
+          i * 10n ** 18n,
+          babyjubjub.genRandomPoint(),
+          BigInt(token),
+        ),
+      );
+
+      merkletree.insertLeaves(notes.map((note) => note.hash));
+
+      // eslint-disable-next-line no-await-in-loop
+      const tx = await transaction.dummyTransact(
+        merkletree,
+        0n,
+        ethers.constants.AddressZero,
+        ethers.constants.HashZero,
+        notes,
+        notes,
+        new Note(0n, 0n, 0n, 0n, 0n),
+        ethers.constants.AddressZero,
+      );
+
+      // eslint-disable-next-line no-await-in-loop
+      expect(await relayAdapt.getAdaptParams([tx], '0x')).to.equal(relayAdaptHelper.getAdaptParams([tx], '0x'));
+    }
+  });
 });
