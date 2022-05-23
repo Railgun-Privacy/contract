@@ -137,11 +137,6 @@ describe('Logic/RailgunLogic/ERC20', () => {
             cumulativeBase += base;
             cumulativeFee += fee;
           });
-
-          event.args.encryptedRandom.forEach((encrypted) => {
-            expect(encrypted[0]).to.equal(encrypted[0]);
-            expect(encrypted[1]).to.equal(encrypted[1]);
-          });
         }
       });
 

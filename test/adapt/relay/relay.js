@@ -12,6 +12,7 @@ const babyjubjub = require('../../../helpers/logic/babyjubjub');
 const MerkleTree = require('../../../helpers/logic/merkletree');
 const { Note } = require('../../../helpers/logic/note');
 const transaction = require('../../../helpers/logic/transaction');
+const NoteRegistry = require('../../../helpers/logic/noteregistry');
 
 chai.use(chaiAsPromised);
 
@@ -208,5 +209,15 @@ describe('Adapt/Relay', () => {
         ));
       }
     }
+  });
+
+  it('Should wrap+deposit, and unwrap+withdraw ETH', async () => {
+    const merkletree = new MerkleTree();
+    const wethnoteregistry = new NoteRegistry();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
+    
   });
 });
