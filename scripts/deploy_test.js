@@ -2,7 +2,7 @@
 /* eslint-disable jsdoc/require-jsdoc */
 const { ethers } = require('hardhat');
 
-const artifacts = require('../helpers/snarkKeys');
+const artifacts = require('../helpers/logic/snarkKeys');
 
 async function main() {
   // Get build artifacts
@@ -15,6 +15,7 @@ async function main() {
   const PoseidonT4 = await ethers.getContractFactory('PoseidonT4');
   const ProxyAdmin = await ethers.getContractFactory('ProxyAdmin');
   const Proxy = await ethers.getContractFactory('PausableUpgradableProxy');
+  const RelayAdapt = await ethers.getContractFactory('RelayAdapt');
 
   console.log('Deploying governance contracts...');
 
@@ -123,6 +124,11 @@ async function main() {
   // Transfer Railgun logic ownership
   await (await railgun.transferOwnership(delegator.address)).wait();
 
+  // Deploy RelayAdapt
+  // @todo replace testerc20.address with bytecode deployment of IWBASE
+  const relayAdapt = await RelayAdapt.deploy(proxy.address, rail.address);
+  await relayAdapt.deployTransaction.wait();
+
   console.log('\n\nDEPLOYMENT COMPLETE\n\n');
 
   console.log('RailToken:', rail.address);
@@ -133,6 +139,7 @@ async function main() {
   console.log('Railgun Logic:', railgunLogic.address);
   console.log('Proxy Admin:', proxyAdmin.address);
   console.log('Proxy:', proxy.address);
+  console.log('RelayAdapt:', relayAdapt.address);
 
   console.log({
     rail: rail.address,
@@ -143,6 +150,7 @@ async function main() {
     implementation: railgunLogic.address,
     proxyAdmin: proxyAdmin.address,
     proxy: proxy.address,
+    relayAdapt: relayAdapt.address,
   });
 }
 
