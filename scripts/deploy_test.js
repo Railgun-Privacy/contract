@@ -2,9 +2,14 @@
 /* eslint-disable jsdoc/require-jsdoc */
 const { ethers } = require('hardhat');
 
+const weth9artifact = require('@ethereum-artifacts/weth9');
+
 const artifacts = require('../helpers/logic/snarkKeys');
 
 async function main() {
+  // Get signers
+  const accounts = await ethers.getSigners();
+
   // Get build artifacts
   const RailToken = await ethers.getContractFactory('RailTokenDAOMintable');
   const Staking = await ethers.getContractFactory('Staking');
@@ -124,7 +129,16 @@ async function main() {
   // Transfer Railgun logic ownership
   await (await railgun.transferOwnership(delegator.address)).wait();
 
-  // Deploy RelayAdapt
+  console.log('Deploying WETH9');
+  const WETH9 = new ethers.ContractFactory(
+    weth9artifact.WETH9.abi,
+    weth9artifact.WETH9.bytecode,
+    accounts[0],
+  );
+  const weth9 = await WETH9.deploy();
+  await weth9.deployTransaction.wait();
+
+  console.log('Deploying relay adapt...');
   // @todo replace testerc20.address with bytecode deployment of IWBASE
   const relayAdapt = await RelayAdapt.deploy(proxy.address, rail.address);
   await relayAdapt.deployTransaction.wait();
@@ -139,6 +153,7 @@ async function main() {
   console.log('Railgun Logic:', railgunLogic.address);
   console.log('Proxy Admin:', proxyAdmin.address);
   console.log('Proxy:', proxy.address);
+  console.log('WETH9:', weth9.address);
   console.log('RelayAdapt:', relayAdapt.address);
 
   console.log({
@@ -150,6 +165,7 @@ async function main() {
     implementation: railgunLogic.address,
     proxyAdmin: proxyAdmin.address,
     proxy: proxy.address,
+    weth9: weth9.address,
     relayAdapt: relayAdapt.address,
   });
 }

@@ -5,6 +5,8 @@ const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 
+const weth9artifact = require('@ethereum-artifacts/weth9');
+
 const relayAdaptHelper = require('../../../helpers/adapt/relay/relayadapt');
 const babyjubjub = require('../../../helpers/logic/babyjubjub');
 const MerkleTree = require('../../../helpers/logic/merkletree');
@@ -19,6 +21,7 @@ let snarkBypassSigner;
 let treasuryAccount;
 let testERC20;
 let railgunLogic;
+let weth9;
 let relayAdapt;
 
 describe('Adapt/Relay', () => {
@@ -63,9 +66,15 @@ describe('Adapt/Relay', () => {
     testERC20 = testERC20.connect(snarkBypassSigner);
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
 
+    const WETH9 = new ethers.ContractFactory(
+      weth9artifact.WETH9.abi,
+      weth9artifact.WETH9.bytecode,
+      accounts[0],
+    );
+    weth9 = await WETH9.deploy();
+
     const RelayAdapt = await ethers.getContractFactory('RelayAdapt');
-    // @todo replace testerc20.address with bytecode deployment of IWBASE
-    relayAdapt = await RelayAdapt.deploy(railgunLogic.address, testERC20.address);
+    relayAdapt = await RelayAdapt.deploy(railgunLogic.address, weth9.address);
   });
 
   it('Should calculate adapt params', async function () {
@@ -179,7 +188,9 @@ describe('Adapt/Relay', () => {
         const requireSuccess = i % 2n === 0n;
         const calls = new Array(j).fill({
           to: token,
-          data: '0x00aabbcc',
+          data: ethers.utils.keccak256(
+            ethers.BigNumber.from(i * loops + 3n).toHexString(),
+          ),
           value: i,
         });
 

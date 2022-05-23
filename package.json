@@ -13,6 +13,7 @@
     "analyze": "npm run lint && npm run clean && ./slither.sh"
   },
   "devDependencies": {
+    "@ethereum-artifacts/weth9": "^1.0.1",
     "@noble/hashes": "^1.0.0",
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-etherscan": "^2.1.3",
