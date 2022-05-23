@@ -73,10 +73,10 @@ describe('Adapt/Relay', () => {
 
     if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
-      loops = 10n;
+      loops = 5n;
     } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
-      loops = 100n;
+      loops = 10n;
     }
 
     for (let i = 0n; i < loops; i += 1n) {
@@ -87,33 +87,42 @@ describe('Adapt/Relay', () => {
         ethers.BigNumber.from(i * loops).toHexString(),
       ).slice(0, 42);
 
-      const notes = new Array(12).fill(1).map(
-        // eslint-disable-next-line no-loop-func
-        () => new Note(
-          spendingKey,
-          viewingKey,
-          i * 10n ** 18n,
-          babyjubjub.genRandomPoint(),
-          BigInt(token),
-        ),
-      );
+      for (let j = 0n; j < i + 1n; j += 1n) {
+        const notes = new Array(Number(i)).fill(1).map(
+          // eslint-disable-next-line no-loop-func
+          () => new Note(
+            spendingKey,
+            viewingKey,
+            i * 10n ** 18n,
+            babyjubjub.genRandomPoint(),
+            BigInt(token),
+          ),
+        );
 
-      merkletree.insertLeaves(notes.map((note) => note.hash));
+        merkletree.insertLeaves(notes.map((note) => note.hash));
 
-      // eslint-disable-next-line no-await-in-loop
-      const tx = await transaction.dummyTransact(
-        merkletree,
-        0n,
-        ethers.constants.AddressZero,
-        ethers.constants.HashZero,
-        notes,
-        notes,
-        new Note(0n, 0n, 0n, 0n, 0n),
-        ethers.constants.AddressZero,
-      );
+        // eslint-disable-next-line no-await-in-loop
+        const txs = await Promise.all(
+          new Array(Number(j)).fill(1).map(() => transaction.dummyTransact(
+            merkletree,
+            0n,
+            ethers.constants.AddressZero,
+            ethers.constants.HashZero,
+            notes,
+            notes,
+            new Note(0n, 0n, 0n, 0n, 0n),
+            ethers.constants.AddressZero,
+          )),
+        );
 
-      // eslint-disable-next-line no-await-in-loop
-      expect(await relayAdapt.getAdaptParams([tx], '0x')).to.equal(relayAdaptHelper.getAdaptParams([tx], '0x'));
+        const additionalData = ethers.utils.keccak256(
+          ethers.BigNumber.from(i * loops + 1n).toHexString(),
+        ).slice(0, 42);
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await relayAdapt.getAdaptParams(txs, additionalData))
+          .to.equal(relayAdaptHelper.getAdaptParams(txs, additionalData));
+      }
     }
   });
 
@@ -122,10 +131,10 @@ describe('Adapt/Relay', () => {
 
     if (process.env.LONG_TESTS === 'extra') {
       this.timeout(5 * 60 * 60 * 1000);
-      loops = 10n;
+      loops = 5n;
     } else if (process.env.LONG_TESTS === 'complete') {
       this.timeout(5 * 60 * 60 * 1000);
-      loops = 100n;
+      loops = 10n;
     }
 
     for (let i = 0n; i < loops; i += 1n) {
@@ -136,33 +145,57 @@ describe('Adapt/Relay', () => {
         ethers.BigNumber.from(i * loops).toHexString(),
       ).slice(0, 42);
 
-      const notes = new Array(12).fill(1).map(
-        // eslint-disable-next-line no-loop-func
-        () => new Note(
-          spendingKey,
-          viewingKey,
-          i * 10n ** 18n,
-          babyjubjub.genRandomPoint(),
-          BigInt(token),
-        ),
-      );
+      for (let j = 0n; j < i; j += 1n) {
+        const notes = new Array(Number(i)).fill(1).map(
+          // eslint-disable-next-line no-loop-func
+          () => new Note(
+            spendingKey,
+            viewingKey,
+            i * 10n ** 18n,
+            babyjubjub.genRandomPoint(),
+            BigInt(token),
+          ),
+        );
 
-      merkletree.insertLeaves(notes.map((note) => note.hash));
+        merkletree.insertLeaves(notes.map((note) => note.hash));
 
-      // eslint-disable-next-line no-await-in-loop
-      const tx = await transaction.dummyTransact(
-        merkletree,
-        0n,
-        ethers.constants.AddressZero,
-        ethers.constants.HashZero,
-        notes,
-        notes,
-        new Note(0n, 0n, 0n, 0n, 0n),
-        ethers.constants.AddressZero,
-      );
+        // eslint-disable-next-line no-await-in-loop
+        const txs = await Promise.all(
+          new Array(Number(j)).fill(1).map(() => transaction.dummyTransact(
+            merkletree,
+            0n,
+            ethers.constants.AddressZero,
+            ethers.constants.HashZero,
+            notes,
+            notes,
+            new Note(0n, 0n, 0n, 0n, 0n),
+            ethers.constants.AddressZero,
+          )),
+        );
 
-      // eslint-disable-next-line no-await-in-loop
-      expect(await relayAdapt.getAdaptParams([tx], '0x')).to.equal(relayAdaptHelper.getAdaptParams([tx], '0x'));
+        const random = BigInt(ethers.utils.keccak256(
+          ethers.BigNumber.from(i * loops + 2n).toHexString(),
+        ));
+        const requireSuccess = i % 2n === 0n;
+        const calls = new Array(j).fill({
+          to: token,
+          data: '0x00aabbcc',
+          value: i,
+        });
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await relayAdapt.getRelayAdaptParams(
+          txs,
+          random,
+          requireSuccess,
+          calls,
+        )).to.equal(relayAdaptHelper.getRelayAdaptParams(
+          txs,
+          random,
+          requireSuccess,
+          calls,
+        ));
+      }
     }
   });
 });

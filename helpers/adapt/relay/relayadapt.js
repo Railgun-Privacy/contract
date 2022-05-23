@@ -29,7 +29,7 @@ function getAdaptParams(transactions, additionalData) {
  */
 function getRelayAdaptParams(transactions, random, requireSuccess, calls) {
   const additionalData = abiCoder.encode(
-    ['uint256', 'bool', 'tuple(address to, bytes data, uint256 value) _calls'],
+    ['uint256', 'bool', 'tuple(address to, bytes data, uint256 value)[] calls'],
     [random, requireSuccess, calls],
   );
 
