@@ -167,7 +167,7 @@ contract RelayAdapt {
    * @param _tokens - ERC20 tokens to send (0x0 is eth)
    * @param _to - ETH address to send to
    */
-   function send(
+   function sendERC20(
     IERC20[] calldata _tokens,
     address _to
   ) external onlySelf {

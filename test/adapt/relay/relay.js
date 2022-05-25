@@ -19,6 +19,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let snarkBypassSigner;
+let primaryAccount;
 let treasuryAccount;
 let testERC20;
 let railgunLogic;
@@ -38,7 +39,7 @@ describe('Adapt/Relay', () => {
     snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
     const accounts = await ethers.getSigners();
-    [treasuryAccount] = accounts;
+    [primaryAccount, treasuryAccount] = accounts;
 
     const PoseidonT3 = await ethers.getContractFactory('PoseidonT3');
     const PoseidonT4 = await ethers.getContractFactory('PoseidonT4');
@@ -232,7 +233,7 @@ describe('Adapt/Relay', () => {
       weth9.address,
     );
 
-    const calls = relayAdaptHelper.formatCalls([
+    const callsDeposit = relayAdaptHelper.formatCalls([
       await relayAdapt.populateTransaction.wrapAllBase(),
       await relayAdapt.populateTransaction.deposit(
         [{
@@ -245,14 +246,80 @@ describe('Adapt/Relay', () => {
       ),
     ]);
 
-    await relayAdapt.multicall(true, calls, { value: depositNote.value });
+    const depositTx = await (
+      await relayAdapt.multicall(true, callsDeposit, { value: depositNote.value })
+    ).wait();
 
     const [depositTxBase, depositTxFee] = transaction.getFee(depositNote.value, true, depositFee);
 
     cumulativeBase += depositTxBase;
     cumulativeFee += depositTxFee;
 
+    wethnoteregistry.parseEvents(depositTx, merkletree);
+    wethnoteregistry.loadNotesWithFees([depositNote], depositFee);
+
     expect(await weth9.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
     expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] = wethnoteregistry.getNotesWithdraw(
+      relayAdapt.address, 1, 1, spendingKey, viewingKey, withdrawFee,
+    );
+
+    const railgunDummyBatch = [
+      await transaction.dummyTransact(
+        merkletree,
+        1n,
+        relayAdapt.address,
+        ethers.constants.HashZero,
+        inputs,
+        outputs,
+        outputs[0],
+        ethers.constants.AddressZero,
+      ),
+    ];
+
+    const random = babyjubjub.genRandomPoint();
+
+    const callsWithdraw = [
+      await relayAdapt.populateTransaction.unwrapAllBase(),
+      await relayAdapt.populateTransaction.sendERC20(
+        [weth9.address],
+        primaryAccount.address,
+      ),
+    ];
+
+    const relayParams = relayAdaptHelper.getRelayAdaptParams(
+      railgunDummyBatch, random, true, callsWithdraw,
+    );
+
+    const railgunBatch = [
+      await transaction.transact(
+        merkletree,
+        1n,
+        relayAdapt.address,
+        relayParams,
+        inputs,
+        outputs,
+        outputs[0],
+        ethers.constants.AddressZero,
+      ),
+    ];
+
+    const balanceBeforeWithdraw = await testERC20.balanceOf(
+      primaryAccount.address,
+    );
+
+    await relayAdapt.relay(railgunBatch, random, true, callsWithdraw);
+
+    const balanceAfterWithdraw = await testERC20.balanceOf(
+      primaryAccount.address,
+    );
+
+    cumulativeBase -= withdrawTxBase;
+    cumulativeFee += withdrawTxFee;
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+    expect(balanceAfterWithdraw.sub(balanceBeforeWithdraw)).to.equal(withdrawTxBase);
   });
 });
