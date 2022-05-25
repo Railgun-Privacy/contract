@@ -18,6 +18,10 @@ import { RailgunLogic, Transaction, CommitmentPreimage, TokenData, TokenType } f
 contract RelayAdapt {
   using SafeERC20 for IERC20;
 
+  // Snark bypass address, can't be address(0) as many burn prevention mechanisms will disallow transfers to 0
+  // Use 0x000000000000000000000000000000000000dEaD as an alternative
+  address constant public VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEaD;
+
   struct Call {
     address to;
     bytes data;
@@ -91,7 +95,12 @@ contract RelayAdapt {
 
     // Loop through each transaction and ensure adaptID parameters match
     for(uint256 i = 0; i < _transactions.length; i++) {
-      require(_transactions[i].boundParams.adaptParams == expectedAdaptParameters, "GeneralAdapt: AdaptID Parameters Mismatch");
+      require(
+        _transactions[i].boundParams.adaptParams == expectedAdaptParameters
+        // solhint-disable-next-line avoid-tx-origin
+        || tx.origin == VERIFICATION_BYPASS,
+        "GeneralAdapt: AdaptID Parameters Mismatch"
+      );
     }
 
     // Execute railgun transactions
@@ -219,7 +228,7 @@ contract RelayAdapt {
   function multicall(
     bool _requireSuccess,
     Call[] calldata _calls
-  ) public returns (Result[] memory) {
+  ) public payable returns (Result[] memory) {
     // Initialize returnData array
     Result[] memory returnData = new Result[](_calls.length);
 

@@ -36,7 +36,22 @@ function getRelayAdaptParams(transactions, random, requireSuccess, calls) {
   return getAdaptParams(transactions, additionalData);
 }
 
+/**
+ * Strips all unnecessary fields from populated transactions
+ *
+ * @param {object[]} calls - calls list
+ * @returns {object[]} formatted calls
+ */
+function formatCalls(calls) {
+  return calls.map((call) => ({
+    to: call.to,
+    data: call.data,
+    value: call.value || 0n,
+  }));
+}
+
 module.exports = {
   getAdaptParams,
   getRelayAdaptParams,
+  formatCalls,
 };

@@ -218,6 +218,41 @@ describe('Adapt/Relay', () => {
     const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
     const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
 
-    
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
+    const depositNote = new Note(
+      spendingKey,
+      viewingKey,
+      1000n,
+      babyjubjub.genRandomPoint(),
+      weth9.address,
+    );
+
+    const calls = relayAdaptHelper.formatCalls([
+      await relayAdapt.populateTransaction.wrapAllBase(),
+      await relayAdapt.populateTransaction.deposit(
+        [{
+          tokenType: 0n,
+          tokenAddress: weth9.address,
+          tokenSubID: 0n,
+        }],
+        await depositNote.encryptRandom(),
+        depositNote.notePublicKey,
+      ),
+    ]);
+
+    await relayAdapt.multicall(true, calls, { value: depositNote.value });
+
+    const [depositTxBase, depositTxFee] = transaction.getFee(depositNote.value, true, depositFee);
+
+    cumulativeBase += depositTxBase;
+    cumulativeFee += depositTxFee;
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
   });
 });
