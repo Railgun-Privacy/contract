@@ -1,3 +1,7 @@
+const hre = require('hardhat');
+
+const { ethers } = hre;
+
 const MerkleTree = require('./merkletree');
 const { Note, WithdrawNote } = require('./note');
 const babyjubjub = require('./babyjubjub');
@@ -64,25 +68,39 @@ class NoteRegistry {
    * @param {MerkleTree} [merkleTree] - (optional) merkle tree to load events into
    */
   parseEvents(transaction, merkleTree) {
+    const railgunLogicArtifact = hre.artifacts.readArtifactSync('RailgunLogic');
+    const railgunInterface = new ethers.utils.Interface(railgunLogicArtifact.abi);
+
     transaction.events.forEach((event) => {
-      if (event.event === 'GeneratedCommitmentBatch') {
-        const commitments = event.args.commitments.map((commitment) => (new WithdrawNote(
+      const GeneratedCommitmentBatch = railgunInterface.getEventTopic('GeneratedCommitmentBatch');
+      const CommitmentBatch = railgunInterface.getEventTopic('CommitmentBatch');
+
+      if (event.topics[0] === GeneratedCommitmentBatch) {
+        const parsedEvent = railgunInterface.parseLog(
+          { data: event.data, topics: event.topics },
+        );
+
+        const commitments = parsedEvent.args.commitments.map((commitment) => (new WithdrawNote(
           BigInt(commitment.npk.toHexString()),
           BigInt(commitment.value.toHexString()),
           BigInt(commitment.token.tokenAddress),
         )).hash);
 
-        this.loadCommitments(event.args.startPosition.toNumber(), commitments);
+        this.loadCommitments(parsedEvent.args.startPosition.toNumber(), commitments);
 
-        merkleTree?.loadToPosition(event.args.startPosition.toNumber(), commitments);
-      } else if (event.event === 'CommitmentBatch') {
-        const commitments = event.args.hash.map(
+        merkleTree?.loadToPosition(parsedEvent.args.startPosition.toNumber(), commitments);
+      } else if (event.topics[0] === CommitmentBatch) {
+        const parsedEvent = railgunInterface.parseLog(
+          { data: event.data, topics: event.topics },
+        );
+
+        const commitments = parsedEvent.args.hash.map(
           (hash) => BigInt(hash.toHexString()),
         );
 
-        this.loadCommitments(event.args.startPosition.toNumber(), commitments);
+        this.loadCommitments(parsedEvent.args.startPosition.toNumber(), commitments);
 
-        merkleTree?.loadToPosition(event.args.startPosition.toNumber(), commitments);
+        merkleTree?.loadToPosition(parsedEvent.args.startPosition.toNumber(), commitments);
       }
     });
   }
