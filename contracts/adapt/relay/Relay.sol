@@ -330,5 +330,6 @@ contract RelayAdapt {
   }
 
   // Allow WBASE contract unwrapping to pay us
+  // solhint-disable-next-line avoid-tx-origin no-empty-blocks
   receive() external payable {}
 }
