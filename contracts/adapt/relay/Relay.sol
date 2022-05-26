@@ -164,11 +164,11 @@ contract RelayAdapt {
 
   /**
    * @notice Sends tokens to particular address
-   * @param _tokens - ERC20 tokens to send (0x0 is eth)
+   * @param _tokens - tokens to send (0x0 - ERC20 is eth)
    * @param _to - ETH address to send to
    */
-   function sendERC20(
-    IERC20[] calldata _tokens,
+   function send(
+    TokenData[] calldata _tokens,
     address _to
   ) external onlySelf {
     // Loop through each token specified for deposit and deposit our total balance
@@ -177,22 +177,34 @@ contract RelayAdapt {
     // transaction always succeeds when dealing with USDT/similar tokens make sure the last
     // call in your calls is a call to the token contract with an approval of 0
     for (uint256 i = 0; i < _tokens.length; i++) {
-      IERC20 token = _tokens[i];
+      if (_tokens[i].tokenType == TokenType.ERC20) {
+        // ERC20 token
+        IERC20 token = IERC20(_tokens[i].tokenAddress);
 
-      if (address(token) == address(0x0)) {
-        // Fetch ETH balance
-        uint256 balance = address(this).balance;
+        if (address(token) == address(0x0)) {
+          // Fetch ETH balance
+          uint256 balance = address(this).balance;
 
-        // Send ETH
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool sent,) = _to.call{value: balance}("");
-        require(sent, "Failed to send Ether");
+          // Send ETH
+          // solhint-disable-next-line avoid-low-level-calls
+          (bool sent,) = _to.call{value: balance}("");
+          require(sent, "Failed to send Ether");
+        } else {
+          // Fetch balance
+          uint256 balance = token.balanceOf(address(this));
+
+          // Send all to address
+          token.safeTransfer(_to, balance);
+        }
+      } else if (_tokens[i].tokenType == TokenType.ERC721) {
+        // ERC721 token
+        revert("RailgunLogic: ERC721 not yet supported");
+      } else if (_tokens[i].tokenType == TokenType.ERC1155) {
+        // ERC1155 token
+        revert("RailgunLogic: ERC1155 not yet supported");
       } else {
-        // Fetch balance
-        uint256 balance = token.balanceOf(address(this));
-
-        // Send all to address
-        token.safeTransfer(_to, balance);
+        // Invalid token type, revert
+        revert("RailgunLogic: Unknown token type");
       }
     }
   }
@@ -228,7 +240,7 @@ contract RelayAdapt {
   function multicall(
     bool _requireSuccess,
     Call[] calldata _calls
-  ) public payable returns (Result[] memory) {
+  ) internal returns (Result[] memory) {
     // Initialize returnData array
     Result[] memory returnData = new Result[](_calls.length);
 
@@ -295,15 +307,17 @@ contract RelayAdapt {
     bool _requireSuccess,
     Call[] calldata _calls
   ) external payable returns (Result[] memory) {
-    // Calculate additionalData parameter for adaptID parameters
-    bytes memory additionalData = abi.encode(
-      _random,
-      _requireSuccess,
-      _calls
-    );
+    if (_transactions.length > 0) {
+      // Calculate additionalData parameter for adaptID parameters
+      bytes memory additionalData = abi.encode(
+        _random,
+        _requireSuccess,
+        _calls
+      );
 
-    // Executes railgun batch
-    railgunBatch(_transactions, additionalData);
+      // Executes railgun batch
+      railgunBatch(_transactions, additionalData);
+    }
 
     // Execute multicalls
     Result[] memory returnData = multicall(_requireSuccess, _calls);
@@ -314,4 +328,7 @@ contract RelayAdapt {
     // Return results of calls
     return returnData;
   }
+
+  // Allow WBASE contract unwrapping to pay us
+  receive() external payable {}
 }

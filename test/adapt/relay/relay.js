@@ -7,6 +7,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 const weth9artifact = require('@ethereum-artifacts/weth9');
 
+const artifacts = require('../../../helpers/logic/snarkKeys');
 const relayAdaptHelper = require('../../../helpers/adapt/relay/relayadapt');
 const babyjubjub = require('../../../helpers/logic/babyjubjub');
 const MerkleTree = require('../../../helpers/logic/merkletree');
@@ -53,14 +54,16 @@ describe('Adapt/Relay', () => {
       },
     });
     railgunLogic = await RailgunLogic.deploy();
-    railgunLogic = railgunLogic.connect(snarkBypassSigner);
     await railgunLogic.initializeRailgunLogic(
       treasuryAccount.address,
       25n,
       25n,
       25n,
-      treasuryAccount.address,
+      primaryAccount.address,
     );
+
+    await artifacts.loadAllArtifacts(railgunLogic);
+    railgunLogic = railgunLogic.connect(snarkBypassSigner);
 
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     testERC20 = await TestERC20.deploy();
@@ -212,6 +215,14 @@ describe('Adapt/Relay', () => {
     }
   });
 
+  it('Should send ETH/ERC20s', async () => {
+    const merkletree = new MerkleTree();
+    const wethnoteregistry = new NoteRegistry();
+
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+  });
+
   it('Should wrap+deposit, and unwrap+withdraw ETH', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
@@ -230,7 +241,7 @@ describe('Adapt/Relay', () => {
       viewingKey,
       1000n,
       babyjubjub.genRandomPoint(),
-      weth9.address,
+      BigInt(weth9.address),
     );
 
     const callsDeposit = relayAdaptHelper.formatCalls([
@@ -246,8 +257,10 @@ describe('Adapt/Relay', () => {
       ),
     ]);
 
+    const random = babyjubjub.genRandomPoint();
+
     const depositTx = await (
-      await relayAdapt.multicall(true, callsDeposit, { value: depositNote.value })
+      await relayAdapt.relay([], random, true, callsDeposit, { value: depositNote.value })
     ).wait();
 
     const [depositTxBase, depositTxFee] = transaction.getFee(depositNote.value, true, depositFee);
@@ -262,7 +275,7 @@ describe('Adapt/Relay', () => {
     expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
 
     const [inputs, outputs, withdrawTxBase, withdrawTxFee] = wethnoteregistry.getNotesWithdraw(
-      relayAdapt.address, 1, 1, spendingKey, viewingKey, withdrawFee,
+      relayAdapt.address, 1, 2, spendingKey, viewingKey, withdrawFee,
     );
 
     const railgunDummyBatch = [
@@ -278,15 +291,13 @@ describe('Adapt/Relay', () => {
       ),
     ];
 
-    const random = babyjubjub.genRandomPoint();
-
-    const callsWithdraw = [
+    const callsWithdraw = relayAdaptHelper.formatCalls([
       await relayAdapt.populateTransaction.unwrapAllBase(),
       await relayAdapt.populateTransaction.sendERC20(
-        [weth9.address],
+        [ethers.constants.AddressZero],
         primaryAccount.address,
       ),
-    ];
+    ]);
 
     const relayParams = relayAdaptHelper.getRelayAdaptParams(
       railgunDummyBatch, random, true, callsWithdraw,
@@ -300,26 +311,18 @@ describe('Adapt/Relay', () => {
         relayParams,
         inputs,
         outputs,
-        outputs[0],
+        outputs[outputs.length - 1],
         ethers.constants.AddressZero,
       ),
     ];
 
-    const balanceBeforeWithdraw = await testERC20.balanceOf(
-      primaryAccount.address,
-    );
-
     await relayAdapt.relay(railgunBatch, random, true, callsWithdraw);
 
-    const balanceAfterWithdraw = await testERC20.balanceOf(
-      primaryAccount.address,
-    );
-
     cumulativeBase -= withdrawTxBase;
+    cumulativeBase -= withdrawTxFee;
     cumulativeFee += withdrawTxFee;
 
     expect(await weth9.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
     expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
-    expect(balanceAfterWithdraw.sub(balanceBeforeWithdraw)).to.equal(withdrawTxBase);
   });
 });
