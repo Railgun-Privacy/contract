@@ -293,8 +293,12 @@ describe('Adapt/Relay', () => {
 
     const callsWithdraw = relayAdaptHelper.formatCalls([
       await relayAdapt.populateTransaction.unwrapAllBase(),
-      await relayAdapt.populateTransaction.sendERC20(
-        [ethers.constants.AddressZero],
+      await relayAdapt.populateTransaction.send(
+        [{
+          tokenType: 0n,
+          tokenAddress: ethers.constants.AddressZero,
+          tokenSubID: 0n,
+        }],
         primaryAccount.address,
       ),
     ]);
