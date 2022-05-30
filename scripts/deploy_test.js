@@ -140,7 +140,7 @@ async function main() {
 
   console.log('Deploying relay adapt...');
   // @todo replace testerc20.address with bytecode deployment of IWBASE
-  const relayAdapt = await RelayAdapt.deploy(proxy.address, rail.address);
+  const relayAdapt = await RelayAdapt.deploy(proxy.address, weth9.address);
   await relayAdapt.deployTransaction.wait();
 
   console.log('\n\nDEPLOYMENT COMPLETE\n\n');
