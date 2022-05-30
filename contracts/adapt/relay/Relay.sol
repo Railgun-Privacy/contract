@@ -133,19 +133,21 @@ contract RelayAdapt {
         // Fetch balance
         uint256 balance = token.balanceOf(address(this));
 
-        // Approve the balance for deposit
-        token.safeApprove(
-          address(railgun),
-          balance
-        );
+        if (balance > 0) {
+          // Approve the balance for deposit
+          token.safeApprove(
+            address(railgun),
+            balance
+          );
 
-        // Push to deposits arrays
-        commitmentPreimages[i] = CommitmentPreimage({
-          npk: _npk,
-          value: uint120(balance),
-          token: _deposits[i]
-        });
-        encryptedRandom[i] = _encryptedRandom;
+          // Push to deposits arrays
+          commitmentPreimages[i] = CommitmentPreimage({
+            npk: _npk,
+            value: uint120(balance),
+            token: _deposits[i]
+          });
+          encryptedRandom[i] = _encryptedRandom;
+        }
       } else if (_deposits[i].tokenType == TokenType.ERC721) {
         // ERC721 token
         revert("GeneralAdapt: ERC721 not yet supported");
@@ -185,16 +187,20 @@ contract RelayAdapt {
           // Fetch ETH balance
           uint256 balance = address(this).balance;
 
-          // Send ETH
-          // solhint-disable-next-line avoid-low-level-calls
-          (bool sent,) = _to.call{value: balance}("");
-          require(sent, "Failed to send Ether");
+          if (balance > 0) {
+            // Send ETH
+            // solhint-disable-next-line avoid-low-level-calls
+            (bool sent,) = _to.call{value: balance}("");
+            require(sent, "Failed to send Ether");
+          }
         } else {
           // Fetch balance
           uint256 balance = token.balanceOf(address(this));
 
-          // Send all to address
-          token.safeTransfer(_to, balance);
+          if (balance > 0) {
+            // Send all to address
+            token.safeTransfer(_to, balance);
+          }
         }
       } else if (_tokens[i].tokenType == TokenType.ERC721) {
         // ERC721 token
