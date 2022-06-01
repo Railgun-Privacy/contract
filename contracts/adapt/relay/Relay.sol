@@ -33,6 +33,8 @@ contract RelayAdapt {
     bytes returnData;
   }
 
+  event CallResult(Result callResult);
+
   // External contract addresses
   RailgunLogic public railgun;
   IWBase public wbase;
@@ -241,15 +243,11 @@ contract RelayAdapt {
    * @notice Executes multicall batch
    * @param _requireSuccess - Whether transaction should throw on call failure
    * @param _calls - multicall array
-   * @return result of calls
    */
   function multicall(
     bool _requireSuccess,
     Call[] calldata _calls
-  ) internal returns (Result[] memory) {
-    // Initialize returnData array
-    Result[] memory returnData = new Result[](_calls.length);
-
+  ) internal {
     // Loop through each call
     for(uint256 i = 0; i < _calls.length; i++) {
       // Retrieve call
@@ -259,16 +257,13 @@ contract RelayAdapt {
       // solhint-disable-next-line avoid-low-level-calls
       (bool success, bytes memory ret) = call.to.call{value: call.value}(call.data);
 
+      emit CallResult(Result(success, ret));
+
       // If requireSuccess is true, throw on failure
       if (_requireSuccess) {
         require(success, "GeneralAdapt: Call Failed");
       }
-
-      // Add call result to returnData
-      returnData[i] = Result(success, ret);
     }
-
-    return returnData;
   }
 
   /**
@@ -312,7 +307,7 @@ contract RelayAdapt {
     uint256 _random,
     bool _requireSuccess,
     Call[] calldata _calls
-  ) external payable returns (Result[] memory) {
+  ) external payable {
     if (_transactions.length > 0) {
       // Calculate additionalData parameter for adaptID parameters
       bytes memory additionalData = abi.encode(
@@ -326,13 +321,10 @@ contract RelayAdapt {
     }
 
     // Execute multicalls
-    Result[] memory returnData = multicall(_requireSuccess, _calls);
+    multicall(_requireSuccess, _calls);
 
     // To execute a multicall and deposit or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.
-
-    // Return results of calls
-    return returnData;
   }
 
   // Allow WBASE contract unwrapping to pay us
