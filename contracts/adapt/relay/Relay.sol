@@ -33,7 +33,7 @@ contract RelayAdapt {
     bytes returnData;
   }
 
-  event CallResult(Result callResult);
+  event CallResult(Result[] callResults);
 
   // External contract addresses
   RailgunLogic public railgun;
@@ -248,6 +248,9 @@ contract RelayAdapt {
     bool _requireSuccess,
     Call[] calldata _calls
   ) internal {
+    // Initialize returnData array
+    Result[] memory returnData = new Result[](_calls.length);
+
     // Loop through each call
     for(uint256 i = 0; i < _calls.length; i++) {
       // Retrieve call
@@ -257,13 +260,17 @@ contract RelayAdapt {
       // solhint-disable-next-line avoid-low-level-calls
       (bool success, bytes memory ret) = call.to.call{value: call.value}(call.data);
 
-      emit CallResult(Result(success, ret));
+      // Add call result to returnData
+      returnData[i] = Result(success, ret);
 
       // If requireSuccess is true, throw on failure
-      if (_requireSuccess) {
-        require(success, "GeneralAdapt: Call Failed");
+      if (_requireSuccess && !success) {
+        emit CallResult(returnData);
+        revert("GeneralAdapt: Call Failed");
       }
     }
+
+    emit CallResult(returnData);
   }
 
   /**
