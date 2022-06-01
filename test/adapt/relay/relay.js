@@ -31,13 +31,18 @@ describe('Adapt/Relay', () => {
   beforeEach(async () => {
     await hre.network.provider.request({
       method: 'hardhat_setBalance',
-      params: ['0x000000000000000000000000000000000000dEaD', '0x56BC75E2D63100000'],
+      params: [
+        '0x000000000000000000000000000000000000dEaD',
+        '0x56BC75E2D63100000',
+      ],
     });
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
       params: ['0x000000000000000000000000000000000000dEaD'],
     });
-    snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
+    snarkBypassSigner = await ethers.getSigner(
+      '0x000000000000000000000000000000000000dEaD',
+    );
 
     const accounts = await ethers.getSigners();
     [primaryAccount, treasuryAccount] = accounts;
@@ -67,7 +72,10 @@ describe('Adapt/Relay', () => {
 
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     testERC20 = await TestERC20.deploy();
-    await testERC20.transfer('0x000000000000000000000000000000000000dEaD', 2n ** 256n - 1n);
+    await testERC20.transfer(
+      '0x000000000000000000000000000000000000dEaD',
+      2n ** 256n - 1n,
+    );
     testERC20 = testERC20.connect(snarkBypassSigner);
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
 
@@ -97,45 +105,51 @@ describe('Adapt/Relay', () => {
       const merkletree = new MerkleTree();
       const spendingKey = babyjubjub.genRandomPrivateKey();
       const viewingKey = babyjubjub.genRandomPrivateKey();
-      const token = ethers.utils.keccak256(
-        ethers.BigNumber.from(i * loops).toHexString(),
-      ).slice(0, 42);
+      const token = ethers.utils
+        .keccak256(ethers.BigNumber.from(i * loops).toHexString())
+        .slice(0, 42);
 
       for (let j = 0n; j < i + 1n; j += 1n) {
         const notes = new Array(Number(i)).fill(1).map(
           // eslint-disable-next-line no-loop-func
-          () => new Note(
-            spendingKey,
-            viewingKey,
-            i * 10n ** 18n,
-            babyjubjub.genRandomPoint(),
-            BigInt(token),
-          ),
+          () =>
+            new Note(
+              spendingKey,
+              viewingKey,
+              i * 10n ** 18n,
+              babyjubjub.genRandomPoint(),
+              BigInt(token),
+            ),
         );
 
         merkletree.insertLeaves(notes.map((note) => note.hash));
 
         // eslint-disable-next-line no-await-in-loop
         const txs = await Promise.all(
-          new Array(Number(j)).fill(1).map(() => transaction.dummyTransact(
-            merkletree,
-            0n,
-            ethers.constants.AddressZero,
-            ethers.constants.HashZero,
-            notes,
-            notes,
-            new Note(0n, 0n, 0n, 0n, 0n),
-            ethers.constants.AddressZero,
-          )),
+          new Array(Number(j))
+            .fill(1)
+            .map(() =>
+              transaction.dummyTransact(
+                merkletree,
+                0n,
+                ethers.constants.AddressZero,
+                ethers.constants.HashZero,
+                notes,
+                notes,
+                new Note(0n, 0n, 0n, 0n, 0n),
+                ethers.constants.AddressZero,
+              ),
+            ),
         );
 
-        const additionalData = ethers.utils.keccak256(
-          ethers.BigNumber.from(i * loops + 1n).toHexString(),
-        ).slice(0, 42);
+        const additionalData = ethers.utils
+          .keccak256(ethers.BigNumber.from(i * loops + 1n).toHexString())
+          .slice(0, 42);
 
         // eslint-disable-next-line no-await-in-loop
-        expect(await relayAdapt.getAdaptParams(txs, additionalData))
-          .to.equal(relayAdaptHelper.getAdaptParams(txs, additionalData));
+        expect(await relayAdapt.getAdaptParams(txs, additionalData)).to.equal(
+          relayAdaptHelper.getAdaptParams(txs, additionalData),
+        );
       }
     }
   });
@@ -155,41 +169,48 @@ describe('Adapt/Relay', () => {
       const merkletree = new MerkleTree();
       const spendingKey = babyjubjub.genRandomPrivateKey();
       const viewingKey = babyjubjub.genRandomPrivateKey();
-      const token = ethers.utils.keccak256(
-        ethers.BigNumber.from(i * loops).toHexString(),
-      ).slice(0, 42);
+      const token = ethers.utils
+        .keccak256(ethers.BigNumber.from(i * loops).toHexString())
+        .slice(0, 42);
 
       for (let j = 0n; j < i; j += 1n) {
         const notes = new Array(Number(i)).fill(1).map(
           // eslint-disable-next-line no-loop-func
-          () => new Note(
-            spendingKey,
-            viewingKey,
-            i * 10n ** 18n,
-            babyjubjub.genRandomPoint(),
-            BigInt(token),
-          ),
+          () =>
+            new Note(
+              spendingKey,
+              viewingKey,
+              i * 10n ** 18n,
+              babyjubjub.genRandomPoint(),
+              BigInt(token),
+            ),
         );
 
         merkletree.insertLeaves(notes.map((note) => note.hash));
 
         // eslint-disable-next-line no-await-in-loop
         const txs = await Promise.all(
-          new Array(Number(j)).fill(1).map(() => transaction.dummyTransact(
-            merkletree,
-            0n,
-            ethers.constants.AddressZero,
-            ethers.constants.HashZero,
-            notes,
-            notes,
-            new Note(0n, 0n, 0n, 0n, 0n),
-            ethers.constants.AddressZero,
-          )),
+          new Array(Number(j))
+            .fill(1)
+            .map(() =>
+              transaction.dummyTransact(
+                merkletree,
+                0n,
+                ethers.constants.AddressZero,
+                ethers.constants.HashZero,
+                notes,
+                notes,
+                new Note(0n, 0n, 0n, 0n, 0n),
+                ethers.constants.AddressZero,
+              ),
+            ),
         );
 
-        const random = BigInt(ethers.utils.keccak256(
-          ethers.BigNumber.from(i * loops + 2n).toHexString(),
-        ));
+        const random = BigInt(
+          ethers.utils.keccak256(
+            ethers.BigNumber.from(i * loops + 2n).toHexString(),
+          ),
+        );
         const requireSuccess = i % 2n === 0n;
         const calls = new Array(j).fill({
           to: token,
@@ -200,17 +221,21 @@ describe('Adapt/Relay', () => {
         });
 
         // eslint-disable-next-line no-await-in-loop
-        expect(await relayAdapt.getRelayAdaptParams(
-          txs,
-          random,
-          requireSuccess,
-          calls,
-        )).to.equal(relayAdaptHelper.getRelayAdaptParams(
-          txs,
-          random,
-          requireSuccess,
-          calls,
-        ));
+        expect(
+          await relayAdapt.getRelayAdaptParams(
+            txs,
+            random,
+            requireSuccess,
+            calls,
+          ),
+        ).to.equal(
+          relayAdaptHelper.getRelayAdaptParams(
+            txs,
+            random,
+            requireSuccess,
+            calls,
+          ),
+        );
       }
     }
   });
@@ -247,11 +272,13 @@ describe('Adapt/Relay', () => {
     const callsDeposit = relayAdaptHelper.formatCalls([
       await relayAdapt.populateTransaction.wrapAllBase(),
       await relayAdapt.populateTransaction.deposit(
-        [{
-          tokenType: 0n,
-          tokenAddress: weth9.address,
-          tokenSubID: 0n,
-        }],
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: weth9.address,
+            tokenSubID: 0n,
+          },
+        ],
         await depositNote.encryptRandom(),
         depositNote.notePublicKey,
       ),
@@ -260,10 +287,16 @@ describe('Adapt/Relay', () => {
     const random = babyjubjub.genRandomPoint();
 
     const depositTx = await (
-      await relayAdapt.relay([], random, true, callsDeposit, { value: depositNote.value })
+      await relayAdapt.relay([], random, true, callsDeposit, {
+        value: depositNote.value,
+      })
     ).wait();
 
-    const [depositTxBase, depositTxFee] = transaction.getFee(depositNote.value, true, depositFee);
+    const [depositTxBase, depositTxFee] = transaction.getFee(
+      depositNote.value,
+      true,
+      depositFee,
+    );
 
     cumulativeBase += depositTxBase;
     cumulativeFee += depositTxFee;
@@ -271,12 +304,22 @@ describe('Adapt/Relay', () => {
     wethnoteregistry.parseEvents(depositTx, merkletree);
     wethnoteregistry.loadNotesWithFees([depositNote], depositFee);
 
-    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
-    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
-
-    const [inputs, outputs, withdrawTxBase, withdrawTxFee] = wethnoteregistry.getNotesWithdraw(
-      relayAdapt.address, 1, 2, spendingKey, viewingKey, withdrawFee,
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
     );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
+
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
+      wethnoteregistry.getNotesWithdraw(
+        relayAdapt.address,
+        1,
+        2,
+        spendingKey,
+        viewingKey,
+        withdrawFee,
+      );
 
     const railgunDummyBatch = [
       await transaction.dummyTransact(
@@ -294,17 +337,22 @@ describe('Adapt/Relay', () => {
     const callsWithdraw = relayAdaptHelper.formatCalls([
       await relayAdapt.populateTransaction.unwrapAllBase(),
       await relayAdapt.populateTransaction.send(
-        [{
-          tokenType: 0n,
-          tokenAddress: ethers.constants.AddressZero,
-          tokenSubID: 0n,
-        }],
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: ethers.constants.AddressZero,
+            tokenSubID: 0n,
+          },
+        ],
         primaryAccount.address,
       ),
     ]);
 
     const relayParams = relayAdaptHelper.getRelayAdaptParams(
-      railgunDummyBatch, random, true, callsWithdraw,
+      railgunDummyBatch,
+      random,
+      true,
+      callsWithdraw,
     );
 
     const railgunBatch = [
@@ -326,7 +374,178 @@ describe('Adapt/Relay', () => {
     cumulativeBase -= withdrawTxFee;
     cumulativeFee += withdrawTxFee;
 
-    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(cumulativeBase);
-    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(cumulativeFee);
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
+    );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
+  });
+
+  it('Should perform cross-contract Relay call (transfer)', async () => {
+    const merkletree = new MerkleTree();
+    const wethnoteregistry = new NoteRegistry();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
+    const depositNote = new Note(
+      spendingKey,
+      viewingKey,
+      1000n,
+      babyjubjub.genRandomPoint(),
+      BigInt(weth9.address),
+    );
+
+    const callsDeposit = relayAdaptHelper.formatCalls([
+      await relayAdapt.populateTransaction.wrapAllBase(),
+      await relayAdapt.populateTransaction.deposit(
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: weth9.address,
+            tokenSubID: 0n,
+          },
+        ],
+        await depositNote.encryptRandom(),
+        depositNote.notePublicKey,
+      ),
+    ]);
+
+    const random = babyjubjub.genRandomPoint();
+
+    const depositTx = await (
+      await relayAdapt.relay([], random, true, callsDeposit, {
+        value: depositNote.value,
+      })
+    ).wait();
+
+    const [depositTxBase, depositTxFee] = transaction.getFee(
+      depositNote.value,
+      true,
+      depositFee,
+    );
+
+    cumulativeBase += depositTxBase;
+    cumulativeFee += depositTxFee;
+
+    wethnoteregistry.parseEvents(depositTx, merkletree);
+    wethnoteregistry.loadNotesWithFees([depositNote], depositFee);
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
+    );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
+
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
+      wethnoteregistry.getNotesWithdraw(
+        relayAdapt.address,
+        1,
+        2,
+        spendingKey,
+        viewingKey,
+        withdrawFee,
+      );
+
+    const railgunDummyBatch = [
+      await transaction.dummyTransact(
+        merkletree,
+        1n,
+        relayAdapt.address,
+        ethers.constants.HashZero,
+        inputs,
+        outputs,
+        outputs[0],
+        ethers.constants.AddressZero,
+      ),
+    ];
+
+    const transferAmount = 1n;
+
+    const depositNote2 = new Note(
+      spendingKey,
+      viewingKey,
+      withdrawTxBase - transferAmount,
+      babyjubjub.genRandomPoint(),
+      BigInt(weth9.address),
+    );
+
+    const [depositTxBase2, depositTxFee2] = transaction.getFee(
+      depositNote2.value,
+      true,
+      depositFee,
+    );
+
+    const crossContractCalls = relayAdaptHelper.formatCalls([
+      await weth9.populateTransaction.transfer(
+        '0x000000000000000000000000000000000000dEaD',
+        transferAmount,
+      ),
+      await relayAdapt.populateTransaction.deposit(
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: weth9.address,
+            tokenSubID: 0n,
+          },
+        ],
+        await depositNote2.encryptRandom(),
+        depositNote2.notePublicKey,
+      ),
+    ]);
+
+    const relayParams = relayAdaptHelper.getRelayAdaptParams(
+      railgunDummyBatch,
+      random,
+      true,
+      crossContractCalls,
+    );
+
+    const railgunBatch = [
+      await transaction.transact(
+        merkletree,
+        1n,
+        relayAdapt.address,
+        relayParams,
+        inputs,
+        outputs,
+        outputs[outputs.length - 1],
+        ethers.constants.AddressZero,
+      ),
+    ];
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
+    );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
+
+    await relayAdapt.relay(railgunBatch, random, true, crossContractCalls);
+
+    cumulativeBase -= withdrawTxBase;
+    cumulativeBase -= withdrawTxFee;
+    cumulativeFee += withdrawTxFee;
+
+    cumulativeBase -= transferAmount;
+
+    cumulativeBase += depositTxBase2;
+    cumulativeBase += depositTxFee2;
+    cumulativeFee += depositTxFee2;
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
+    );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
   });
 });
