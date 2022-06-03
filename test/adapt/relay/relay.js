@@ -499,8 +499,8 @@ describe('Adapt/Relay', () => {
     const relayParams = relayAdaptHelper.getRelayAdaptParams(
       railgunDummyBatch,
       random,
-      true,
-      1n,
+      false,
+1n,
       crossContractCalls,
     );
 
@@ -524,7 +524,7 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    await relayAdapt.relay(railgunBatch, random, true, 1n, crossContractCalls);
+    await relayAdapt.relay(railgunBatch, random, false, 1n, crossContractCalls);
 
     cumulativeBase -= withdrawTxBase;
     cumulativeBase -= withdrawTxFee;
