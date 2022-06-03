@@ -14,6 +14,7 @@ const MerkleTree = require('../../../helpers/logic/merkletree');
 const { Note } = require('../../../helpers/logic/note');
 const transaction = require('../../../helpers/logic/transaction');
 const NoteRegistry = require('../../../helpers/logic/noteregistry');
+const { assert } = require('chai');
 
 chai.use(chaiAsPromised);
 
@@ -542,5 +543,161 @@ describe('Adapt/Relay', () => {
     expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
       cumulativeFee,
     );
+  });
+
+  it.only('Should revert cross-contract Relay call on deposit failure', async () => {
+    const merkletree = new MerkleTree();
+    const wethnoteregistry = new NoteRegistry();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
+    const depositNote = new Note(
+      spendingKey,
+      viewingKey,
+      1000n,
+      babyjubjub.genRandomPoint(),
+      BigInt(weth9.address),
+    );
+
+    const callsDeposit = relayAdaptHelper.formatCalls([
+      await relayAdapt.populateTransaction.wrapAllBase(),
+      await relayAdapt.populateTransaction.deposit(
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: weth9.address,
+            tokenSubID: 0n,
+          },
+        ],
+        await depositNote.encryptRandom(),
+        depositNote.notePublicKey,
+      ),
+    ]);
+
+    const random = babyjubjub.genRandomPoint();
+
+    const depositTx = await (
+      await relayAdapt.relay([], random, true, callsDeposit, {
+        value: depositNote.value,
+      })
+    ).wait();
+
+    const [depositTxBase, depositTxFee] = transaction.getFee(
+      depositNote.value,
+      true,
+      depositFee,
+    );
+
+    cumulativeBase += depositTxBase;
+    cumulativeFee += depositTxFee;
+
+    wethnoteregistry.parseEvents(depositTx, merkletree);
+    wethnoteregistry.loadNotesWithFees([depositNote], depositFee);
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
+    );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
+
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
+      wethnoteregistry.getNotesWithdraw(
+        relayAdapt.address,
+        1,
+        2,
+        spendingKey,
+        viewingKey,
+        withdrawFee,
+      );
+
+    const railgunDummyBatch = [
+      await transaction.dummyTransact(
+        merkletree,
+        1n,
+        relayAdapt.address,
+        ethers.constants.HashZero,
+        inputs,
+        outputs,
+        outputs[0],
+        ethers.constants.AddressZero,
+      ),
+    ];
+
+    const transferAmount = 100n;
+
+    const depositNote2 = new Note(
+      spendingKey,
+      viewingKey,
+      withdrawTxBase - transferAmount,
+      babyjubjub.genRandomPoint(),
+      BigInt(weth9.address),
+    );
+
+    const [depositTxBase2, depositTxFee2] = transaction.getFee(
+      depositNote2.value,
+      true,
+      depositFee,
+    );
+
+    const crossContractCalls = relayAdaptHelper.formatCalls([
+      await weth9.populateTransaction.transfer(
+        '0x000000000000000000000000000000000000dEaD',
+        transferAmount,
+      ),
+      await relayAdapt.populateTransaction.deposit(
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: weth9.address,
+            tokenSubID: 0n,
+          },
+        ],
+        await depositNote2.encryptRandom(),
+        depositNote2.notePublicKey,
+      ),
+    ]);
+
+    const relayParams = relayAdaptHelper.getRelayAdaptParams(
+      railgunDummyBatch,
+      random,
+      false,
+      crossContractCalls,
+    );
+
+    const railgunBatch = [
+      await transaction.transact(
+        merkletree,
+        1n,
+        relayAdapt.address,
+        relayParams,
+        inputs,
+        outputs,
+        outputs[outputs.length - 1],
+        ethers.constants.AddressZero,
+      ),
+    ];
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(998n);
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(2n);
+
+    try {
+      await relayAdapt.relay(railgunBatch, random, false, crossContractCalls, {
+        gasLimit: 1600000, // Requires ~1.7M.
+      });
+      assert(false, 'Should catch error');
+    } catch (err) {
+      // no op
+    }
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(998n);
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(2n);
   });
 });
