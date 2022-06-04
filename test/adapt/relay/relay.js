@@ -7,7 +7,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 const weth9artifact = require('@ethereum-artifacts/weth9');
 
-const { assert, config } = require('chai');
+const { assert } = require('chai');
 const artifacts = require('../../../helpers/logic/snarkKeys');
 const relayAdaptHelper = require('../../../helpers/adapt/relay/relayadapt');
 const babyjubjub = require('../../../helpers/logic/babyjubjub');
@@ -466,7 +466,6 @@ describe('Adapt/Relay', () => {
     const wethnoteregistry = new NoteRegistry();
 
     const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
-    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
 
     const spendingKey = babyjubjub.genRandomPrivateKey();
     const viewingKey = babyjubjub.genRandomPrivateKey();
@@ -495,6 +494,72 @@ describe('Adapt/Relay', () => {
           {
             tokenType: 0n,
             tokenAddress: testERC20.address,
+            tokenSubID: 0n,
+          },
+        ],
+        await depositNote.encryptRandom(),
+        depositNote.notePublicKey,
+      ),
+    ]);
+
+    const random = babyjubjub.genRandomPoint();
+
+    const depositTx = await (
+      await relayAdapt.relay([], random, true, 1n, callsDeposit, {
+        value: depositNote.value,
+      })
+    ).wait();
+
+    const [depositTxBase, depositTxFee] = transaction.getFee(
+      depositNote.value,
+      true,
+      depositFee,
+    );
+
+    cumulativeBase += depositTxBase;
+    cumulativeFee += depositTxFee;
+
+    wethnoteregistry.parseEvents(depositTx, merkletree);
+    wethnoteregistry.loadNotesWithFees([depositNote], depositFee);
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
+    );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
+    expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(0n);
+    expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(0n);
+  });
+
+  it.only('Should perform cross-contract Relay call (transfer)', async () => {
+    const merkletree = new MerkleTree();
+    const wethnoteregistry = new NoteRegistry();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
+    const depositNote = new Note(
+      spendingKey,
+      viewingKey,
+      1000n,
+      babyjubjub.genRandomPoint(),
+      BigInt(weth9.address),
+    );
+
+    const callsDeposit = relayAdaptHelper.formatCalls([
+      await relayAdapt.populateTransaction.wrapAllBase(),
+      await relayAdapt.populateTransaction.deposit(
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: weth9.address,
             tokenSubID: 0n,
           },
         ],
