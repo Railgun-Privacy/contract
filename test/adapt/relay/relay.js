@@ -7,7 +7,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 const weth9artifact = require('@ethereum-artifacts/weth9');
 
-const { assert } = require('chai');
+const { assert, config } = require('chai');
 const artifacts = require('../../../helpers/logic/snarkKeys');
 const relayAdaptHelper = require('../../../helpers/adapt/relay/relayadapt');
 const babyjubjub = require('../../../helpers/logic/babyjubjub');
@@ -387,7 +387,7 @@ describe('Adapt/Relay', () => {
     );
   });
 
-  it('Should perform cross-contract Relay call (transfer)', async () => {
+  it.only('Should perform cross-contract Relay call (transfer)', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
@@ -412,9 +412,15 @@ describe('Adapt/Relay', () => {
       await relayAdapt.populateTransaction.wrapAllBase(),
       await relayAdapt.populateTransaction.deposit(
         [
+          // TODO: Test in reverse order (bad then good token).
           {
             tokenType: 0n,
             tokenAddress: weth9.address,
+            tokenSubID: 0n,
+          },
+          {
+            tokenType: 0n,
+            tokenAddress: testERC20.address,
             tokenSubID: 0n,
           },
         ],

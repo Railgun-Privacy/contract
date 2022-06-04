@@ -30,7 +30,7 @@ contract RelayAdapt {
 
   struct Result {
     bool success;
-    bytes returnData;
+    string returnData;
   }
 
   event CallResult(Result[] callResults);
@@ -261,7 +261,7 @@ contract RelayAdapt {
       (bool success, bytes memory ret) = call.to.call{value: call.value, gas: gasleft()}(call.data);
 
       // Add call result to returnData
-      returnData[i] = Result(success, ret);
+      returnData[i] = Result(success, string(ret));
 
       if (success) {
         continue;
@@ -273,7 +273,7 @@ contract RelayAdapt {
       // If requireSuccess is true, throw on failure
       if (requireSuccess) {
         emit CallResult(returnData);
-        revert("GeneralAdapt: Call Failed");
+        revert(string.concat("GeneralAdapt Call Failed:", string(ret)));
       }
     }
 
