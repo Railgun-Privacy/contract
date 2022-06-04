@@ -555,7 +555,7 @@ describe('Adapt/Relay', () => {
     );
   });
 
-  it.only('Should revert cross-contract Relay call on deposit failure', async () => {
+  it('Should revert cross-contract Relay call on deposit failure', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
