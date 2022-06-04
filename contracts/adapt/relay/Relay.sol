@@ -162,6 +162,8 @@ contract RelayAdapt {
       }
     }
 
+    // TODO: Filter commitmentPreImages for 0s (0 balance tokens).
+
     // Deposit back to Railgun
     railgun.generateDeposit(commitmentPreimages, encryptedRandom);
   }
