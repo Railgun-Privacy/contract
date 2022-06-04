@@ -545,7 +545,7 @@ describe('Adapt/Relay', () => {
     );
   });
 
-  it.only('Should revert cross-contract Relay call on deposit failure', async () => {
+  it('Should revert cross-contract Relay call on deposit failure', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
@@ -608,15 +608,14 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
-      wethnoteregistry.getNotesWithdraw(
-        relayAdapt.address,
-        1,
-        2,
-        spendingKey,
-        viewingKey,
-        withdrawFee,
-      );
+    const [inputs, outputs, withdrawTxBase] = wethnoteregistry.getNotesWithdraw(
+      relayAdapt.address,
+      1,
+      2,
+      spendingKey,
+      viewingKey,
+      withdrawFee,
+    );
 
     const railgunDummyBatch = [
       await transaction.dummyTransact(
@@ -639,12 +638,6 @@ describe('Adapt/Relay', () => {
       withdrawTxBase - transferAmount,
       babyjubjub.genRandomPoint(),
       BigInt(weth9.address),
-    );
-
-    const [depositTxBase2, depositTxFee2] = transaction.getFee(
-      depositNote2.value,
-      true,
-      depositFee,
     );
 
     const crossContractCalls = relayAdaptHelper.formatCalls([
