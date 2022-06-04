@@ -65,11 +65,7 @@ class Note {
    * @returns {bigint} hash
    */
   get hash() {
-    return poseidon([
-      this.notePublicKey,
-      this.token,
-      this.value,
-    ]);
+    return poseidon([this.notePublicKey, this.token, this.value]);
   }
 
   /**
@@ -79,10 +75,7 @@ class Note {
    * @returns {bigint} nullifier
    */
   getNullifier(leafIndex) {
-    return poseidon([
-      this.nullifyingKey,
-      leafIndex,
-    ]);
+    return poseidon([this.nullifyingKey, leafIndex]);
   }
 
   /**
@@ -94,12 +87,7 @@ class Note {
    * @param {Array<bigint>} commitmentsOut - transaction commitments
    * @returns {object} signature
    */
-  sign(
-    merkleRoot,
-    boundParamsHash,
-    nullifiers,
-    commitmentsOut,
-  ) {
+  sign(merkleRoot, boundParamsHash, nullifiers, commitmentsOut) {
     const hash = poseidon([
       merkleRoot,
       boundParamsHash,
@@ -120,7 +108,7 @@ class Note {
   /**
    * Encrypts note random
    *
-   * @returns {Buffer[]} encrypted random data
+   * @returns {Promise<Buffer[]>} encrypted random data
    */
   async encryptRandom() {
     return cryptoHelper.encryptAESGCM(
@@ -159,11 +147,7 @@ class WithdrawNote {
    * @returns {bigint} hash
    */
   get hash() {
-    return poseidon([
-      this.withdrawAddress,
-      this.token,
-      this.value,
-    ]);
+    return poseidon([this.withdrawAddress, this.token, this.value]);
   }
 }
 

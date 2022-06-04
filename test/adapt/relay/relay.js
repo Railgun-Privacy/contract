@@ -541,10 +541,7 @@ describe('Adapt/Relay', () => {
     cumulativeBase -= withdrawTxFee;
     cumulativeFee += withdrawTxFee;
 
-    cumulativeBase -= transferAmount;
-
     cumulativeBase += depositTxBase2;
-    cumulativeBase += depositTxFee2;
     cumulativeFee += depositTxFee2;
 
     expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
