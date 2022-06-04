@@ -282,7 +282,7 @@ describe('Adapt/Relay', () => {
     const random = babyjubjub.genRandomPoint();
 
     const depositTx = await (
-      await relayAdapt.relay([], random, true, callsDeposit, {
+      await relayAdapt.relay([], random, true, 1n, callsDeposit, {
         value: depositNote.value,
       })
     ).wait();
@@ -363,7 +363,7 @@ describe('Adapt/Relay', () => {
       ),
     ];
 
-    await relayAdapt.relay(railgunBatch, random, true, callsWithdraw);
+    await relayAdapt.relay(railgunBatch, random, true, 1n, callsWithdraw);
 
     cumulativeBase -= withdrawTxBase;
     cumulativeBase -= withdrawTxFee;
@@ -416,7 +416,7 @@ describe('Adapt/Relay', () => {
     const random = babyjubjub.genRandomPoint();
 
     const depositTx = await (
-      await relayAdapt.relay([], random, true, callsDeposit, {
+      await relayAdapt.relay([], random, true, 1n, callsDeposit, {
         value: depositNote.value,
       })
     ).wait();
@@ -524,7 +524,7 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    await relayAdapt.relay(railgunBatch, random, true, crossContractCalls);
+    await relayAdapt.relay(railgunBatch, random, true, 1n, crossContractCalls);
 
     cumulativeBase -= withdrawTxBase;
     cumulativeBase -= withdrawTxFee;

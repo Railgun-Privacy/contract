@@ -258,7 +258,7 @@ contract RelayAdapt {
 
       // Execute call
       // solhint-disable-next-line avoid-low-level-calls
-      (bool success, bytes memory ret) = call.to.call{value: call.value}(call.data);
+      (bool success, bytes memory ret) = call.to.call{value: call.value, gas: gasleft()}(call.data);
 
       // Add call result to returnData
       returnData[i] = Result(success, ret);
