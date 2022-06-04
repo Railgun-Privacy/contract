@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const bigintBuffer = require('bigint-buffer');
+const curve25519 = require('@noble/ed25519');
 const { blake3 } = require('@noble/hashes/blake3');
 const { XChaCha20 } = require('xchacha20-js');
 
@@ -104,14 +106,39 @@ async function decryptAESGCM(ciphertext, key) {
 }
 
 /**
- * Generates ephemeral keys for
+ * Adjusts random value for curve25519
+ *
+ * @param {bigint} random - random value
+ * @returns {bigint} adjusted random
+ */
+function adjustRandom(random) {
+  const randomArray = crypto.createHash('sha256').update(
+    bigintBuffer.toBufferBE(random, 32),
+  ).digest();
+  // eslint-disable-next-line no-bitwise
+  randomArray[0] &= 248;
+  // eslint-disable-next-line no-bitwise
+  randomArray[31] &= 127;
+  // eslint-disable-next-line no-bitwise
+  randomArray[31] |= 64;
+  return BigInt(`0x${randomArray.toString('hex')}`) % curve25519.CURVE.n;
+}
+
+/**
+ * Generates ephemeral keys for note encryption
  *
  * @param {bigint} random - randomness for ephemeral keys
  * @param {bigint} senderPrivKey - Private key of sender
  * @param {bigint[]} receiverPubKey - public key of receiver
+ * @returns {}
  */
 async function ephemeralKeysGen(random, senderPrivKey, receiverPubKey) {
-
+  const r = adjustRandom(random);
+  const S = curve25519.Point.fromHex(senderPrivKey);
+  const R = curve25519.Point.fromHex(receiverPubKey);
+  const rS = S.multiply(r).toRawBytes();
+  const rR = R.multiply(r).toRawBytes();
+  return [rS, rR];
 }
 
 module.exports = {

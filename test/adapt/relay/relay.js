@@ -112,14 +112,13 @@ describe('Adapt/Relay', () => {
       for (let j = 0n; j < i + 1n; j += 1n) {
         const notes = new Array(Number(i)).fill(1).map(
           // eslint-disable-next-line no-loop-func
-          () =>
-            new Note(
-              spendingKey,
-              viewingKey,
-              i * 10n ** 18n,
-              babyjubjub.genRandomPoint(),
-              BigInt(token),
-            ),
+          () => new Note(
+            spendingKey,
+            viewingKey,
+            i * 10n ** 18n,
+            babyjubjub.genRandomPoint(),
+            BigInt(token),
+          ),
         );
 
         merkletree.insertLeaves(notes.map((note) => note.hash));
@@ -128,18 +127,16 @@ describe('Adapt/Relay', () => {
         const txs = await Promise.all(
           new Array(Number(j))
             .fill(1)
-            .map(() =>
-              transaction.dummyTransact(
-                merkletree,
-                0n,
-                ethers.constants.AddressZero,
-                ethers.constants.HashZero,
-                notes,
-                notes,
-                new Note(0n, 0n, 0n, 0n, 0n),
-                ethers.constants.AddressZero,
-              ),
-            ),
+            .map(() => transaction.dummyTransact(
+              merkletree,
+              0n,
+              ethers.constants.AddressZero,
+              ethers.constants.HashZero,
+              notes,
+              notes,
+              new Note(0n, 0n, 0n, 0n, 0n),
+              ethers.constants.AddressZero,
+            )),
         );
 
         const additionalData = ethers.utils
@@ -176,14 +173,13 @@ describe('Adapt/Relay', () => {
       for (let j = 0n; j < i; j += 1n) {
         const notes = new Array(Number(i)).fill(1).map(
           // eslint-disable-next-line no-loop-func
-          () =>
-            new Note(
-              spendingKey,
-              viewingKey,
-              i * 10n ** 18n,
-              babyjubjub.genRandomPoint(),
-              BigInt(token),
-            ),
+          () => new Note(
+            spendingKey,
+            viewingKey,
+            i * 10n ** 18n,
+            babyjubjub.genRandomPoint(),
+            BigInt(token),
+          ),
         );
 
         merkletree.insertLeaves(notes.map((note) => note.hash));
@@ -192,18 +188,16 @@ describe('Adapt/Relay', () => {
         const txs = await Promise.all(
           new Array(Number(j))
             .fill(1)
-            .map(() =>
-              transaction.dummyTransact(
-                merkletree,
-                0n,
-                ethers.constants.AddressZero,
-                ethers.constants.HashZero,
-                notes,
-                notes,
-                new Note(0n, 0n, 0n, 0n, 0n),
-                ethers.constants.AddressZero,
-              ),
-            ),
+            .map(() => transaction.dummyTransact(
+              merkletree,
+              0n,
+              ethers.constants.AddressZero,
+              ethers.constants.HashZero,
+              notes,
+              notes,
+              new Note(0n, 0n, 0n, 0n, 0n),
+              ethers.constants.AddressZero,
+            )),
         );
 
         const random = BigInt(
@@ -219,20 +213,21 @@ describe('Adapt/Relay', () => {
           ),
           value: i,
         });
+        const minGas = i;
 
         // eslint-disable-next-line no-await-in-loop
-        expect(
-          await relayAdapt.getRelayAdaptParams(
-            txs,
-            random,
-            requireSuccess,
-            calls,
-          ),
-        ).to.equal(
+        expect(await relayAdapt.getRelayAdaptParams(
+          txs,
+          random,
+          requireSuccess,
+          minGas,
+          calls,
+        )).to.equal(
           relayAdaptHelper.getRelayAdaptParams(
             txs,
             random,
             requireSuccess,
+            minGas,
             calls,
           ),
         );
@@ -311,15 +306,14 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
-      wethnoteregistry.getNotesWithdraw(
-        relayAdapt.address,
-        1,
-        2,
-        spendingKey,
-        viewingKey,
-        withdrawFee,
-      );
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] = wethnoteregistry.getNotesWithdraw(
+      relayAdapt.address,
+      1,
+      2,
+      spendingKey,
+      viewingKey,
+      withdrawFee,
+    );
 
     const railgunDummyBatch = [
       await transaction.dummyTransact(
@@ -352,6 +346,7 @@ describe('Adapt/Relay', () => {
       railgunDummyBatch,
       random,
       true,
+      1n,
       callsWithdraw,
     );
 
@@ -382,7 +377,7 @@ describe('Adapt/Relay', () => {
     );
   });
 
-  it('Should perform cross-contract Relay call (transfer)', async () => {
+  it('Should perform cross-contract Relay call (transfer)', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
@@ -445,15 +440,14 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
-      wethnoteregistry.getNotesWithdraw(
-        relayAdapt.address,
-        1,
-        2,
-        spendingKey,
-        viewingKey,
-        withdrawFee,
-      );
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] = wethnoteregistry.getNotesWithdraw(
+      relayAdapt.address,
+      1,
+      2,
+      spendingKey,
+      viewingKey,
+      withdrawFee,
+    );
 
     const railgunDummyBatch = [
       await transaction.dummyTransact(
@@ -506,6 +500,7 @@ describe('Adapt/Relay', () => {
       railgunDummyBatch,
       random,
       true,
+      1n,
       crossContractCalls,
     );
 

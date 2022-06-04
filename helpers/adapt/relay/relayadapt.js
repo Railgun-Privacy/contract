@@ -24,13 +24,14 @@ function getAdaptParams(transactions, additionalData) {
  * @param {object[]} transactions - transactions
  * @param {bigint} random - random value
  * @param {boolean} requireSuccess - require success on calls
+ * @param {bigint} minGas - minimum amount of gas to be supplied to transaction
  * @param {object[]} calls - calls list
  * @returns {string} adapt params
  */
-function getRelayAdaptParams(transactions, random, requireSuccess, calls) {
+function getRelayAdaptParams(transactions, random, requireSuccess, minGas, calls) {
   const additionalData = abiCoder.encode(
-    ['uint256', 'bool', 'tuple(address to, bytes data, uint256 value)[] calls'],
-    [random, requireSuccess, calls],
+    ['uint256', 'bool', 'uint256', 'tuple(address to, bytes data, uint256 value)[] calls'],
+    [random, requireSuccess, minGas, calls],
   );
 
   return getAdaptParams(transactions, additionalData);

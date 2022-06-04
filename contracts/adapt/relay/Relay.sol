@@ -280,6 +280,7 @@ contract RelayAdapt {
    * @param _random - Random value (shouldn't be reused if resubmitting the same transaction
    * through another relayer or resubmitting on failed transaction - the same nullifier:random
    * should never be reused)
+   * @param _minGas - minimum amount of gas to be supplied to transaction
    * @param _requireSuccess - Whether transaction should throw on multicall failure
    * @param _calls - multicall
    */
@@ -287,12 +288,14 @@ contract RelayAdapt {
     Transaction[] calldata _transactions,
     uint256 _random,
     bool _requireSuccess,
+    uint256 _minGas,
     Call[] calldata _calls
   ) external pure returns (bytes32) {
     // Convenience function to get the expected adaptID parameters value for global
     bytes memory additionalData = abi.encode(
       _random,
       _requireSuccess,
+      _minGas,
       _calls
     );
 
@@ -307,19 +310,24 @@ contract RelayAdapt {
    * through another relayer or resubmitting on failed transaction - the same nullifier:random
    * should never be reused)
    * @param _requireSuccess - Whether transaction should throw on multicall failure
+   * @param _minGas - minimum amount of gas to be supplied to transaction
    * @param _calls - multicall
    */
   function relay(
     Transaction[] calldata _transactions,
     uint256 _random,
     bool _requireSuccess,
+    uint256 _minGas,
     Call[] calldata _calls
   ) external payable {
+    require(gasleft() > _minGas, "Not enough gas supplied");
+
     if (_transactions.length > 0) {
       // Calculate additionalData parameter for adaptID parameters
       bytes memory additionalData = abi.encode(
         _random,
         _requireSuccess,
+        _minGas,
         _calls
       );
 
