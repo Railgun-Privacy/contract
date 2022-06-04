@@ -7,7 +7,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 const weth9artifact = require('@ethereum-artifacts/weth9');
 
-const { assert, config } = require('chai');
+const { assert } = require('chai');
 const artifacts = require('../../../helpers/logic/snarkKeys');
 const relayAdaptHelper = require('../../../helpers/adapt/relay/relayadapt');
 const babyjubjub = require('../../../helpers/logic/babyjubjub');
@@ -15,6 +15,9 @@ const MerkleTree = require('../../../helpers/logic/merkletree');
 const { Note } = require('../../../helpers/logic/note');
 const transaction = require('../../../helpers/logic/transaction');
 const NoteRegistry = require('../../../helpers/logic/noteregistry');
+const {
+  getRelayAdaptCallResultError,
+} = require('../../../helpers/adapt/relay/parse-events');
 
 chai.use(chaiAsPromised);
 
@@ -387,12 +390,11 @@ describe('Adapt/Relay', () => {
     );
   });
 
-  it.only('Should perform cross-contract Relay call (transfer)', async () => {
+  it.only('Should deposit token with balance, and skip token without balance', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
     const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
-    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
 
     const spendingKey = babyjubjub.genRandomPrivateKey();
     const viewingKey = babyjubjub.genRandomPrivateKey();
@@ -421,6 +423,72 @@ describe('Adapt/Relay', () => {
           {
             tokenType: 0n,
             tokenAddress: testERC20.address,
+            tokenSubID: 0n,
+          },
+        ],
+        await depositNote.encryptRandom(),
+        depositNote.notePublicKey,
+      ),
+    ]);
+
+    const random = babyjubjub.genRandomPoint();
+
+    const depositTx = await (
+      await relayAdapt.relay([], random, true, 1n, callsDeposit, {
+        value: depositNote.value,
+      })
+    ).wait();
+
+    const [depositTxBase, depositTxFee] = transaction.getFee(
+      depositNote.value,
+      true,
+      depositFee,
+    );
+
+    cumulativeBase += depositTxBase;
+    cumulativeFee += depositTxFee;
+
+    wethnoteregistry.parseEvents(depositTx, merkletree);
+    wethnoteregistry.loadNotesWithFees([depositNote], depositFee);
+
+    expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
+      cumulativeBase,
+    );
+    expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
+      cumulativeFee,
+    );
+    expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(0n);
+    expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(0n);
+  });
+
+  it('Should perform cross-contract Relay call (transfer)', async () => {
+    const merkletree = new MerkleTree();
+    const wethnoteregistry = new NoteRegistry();
+
+    const depositFee = BigInt((await railgunLogic.depositFee()).toHexString());
+    const withdrawFee = BigInt((await railgunLogic.depositFee()).toHexString());
+
+    const spendingKey = babyjubjub.genRandomPrivateKey();
+    const viewingKey = babyjubjub.genRandomPrivateKey();
+
+    let cumulativeBase = 0n;
+    let cumulativeFee = 0n;
+
+    const depositNote = new Note(
+      spendingKey,
+      viewingKey,
+      1000n,
+      babyjubjub.genRandomPoint(),
+      BigInt(weth9.address),
+    );
+
+    const callsDeposit = relayAdaptHelper.formatCalls([
+      await relayAdapt.populateTransaction.wrapAllBase(),
+      await relayAdapt.populateTransaction.deposit(
+        [
+          {
+            tokenType: 0n,
+            tokenAddress: weth9.address,
             tokenSubID: 0n,
           },
         ],
@@ -541,7 +609,17 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    await relayAdapt.relay(railgunBatch, random, false, 1n, crossContractCalls);
+    const txResponse = await relayAdapt.relay(
+      railgunBatch,
+      random,
+      false,
+      1n,
+      crossContractCalls,
+    );
+    const txReceipt = await txResponse.wait();
+
+    const error = getRelayAdaptCallResultError(txReceipt);
+    expect(error).to.equal(undefined);
 
     cumulativeBase -= withdrawTxBase;
     cumulativeBase -= withdrawTxFee;
