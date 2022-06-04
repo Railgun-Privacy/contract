@@ -7,6 +7,7 @@ const chaiAsPromised = require('chai-as-promised');
 
 const weth9artifact = require('@ethereum-artifacts/weth9');
 
+const { assert } = require('chai');
 const artifacts = require('../../../helpers/logic/snarkKeys');
 const relayAdaptHelper = require('../../../helpers/adapt/relay/relayadapt');
 const babyjubjub = require('../../../helpers/logic/babyjubjub');
@@ -14,7 +15,6 @@ const MerkleTree = require('../../../helpers/logic/merkletree');
 const { Note } = require('../../../helpers/logic/note');
 const transaction = require('../../../helpers/logic/transaction');
 const NoteRegistry = require('../../../helpers/logic/noteregistry');
-const { assert } = require('chai');
 
 chai.use(chaiAsPromised);
 
@@ -113,13 +113,14 @@ describe('Adapt/Relay', () => {
       for (let j = 0n; j < i + 1n; j += 1n) {
         const notes = new Array(Number(i)).fill(1).map(
           // eslint-disable-next-line no-loop-func
-          () => new Note(
-            spendingKey,
-            viewingKey,
-            i * 10n ** 18n,
-            babyjubjub.genRandomPoint(),
-            BigInt(token),
-          ),
+          () =>
+            new Note(
+              spendingKey,
+              viewingKey,
+              i * 10n ** 18n,
+              babyjubjub.genRandomPoint(),
+              BigInt(token),
+            ),
         );
 
         merkletree.insertLeaves(notes.map((note) => note.hash));
@@ -128,16 +129,18 @@ describe('Adapt/Relay', () => {
         const txs = await Promise.all(
           new Array(Number(j))
             .fill(1)
-            .map(() => transaction.dummyTransact(
-              merkletree,
-              0n,
-              ethers.constants.AddressZero,
-              ethers.constants.HashZero,
-              notes,
-              notes,
-              new Note(0n, 0n, 0n, 0n, 0n),
-              ethers.constants.AddressZero,
-            )),
+            .map(() =>
+              transaction.dummyTransact(
+                merkletree,
+                0n,
+                ethers.constants.AddressZero,
+                ethers.constants.HashZero,
+                notes,
+                notes,
+                new Note(0n, 0n, 0n, 0n, 0n),
+                ethers.constants.AddressZero,
+              ),
+            ),
         );
 
         const additionalData = ethers.utils
@@ -174,13 +177,14 @@ describe('Adapt/Relay', () => {
       for (let j = 0n; j < i; j += 1n) {
         const notes = new Array(Number(i)).fill(1).map(
           // eslint-disable-next-line no-loop-func
-          () => new Note(
-            spendingKey,
-            viewingKey,
-            i * 10n ** 18n,
-            babyjubjub.genRandomPoint(),
-            BigInt(token),
-          ),
+          () =>
+            new Note(
+              spendingKey,
+              viewingKey,
+              i * 10n ** 18n,
+              babyjubjub.genRandomPoint(),
+              BigInt(token),
+            ),
         );
 
         merkletree.insertLeaves(notes.map((note) => note.hash));
@@ -189,16 +193,18 @@ describe('Adapt/Relay', () => {
         const txs = await Promise.all(
           new Array(Number(j))
             .fill(1)
-            .map(() => transaction.dummyTransact(
-              merkletree,
-              0n,
-              ethers.constants.AddressZero,
-              ethers.constants.HashZero,
-              notes,
-              notes,
-              new Note(0n, 0n, 0n, 0n, 0n),
-              ethers.constants.AddressZero,
-            )),
+            .map(() =>
+              transaction.dummyTransact(
+                merkletree,
+                0n,
+                ethers.constants.AddressZero,
+                ethers.constants.HashZero,
+                notes,
+                notes,
+                new Note(0n, 0n, 0n, 0n, 0n),
+                ethers.constants.AddressZero,
+              ),
+            ),
         );
 
         const random = BigInt(
@@ -217,13 +223,15 @@ describe('Adapt/Relay', () => {
         const minGas = i;
 
         // eslint-disable-next-line no-await-in-loop
-        expect(await relayAdapt.getRelayAdaptParams(
-          txs,
-          random,
-          requireSuccess,
-          minGas,
-          calls,
-        )).to.equal(
+        expect(
+          await relayAdapt.getRelayAdaptParams(
+            txs,
+            random,
+            requireSuccess,
+            minGas,
+            calls,
+          ),
+        ).to.equal(
           relayAdaptHelper.getRelayAdaptParams(
             txs,
             random,
@@ -307,14 +315,15 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    const [inputs, outputs, withdrawTxBase, withdrawTxFee] = wethnoteregistry.getNotesWithdraw(
-      relayAdapt.address,
-      1,
-      2,
-      spendingKey,
-      viewingKey,
-      withdrawFee,
-    );
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
+      wethnoteregistry.getNotesWithdraw(
+        relayAdapt.address,
+        1,
+        2,
+        spendingKey,
+        viewingKey,
+        withdrawFee,
+      );
 
     const railgunDummyBatch = [
       await transaction.dummyTransact(
@@ -441,14 +450,15 @@ describe('Adapt/Relay', () => {
       cumulativeFee,
     );
 
-    const [inputs, outputs, withdrawTxBase, withdrawTxFee] = wethnoteregistry.getNotesWithdraw(
-      relayAdapt.address,
-      1,
-      2,
-      spendingKey,
-      viewingKey,
-      withdrawFee,
-    );
+    const [inputs, outputs, withdrawTxBase, withdrawTxFee] =
+      wethnoteregistry.getNotesWithdraw(
+        relayAdapt.address,
+        1,
+        2,
+        spendingKey,
+        viewingKey,
+        withdrawFee,
+      );
 
     const railgunDummyBatch = [
       await transaction.dummyTransact(
@@ -501,7 +511,7 @@ describe('Adapt/Relay', () => {
       railgunDummyBatch,
       random,
       false,
-1n,
+      1n,
       crossContractCalls,
     );
 
@@ -545,7 +555,7 @@ describe('Adapt/Relay', () => {
     );
   });
 
-  it('Should revert cross-contract Relay call on deposit failure', async () => {
+  it.only('Should revert cross-contract Relay call on deposit failure', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
@@ -584,7 +594,7 @@ describe('Adapt/Relay', () => {
     const random = babyjubjub.genRandomPoint();
 
     const depositTx = await (
-      await relayAdapt.relay([], random, true, callsDeposit, {
+      await relayAdapt.relay([], random, true, 1n, callsDeposit, {
         value: depositNote.value,
       })
     ).wait();
@@ -662,6 +672,7 @@ describe('Adapt/Relay', () => {
       railgunDummyBatch,
       random,
       false,
+      1n,
       crossContractCalls,
     );
 
