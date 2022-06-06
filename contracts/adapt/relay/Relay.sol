@@ -126,7 +126,7 @@ contract RelayAdapt {
     // transaction always succeeds when dealing with USDT/similar tokens make sure the last
     // call in your calls is a call to the token contract with an approval of 0
     CommitmentPreimage[] memory commitmentPreimages = new CommitmentPreimage[](_deposits.length);
-    uint256[2][] memory encryptedRandom = new uint256[2][](_deposits.length);
+    uint256 numValidTokens = 0;
 
     for (uint256 i = 0; i < _deposits.length; i++) {
       if (_deposits[i].tokenType == TokenType.ERC20) {
@@ -136,6 +136,8 @@ contract RelayAdapt {
         uint256 balance = token.balanceOf(address(this));
 
         if (balance > 0) {
+          numValidTokens += 1;
+
           // Approve the balance for deposit
           token.safeApprove(
             address(railgun),
@@ -148,7 +150,6 @@ contract RelayAdapt {
             value: uint120(balance),
             token: _deposits[i]
           });
-          encryptedRandom[i] = _encryptedRandom;
         }
       } else if (_deposits[i].tokenType == TokenType.ERC721) {
         // ERC721 token
@@ -162,10 +163,26 @@ contract RelayAdapt {
       }
     }
 
-    // TODO: Filter commitmentPreImages for 0s (0 balance tokens).
+    if (numValidTokens == 0) {
+      return;
+    }
+
+    // Filter commitmentPreImages for != 0 (remove 0 balance tokens).
+    CommitmentPreimage[] memory filteredCommitmentPreimages = new CommitmentPreimage[](numValidTokens);
+    uint256[2][] memory filteredEncryptedRandom = new uint256[2][](numValidTokens);
+
+    uint256 filterIndex = 0;
+    for (uint256 i = 0; i < numValidTokens; i++) {
+      while (commitmentPreimages[filterIndex].value == 0) {
+        filterIndex += 1;
+      }
+      filteredCommitmentPreimages[i] = commitmentPreimages[filterIndex];
+      filteredEncryptedRandom[i] = _encryptedRandom;
+      filterIndex += 1;
+    }
 
     // Deposit back to Railgun
-    railgun.generateDeposit(commitmentPreimages, encryptedRandom);
+    railgun.generateDeposit(filteredCommitmentPreimages, filteredEncryptedRandom);
   }
 
   /**

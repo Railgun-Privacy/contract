@@ -390,7 +390,7 @@ describe('Adapt/Relay', () => {
     );
   });
 
-  it.only('Should deposit token with balance, and skip token without balance', async () => {
+  it('Should deposit token with balance, and skip token without balance', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
@@ -414,15 +414,14 @@ describe('Adapt/Relay', () => {
       await relayAdapt.populateTransaction.wrapAllBase(),
       await relayAdapt.populateTransaction.deposit(
         [
-          // TODO: Test in reverse order (bad then good token).
           {
             tokenType: 0n,
-            tokenAddress: weth9.address,
+            tokenAddress: testERC20.address,
             tokenSubID: 0n,
           },
           {
             tokenType: 0n,
-            tokenAddress: testERC20.address,
+            tokenAddress: weth9.address,
             tokenSubID: 0n,
           },
         ],
@@ -451,14 +450,14 @@ describe('Adapt/Relay', () => {
     wethnoteregistry.parseEvents(depositTx, merkletree);
     wethnoteregistry.loadNotesWithFees([depositNote], depositFee);
 
+    expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(0n);
+    expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(0n);
     expect(await weth9.balanceOf(railgunLogic.address)).to.equal(
       cumulativeBase,
     );
     expect(await weth9.balanceOf(treasuryAccount.address)).to.equal(
       cumulativeFee,
     );
-    expect(await testERC20.balanceOf(railgunLogic.address)).to.equal(0n);
-    expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(0n);
   });
 
   it('Should perform cross-contract Relay call (transfer)', async () => {
@@ -532,7 +531,7 @@ describe('Adapt/Relay', () => {
     expect(await testERC20.balanceOf(treasuryAccount.address)).to.equal(0n);
   });
 
-  it.only('Should perform cross-contract Relay call (transfer)', async () => {
+  it('Should perform cross-contract Relay call (transfer)', async () => {
     const merkletree = new MerkleTree();
     const wethnoteregistry = new NoteRegistry();
 
