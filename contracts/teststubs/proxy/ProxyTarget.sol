@@ -4,12 +4,12 @@ pragma abicoder v2;
 
 contract ProxyTargetStubA {
   function testFunction() external pure returns (string memory) {
-    return "A";
+    return 'A';
   }
 }
 
 contract ProxyTargetStubB {
   function testFunction() external pure returns (string memory) {
-    return "B";
+    return 'B';
   }
 }

@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-import { SNARK_SCALAR_FIELD } from "./Globals.sol";
+import {SNARK_SCALAR_FIELD} from './Globals.sol';
 
-import { PoseidonT3 } from "./Poseidon.sol";
+import {PoseidonT3} from './Poseidon.sol';
 
 /**
  * @title Commitments
@@ -30,7 +30,7 @@ contract Commitments is Initializable {
   uint256 internal constant TREE_DEPTH = 16;
 
   // Tree zero value
-  uint256 public constant ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD;
+  uint256 public constant ZERO_VALUE = uint256(keccak256('Railgun')) % SNARK_SCALAR_FIELD;
 
   // Next leaf index (number of inserted leaves in the current tree)
   uint256 internal nextLeafIndex;
@@ -56,7 +56,6 @@ contract Commitments is Initializable {
   // Whether the contract has already seen a particular Merkle tree root
   // treeNumber -> root -> seen
   mapping(uint256 => mapping(uint256 => bool)) public rootHistory;
-
 
   /**
    * @notice Calculates initial values for Merkle Tree
@@ -104,10 +103,7 @@ contract Commitments is Initializable {
    * @return hash result
    */
   function hashLeftRight(uint256 _left, uint256 _right) public pure returns (uint256) {
-    return PoseidonT3.poseidon([
-      _left,
-      _right
-    ]);
+    return PoseidonT3.poseidon([_left, _right]);
   }
 
   /**
@@ -142,7 +138,9 @@ contract Commitments is Initializable {
 
     // Create new tree if current one can't contain new leaves
     // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + count) >= (2 ** TREE_DEPTH)) { newTree(); }
+    if ((nextLeafIndex + count) >= (2**TREE_DEPTH)) {
+      newTree();
+    }
 
     // Current index is the index at each level to insert the hash
     uint256 levelInsertionIndex = nextLeafIndex;
@@ -169,7 +167,10 @@ contract Commitments is Initializable {
         nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
 
         // Calculate the hash for the next level
-        _leafHashes[nextLevelHashIndex] = hashLeftRight(filledSubTrees[level], _leafHashes[insertionElement]);
+        _leafHashes[nextLevelHashIndex] = hashLeftRight(
+          filledSubTrees[level],
+          _leafHashes[insertionElement]
+        );
 
         // Increment
         insertionElement += 1;
@@ -209,7 +210,7 @@ contract Commitments is Initializable {
       // Get count of elements for next level
       count = nextLevelHashIndex + 1;
     }
- 
+
     // Update the Merkle tree root
     merkleRoot = _leafHashes[0];
     rootHistory[treeNumber][merkleRoot] = true;

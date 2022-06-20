@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
-import { IWBase } from "./IWBase.sol";
-import { RailgunLogic, Transaction, CommitmentPreimage, TokenData, TokenType } from "../../logic/RailgunLogic.sol";
+import {IWBase} from './IWBase.sol';
+import {RailgunLogic, Transaction, CommitmentPreimage, TokenData, TokenType} from '../../logic/RailgunLogic.sol';
 
 /**
  * @title Relay Adapt
@@ -20,7 +20,7 @@ contract RelayAdapt {
 
   // Snark bypass address, can't be address(0) as many burn prevention mechanisms will disallow transfers to 0
   // Use 0x000000000000000000000000000000000000dEaD as an alternative
-  address constant public VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEaD;
+  address public constant VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEaD;
 
   struct Call {
     address to;
@@ -43,7 +43,7 @@ contract RelayAdapt {
    * @notice only allows self calls to these contracts
    */
   modifier onlySelf() {
-    require(msg.sender == address(this), "RelayAdapt: External call to onlySelf function");
+    require(msg.sender == address(this), 'RelayAdapt: External call to onlySelf function');
     _;
   }
 
@@ -61,10 +61,11 @@ contract RelayAdapt {
    * @param _additionalData - Additional data
    * @return adapt params
    */
-  function getAdaptParams(
-    Transaction[] calldata _transactions,
-    bytes memory _additionalData
-  ) public pure returns (bytes32) {
+  function getAdaptParams(Transaction[] calldata _transactions, bytes memory _additionalData)
+    public
+    pure
+    returns (bytes32)
+  {
     uint256[] memory firstNullifiers = new uint256[](_transactions.length);
 
     for (uint256 i = 0; i < _transactions.length; i++) {
@@ -72,13 +73,7 @@ contract RelayAdapt {
       firstNullifiers[i] = _transactions[i].nullifiers[0];
     }
 
-    return keccak256(
-      abi.encode(
-        firstNullifiers,
-        _transactions.length,
-        _additionalData
-      )
-    );
+    return keccak256(abi.encode(firstNullifiers, _transactions.length, _additionalData));
   }
 
   /**
@@ -89,19 +84,16 @@ contract RelayAdapt {
    * If called via multicall sub-call this can be extracted and submitted standalone
    * Be aware of the dangers of this before doing so!
    */
-  function railgunBatch(
-    Transaction[] calldata _transactions,
-    bytes memory _additionalData
-  ) public {
+  function railgunBatch(Transaction[] calldata _transactions, bytes memory _additionalData) public {
     bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData);
 
     // Loop through each transaction and ensure adaptID parameters match
-    for(uint256 i = 0; i < _transactions.length; i++) {
+    for (uint256 i = 0; i < _transactions.length; i++) {
       require(
-        _transactions[i].boundParams.adaptParams == expectedAdaptParameters
-        // solhint-disable-next-line avoid-tx-origin
-        || tx.origin == VERIFICATION_BYPASS,
-        "GeneralAdapt: AdaptID Parameters Mismatch"
+        _transactions[i].boundParams.adaptParams == expectedAdaptParameters ||
+          // solhint-disable-next-line avoid-tx-origin
+          tx.origin == VERIFICATION_BYPASS,
+        'GeneralAdapt: AdaptID Parameters Mismatch'
       );
     }
 
@@ -139,10 +131,7 @@ contract RelayAdapt {
           numValidTokens += 1;
 
           // Approve the balance for deposit
-          token.safeApprove(
-            address(railgun),
-            balance
-          );
+          token.safeApprove(address(railgun), balance);
 
           // Push to deposits arrays
           commitmentPreimages[i] = CommitmentPreimage({
@@ -153,13 +142,13 @@ contract RelayAdapt {
         }
       } else if (_deposits[i].tokenType == TokenType.ERC721) {
         // ERC721 token
-        revert("GeneralAdapt: ERC721 not yet supported");
+        revert('GeneralAdapt: ERC721 not yet supported');
       } else if (_deposits[i].tokenType == TokenType.ERC1155) {
         // ERC1155 token
-        revert("GeneralAdapt: ERC1155 not yet supported");
+        revert('GeneralAdapt: ERC1155 not yet supported');
       } else {
         // Invalid token type, revert
-        revert("GeneralAdapt: Unknown token type");
+        revert('GeneralAdapt: Unknown token type');
       }
     }
 
@@ -168,7 +157,9 @@ contract RelayAdapt {
     }
 
     // Filter commitmentPreImages for != 0 (remove 0 balance tokens).
-    CommitmentPreimage[] memory filteredCommitmentPreimages = new CommitmentPreimage[](numValidTokens);
+    CommitmentPreimage[] memory filteredCommitmentPreimages = new CommitmentPreimage[](
+      numValidTokens
+    );
     uint256[2][] memory filteredEncryptedRandom = new uint256[2][](numValidTokens);
 
     uint256 filterIndex = 0;
@@ -190,10 +181,7 @@ contract RelayAdapt {
    * @param _tokens - tokens to send (0x0 - ERC20 is eth)
    * @param _to - ETH address to send to
    */
-   function send(
-    TokenData[] calldata _tokens,
-    address _to
-  ) external onlySelf {
+  function send(TokenData[] calldata _tokens, address _to) external onlySelf {
     // Loop through each token specified for deposit and deposit our total balance
     // Due to a quirk with the USDT token contract this will fail if it's approval is
     // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
@@ -211,8 +199,8 @@ contract RelayAdapt {
           if (balance > 0) {
             // Send ETH
             // solhint-disable-next-line avoid-low-level-calls
-            (bool sent,) = _to.call{value: balance}("");
-            require(sent, "Failed to send Ether");
+            (bool sent, ) = _to.call{value: balance}('');
+            require(sent, 'Failed to send Ether');
           }
         } else {
           // Fetch balance
@@ -225,13 +213,13 @@ contract RelayAdapt {
         }
       } else if (_tokens[i].tokenType == TokenType.ERC721) {
         // ERC721 token
-        revert("RailgunLogic: ERC721 not yet supported");
+        revert('RailgunLogic: ERC721 not yet supported');
       } else if (_tokens[i].tokenType == TokenType.ERC1155) {
         // ERC1155 token
-        revert("RailgunLogic: ERC1155 not yet supported");
+        revert('RailgunLogic: ERC1155 not yet supported');
       } else {
         // Invalid token type, revert
-        revert("RailgunLogic: Unknown token type");
+        revert('RailgunLogic: Unknown token type');
       }
     }
   }
@@ -263,15 +251,12 @@ contract RelayAdapt {
    * @param _requireSuccess - Whether transaction should throw on call failure
    * @param _calls - multicall array
    */
-  function multicall(
-    bool _requireSuccess,
-    Call[] calldata _calls
-  ) internal {
+  function multicall(bool _requireSuccess, Call[] calldata _calls) internal {
     // Initialize returnData array
     Result[] memory returnData = new Result[](_calls.length);
 
     // Loop through each call
-    for(uint256 i = 0; i < _calls.length; i++) {
+    for (uint256 i = 0; i < _calls.length; i++) {
       // Retrieve call
       Call calldata call = _calls[i];
 
@@ -292,7 +277,7 @@ contract RelayAdapt {
       // If requireSuccess is true, throw on failure
       if (requireSuccess) {
         emit CallResult(returnData);
-        revert(string.concat("GeneralAdapt Call Failed:", string(ret)));
+        revert(string.concat('GeneralAdapt Call Failed:', string(ret)));
       }
     }
 
@@ -318,12 +303,7 @@ contract RelayAdapt {
     Call[] calldata _calls
   ) external pure returns (bytes32) {
     // Convenience function to get the expected adaptID parameters value for global
-    bytes memory additionalData = abi.encode(
-      _random,
-      _requireSuccess,
-      _minGas,
-      _calls
-    );
+    bytes memory additionalData = abi.encode(_random, _requireSuccess, _minGas, _calls);
 
     // Return adapt params value
     return getAdaptParams(_transactions, additionalData);
@@ -346,16 +326,11 @@ contract RelayAdapt {
     uint256 _minGas,
     Call[] calldata _calls
   ) external payable {
-    require(gasleft() > _minGas, "Not enough gas supplied");
+    require(gasleft() > _minGas, 'Not enough gas supplied');
 
     if (_transactions.length > 0) {
       // Calculate additionalData parameter for adaptID parameters
-      bytes memory additionalData = abi.encode(
-        _random,
-        _requireSuccess,
-        _minGas,
-        _calls
-      );
+      bytes memory additionalData = abi.encode(_random, _requireSuccess, _minGas, _calls);
 
       // Executes railgun batch
       railgunBatch(_transactions, additionalData);
@@ -369,6 +344,6 @@ contract RelayAdapt {
   }
 
   // Allow WBASE contract unwrapping to pay us
-  // solhint-disable-next-line avoid-tx-origin no-empty-blocks
+  // solhint-disable-next-line no-empty-blocks
   receive() external payable {}
 }

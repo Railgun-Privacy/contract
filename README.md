@@ -1,6 +1,7 @@
 # Railgun
 
 ## Getting started
+
 - Install Node.js - using [nvm](https://github.com/nvm-sh/nvm) is recommended
 - Run `npm i` to install dependancies
 - (Optional) Copy `networks.config,js.example` to `networks.config,js` and edit as needed.

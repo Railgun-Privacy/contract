@@ -1,32 +1,21 @@
 module.exports = {
   env: {
-    commonjs: true,
+    browser: false,
     es2021: true,
+    mocha: true,
     node: true,
   },
-  extends: [
-    'airbnb-base',
-    'plugin:jsdoc/recommended',
-  ],
-  plugins: [
-    'jsdoc',
-  ],
+  plugins: ['@typescript-eslint'],
+  extends: ['airbnb-base', 'plugin:prettier/recommended', 'plugin:node/recommended'],
+  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 12,
   },
   rules: {
+    'node/no-unsupported-features/es-syntax': ['error', {ignores: ['modules']}],
+    'import/prefer-default-export': 'off',
     'import/no-extraneous-dependencies': 'off',
-    'jsdoc/check-indentation': 1,
-    'jsdoc/require-description': 1,
-    'jsdoc/require-jsdoc': ['warn', {
-      require: {
-        ArrowFunctionExpression: true,
-        ClassExpression: true,
-        FunctionDeclaration: true,
-        FunctionExpression: true,
-        MethodDefinition: true,
-      },
-    }],
-    'jsdoc/require-hyphen-before-param-description': 'warn',
+    'node/no-extraneous-import': 'off',
+    'no-console': 'off',
   },
 };

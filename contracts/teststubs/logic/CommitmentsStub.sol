@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import { Commitments } from "../../logic/Commitments.sol";
+import {Commitments} from '../../logic/Commitments.sol';
 
 contract CommitmentsStub is Commitments {
   constructor() {
-   initializeCommitmentsStub();
+    initializeCommitmentsStub();
   }
 
   function initializeCommitmentsStub() internal initializer {

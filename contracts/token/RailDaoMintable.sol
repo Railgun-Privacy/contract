@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 /**
  * @title RailTokenDAOMintable
@@ -20,7 +20,14 @@ contract RailTokenDAOMintable is Ownable, ERC20 {
    * @notice Mints initial token supply
    */
 
-  constructor(address _initialHolder, uint256 _initialSupply, uint256 _cap, address _owner, string memory name, string memory symbol) ERC20(name, symbol) {
+  constructor(
+    address _initialHolder,
+    uint256 _initialSupply,
+    uint256 _cap,
+    address _owner,
+    string memory name,
+    string memory symbol
+  ) ERC20(name, symbol) {
     // Save cap
     cap = _cap;
 
@@ -39,7 +46,10 @@ contract RailTokenDAOMintable is Ownable, ERC20 {
    */
 
   function _mint(address _account, uint256 _amount) internal override {
-    require(ERC20.totalSupply() + _amount <= cap, "RailTokenDAOMintable: Can't mint more than hard cap");
+    require(
+      ERC20.totalSupply() + _amount <= cap,
+      "RailTokenDAOMintable: Can't mint more than hard cap"
+    );
     super._mint(_account, _amount);
   }
 
@@ -51,7 +61,11 @@ contract RailTokenDAOMintable is Ownable, ERC20 {
    * @return success
    */
 
-  function governanceMint(address _account, uint256 _amount) external onlyOwner returns (bool success) {
+  function governanceMint(address _account, uint256 _amount)
+    external
+    onlyOwner
+    returns (bool success)
+  {
     _mint(_account, _amount);
     return true;
   }

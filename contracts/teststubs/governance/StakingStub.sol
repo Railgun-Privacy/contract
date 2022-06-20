@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import { Staking } from "../../governance/Staking.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Staking} from '../../governance/Staking.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract StakingStub is Staking {
   //solhint-disable-next-line no-empty-blocks

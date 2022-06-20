@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { StorageSlot } from "@openzeppelin/contracts/utils/StorageSlot.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import {StorageSlot} from '@openzeppelin/contracts/utils/StorageSlot.sol';
+import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 
 /**
  * @title PausableUpgradableProxy
@@ -14,9 +14,10 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  */
 contract PausableUpgradableProxy {
   // Storage slot locations
-  bytes32 private constant IMPLEMENTATION_SLOT = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
-  bytes32 private constant ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
-  bytes32 private constant PAUSED_SLOT = bytes32(uint256(keccak256("eip1967.proxy.paused")) - 1);
+  bytes32 private constant IMPLEMENTATION_SLOT =
+    bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1);
+  bytes32 private constant ADMIN_SLOT = bytes32(uint256(keccak256('eip1967.proxy.admin')) - 1);
+  bytes32 private constant PAUSED_SLOT = bytes32(uint256(keccak256('eip1967.proxy.paused')) - 1);
 
   // Events
   event ProxyUpgrade(address previousImplementation, address newImplementation);
@@ -47,7 +48,7 @@ contract PausableUpgradableProxy {
 
   modifier notPaused() {
     // Revert if the contract is paused
-    require(!StorageSlot.getBooleanSlot(PAUSED_SLOT).value, "Proxy: Contract is paused");
+    require(!StorageSlot.getBooleanSlot(PAUSED_SLOT).value, 'Proxy: Contract is paused');
     _;
   }
 
@@ -78,8 +79,12 @@ contract PausableUpgradableProxy {
 
       switch result
       // delegatecall returns 0 on error.
-      case 0 { revert(0, returndatasize()) }
-      default { return(0, returndatasize()) }
+      case 0 {
+        revert(0, returndatasize())
+      }
+      default {
+        return(0, returndatasize())
+      }
     }
   }
 
@@ -116,7 +121,7 @@ contract PausableUpgradableProxy {
    * @param _newOwner - Address to transfer ownership to
    */
   function transferOwnership(address _newOwner) external onlyOwner {
-    require(_newOwner != address(0), "Proxy: Preventing potential accidental burn");
+    require(_newOwner != address(0), 'Proxy: Preventing potential accidental burn');
 
     // Get admin slot
     StorageSlot.AddressSlot storage admin = StorageSlot.getAddressSlot(ADMIN_SLOT);
@@ -134,7 +139,9 @@ contract PausableUpgradableProxy {
    */
   function upgrade(address _newImplementation) external onlyOwner {
     // Get implementation slot
-    StorageSlot.AddressSlot storage implementation = StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT);
+    StorageSlot.AddressSlot storage implementation = StorageSlot.getAddressSlot(
+      IMPLEMENTATION_SLOT
+    );
 
     // If new implementation is identical to old, skip
     if (implementation.value != _newImplementation) {
@@ -149,7 +156,7 @@ contract PausableUpgradableProxy {
   /**
    * @notice Pauses contract
    */
-  function pause() external onlyOwner  {
+  function pause() external onlyOwner {
     // Get paused slot
     StorageSlot.BooleanSlot storage paused = StorageSlot.getBooleanSlot(PAUSED_SLOT);
 

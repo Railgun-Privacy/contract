@@ -2,10 +2,11 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import { G1Point, G2Point, VerifyingKey, SnarkProof, SNARK_SCALAR_FIELD } from "./Globals.sol";
+import {G1Point, G2Point, VerifyingKey, SnarkProof, SNARK_SCALAR_FIELD} from './Globals.sol';
 
 library Snark {
-  uint256 private constant PRIME_Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+  uint256 private constant PRIME_Q =
+    21888242871839275222246405745257275088696311157297823662689037894645226208583;
   uint256 private constant PAIRING_INPUT_SIZE = 24;
   uint256 private constant PAIRING_INPUT_WIDTH = 768; // PAIRING_INPUT_SIZE * 32
 
@@ -22,10 +23,10 @@ library Snark {
     rh = mulmod(rh, p.x, PRIME_Q); //x^3
     rh = addmod(rh, 3, PRIME_Q); //x^3 + 3
     uint256 lh = mulmod(p.y, p.y, PRIME_Q); //y^2
-    require(lh == rh, "Snark: Invalid negation");
+    require(lh == rh, 'Snark: Invalid negation');
 
     return G1Point(p.x, PRIME_Q - (p.y % PRIME_Q));
-    }
+  }
 
   /**
    * @notice Adds 2 G1 points
@@ -50,7 +51,7 @@ library Snark {
     }
 
     // Check if operation succeeded
-    require(success, "Snark: Add Failed");
+    require(success, 'Snark: Add Failed');
 
     return result;
   }
@@ -68,14 +69,14 @@ library Snark {
     input[1] = p.y;
     input[2] = s;
     bool success;
-    
+
     // solhint-disable-next-line no-inline-assembly
     assembly {
       success := staticcall(sub(gas(), 2000), 7, input, 0x60, r, 0x40)
     }
 
     // Check multiplication succeeded
-    require(success, "Snark: Scalar Multiplication Failed");
+    require(success, 'Snark: Scalar Multiplication Failed');
   }
 
   /**
@@ -128,28 +129,21 @@ library Snark {
 
     // solhint-disable-next-line no-inline-assembly
     assembly {
-      success := staticcall(
-        sub(gas(), 2000),
-        8,
-        input,
-        PAIRING_INPUT_WIDTH,
-        out,
-        0x20
-      )
+      success := staticcall(sub(gas(), 2000), 8, input, PAIRING_INPUT_WIDTH, out, 0x20)
     }
 
     // Check if operation succeeded
-    require(success, "Snark: Pairing Verification Failed");
+    require(success, 'Snark: Pairing Verification Failed');
 
     return out[0] != 0;
   }
 
   /**
-    * @notice Verifies snark proof against proving key
-    * @param _vk - Verification Key
-    * @param _proof - snark proof
-    * @param _inputs - inputs
-    */
+   * @notice Verifies snark proof against proving key
+   * @param _vk - Verification Key
+   * @param _proof - snark proof
+   * @param _inputs - inputs
+   */
   function verify(
     VerifyingKey memory _vk,
     SnarkProof memory _proof,
@@ -157,29 +151,30 @@ library Snark {
   ) internal view returns (bool) {
     // Compute the linear combination vkX
     G1Point memory vkX = G1Point(0, 0);
-    
+
     // Loop through every input
-    for (uint i = 0; i < _inputs.length; i++) {
+    for (uint256 i = 0; i < _inputs.length; i++) {
       // Make sure inputs are less than SNARK_SCALAR_FIELD
-      require(_inputs[i] < SNARK_SCALAR_FIELD, "Snark: Input > SNARK_SCALAR_FIELD");
+      require(_inputs[i] < SNARK_SCALAR_FIELD, 'Snark: Input > SNARK_SCALAR_FIELD');
 
       // Add to vkX point
       vkX = add(vkX, scalarMul(_vk.ic[i + 1], _inputs[i]));
-  }
+    }
 
     // Compute final vkX point
     vkX = add(vkX, _vk.ic[0]);
 
     // Verify pairing and return
-    return pairing(
-      negate(_proof.a),
-      _proof.b,
-      _vk.alpha1,
-      _vk.beta2,
-      vkX,
-      _vk.gamma2,
-      _proof.c,
-      _vk.delta2
-    );
+    return
+      pairing(
+        negate(_proof.a),
+        _proof.b,
+        _vk.alpha1,
+        _vk.beta2,
+        vkX,
+        _vk.gamma2,
+        _proof.c,
+        _vk.delta2
+      );
   }
 }

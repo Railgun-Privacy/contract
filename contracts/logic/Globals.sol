@@ -6,7 +6,11 @@ pragma abicoder v2;
 uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 uint256 constant CIPHERTEXT_WORDS = 4;
 
-enum TokenType { ERC20, ERC721, ERC1155 }
+enum TokenType {
+  ERC20,
+  ERC721,
+  ERC1155
+}
 
 // Transaction token data
 struct TokenData {
@@ -22,7 +26,11 @@ struct CommitmentCiphertext {
   uint256[] memo;
 }
 
-enum WithdrawType { NONE, WITHDRAW, REDIRECT }
+enum WithdrawType {
+  NONE,
+  WITHDRAW,
+  REDIRECT
+}
 
 // Transaction bound parameters
 struct BoundParams {
