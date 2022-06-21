@@ -17,5 +17,8 @@ module.exports = {
     'import/no-extraneous-dependencies': 'off',
     'node/no-extraneous-import': 'off',
     'no-console': 'off',
+    'no-process-exit': 'off',
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': ['error'],
   },
 };

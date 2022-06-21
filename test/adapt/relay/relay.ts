@@ -3,6 +3,8 @@ import {network, ethers} from 'hardhat';
 import chai, {assert} from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import weth9artifact from '@ethereum-artifacts/weth9';
+import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
+import {BigNumber, Contract, PopulatedTransaction} from 'ethers';
 import {
   formatCalls,
   getAdaptParams,
@@ -11,8 +13,6 @@ import {
 import {genRandomPoint, genRandomPrivateKey} from '../../../helpers/logic/babyjubjub';
 import {Note, WithdrawNote} from '../../../helpers/logic/note';
 import {getRelayAdaptCallResultError} from '../../../helpers/adapt/relay/parse-events';
-import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
-import {BigNumber, Contract, PopulatedTransaction} from 'ethers';
 import {dummyTransact, getFee, transact} from '../../../helpers/logic/transaction';
 import {MerkleTree} from '../../../helpers/logic/merkletree';
 import {NoteRegistry} from '../../../helpers/logic/note-registry';
@@ -198,8 +198,8 @@ describe('Adapt/Relay', () => {
         } as PopulatedTransaction);
         const minGas = i;
 
-        // eslint-disable-next-line no-await-in-loop
         expect(
+          // eslint-disable-next-line no-await-in-loop
           await relayAdapt.getRelayAdaptParams(txs, random, requireSuccess, minGas, calls)
         ).to.equal(getRelayAdaptParams(txs, random, requireSuccess, minGas, calls));
       }
@@ -207,14 +207,14 @@ describe('Adapt/Relay', () => {
   });
 
   it('Should send ETH/ERC20s', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-unused-vars
     const merkletree = new MerkleTree();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-unused-vars
     const wethnoteregistry = new NoteRegistry();
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-unused-vars
     const spendingKey = genRandomPrivateKey();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line no-unused-vars
     const viewingKey = genRandomPrivateKey();
   });
 
