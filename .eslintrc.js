@@ -14,6 +14,7 @@ module.exports = {
   rules: {
     'node/no-unsupported-features/es-syntax': ['error', {ignores: ['modules']}],
     'import/prefer-default-export': 'off',
+    'import/extensions': 'off',
     'import/no-extraneous-dependencies': 'off',
     'node/no-extraneous-import': 'off',
     'no-console': 'off',

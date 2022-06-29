@@ -1,5 +1,5 @@
 {
-  "spec": "test/**/*.js",
+  "spec": "test/**/*.ts",
   "require": ["hardhat/register"],
   "exit": true,
   "timeout": 600000

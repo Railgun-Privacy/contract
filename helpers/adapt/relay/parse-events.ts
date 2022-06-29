@@ -16,7 +16,7 @@ const parseCallResultError = (returnData: string): string => {
     return result[0];
   }
 
-  return 'Unknown Relay Adapt error.';
+  return returnData;
 };
 
 export const getRelayAdaptCallResultError = (receipt: TransactionReceipt) => {

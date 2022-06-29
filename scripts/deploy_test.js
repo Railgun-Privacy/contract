@@ -1,8 +1,8 @@
-const {ethers} = require('hardhat');
+import {ethers} from 'hardhat';
 
-const weth9artifact = require('@ethereum-artifacts/weth9');
+import {WETH9 as _WETH9} from '@ethereum-artifacts/weth9';
 
-const artifacts = require('../helpers/logic/snarkKeys');
+import {loadAllArtifacts} from '../helpers/logic/snarkKeys.ts';
 
 async function main() {
   // Get signers
@@ -130,7 +130,7 @@ async function main() {
   console.log('Setting snark verification keys...');
 
   // Deploy all snark keys
-  await artifacts.loadAllArtifacts(railgun);
+  await loadAllArtifacts(railgun);
 
   console.log('Transferring logic contract ownership...');
 
@@ -138,11 +138,7 @@ async function main() {
   await (await railgun.transferOwnership(delegator.address)).wait();
 
   console.log('Deploying WETH9');
-  const WETH9 = new ethers.ContractFactory(
-    weth9artifact.WETH9.abi,
-    weth9artifact.WETH9.bytecode,
-    accounts[0]
-  );
+  const WETH9 = new ethers.ContractFactory(_WETH9.abi, _WETH9.bytecode, accounts[0]);
   const weth9 = await WETH9.deploy();
   await weth9.deployTransaction.wait();
 
