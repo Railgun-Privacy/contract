@@ -13,9 +13,8 @@ describe('Treasury/Treasury', () => {
   beforeEach(async () => {
     const Treasury = await ethers.getContractFactory('Treasury');
 
-    treasury = await Treasury.deploy(
-      (await ethers.getSigners())[0].address,
-    );
+    treasury = await Treasury.deploy();
+    await treasury.initializeTreasury((await ethers.getSigners())[0].address);
   });
 
   it('Should transfer ETH', async () => {

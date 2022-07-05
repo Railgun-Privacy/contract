@@ -5,34 +5,20 @@ pragma abicoder v2;
 // OpenZeppelin v4
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Treasury
  * @author Railgun Contributors
  * @notice Stores treasury funds for Railgun
  */
-contract Treasury is Initializable, AccessControlUpgradeable {
+contract TreasuryOld is Ownable {
   using SafeERC20 for IERC20;
-
-  bytes32 private constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
-
   /**
    * @notice Sets initial admin
-   * @param _admin - initial admin
    */
-  function initializeTreasury(
-    address _admin
-  ) external initializer {
-    // Call initializers
-    AccessControlUpgradeable.__AccessControl_init();
-
-    // Set owner
-    AccessControlUpgradeable._setupRole(DEFAULT_ADMIN_ROLE, _admin);
-
-    // Give owner the transfer role
-    AccessControlUpgradeable.grantRole(TRANSFER_ROLE, _admin);
+  constructor(address _admin) {
+    Ownable.transferOwnership(_admin);
   }
 
   /**
@@ -40,7 +26,7 @@ contract Treasury is Initializable, AccessControlUpgradeable {
    * @param _to - Address to transfer ETH to
    * @param _amount - Amount of ETH to transfer
    */
-  function transferETH(address payable _to, uint256 _amount) external onlyRole(TRANSFER_ROLE) {
+  function transferETH(address payable _to, uint256 _amount) external onlyOwner {
     require(_to != address(0), "Treasury: Preventing potential accidental burn");
     //solhint-disable-next-line avoid-low-level-calls
     (bool sent,) = _to.call{value: _amount}("");
@@ -53,7 +39,7 @@ contract Treasury is Initializable, AccessControlUpgradeable {
    * @param _to - Address to transfer tokens to
    * @param _amount - Amount of tokens to transfer
    */
-  function transferERC20(IERC20 _token, address _to, uint256 _amount) external onlyRole(TRANSFER_ROLE) {
+  function transferERC20(IERC20 _token, address _to, uint256 _amount) external onlyOwner {
     require(_to != address(0), "Treasury: Preventing potential accidental burn");
     _token.safeTransfer(_to, _amount);
   }
