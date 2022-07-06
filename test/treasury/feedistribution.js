@@ -9,7 +9,7 @@ const { expect } = chai;
 
 let feeDistribution;
 let rail;
-let secondToken;
+let distributionTokens;
 let treasury;
 let staking;
 let users;
@@ -24,7 +24,9 @@ describe('Treasury/FeeDistribution', () => {
     const Treasury = await ethers.getContractFactory('Treasury');
 
     rail = await ERC20.deploy();
-    secondToken = await ERC20.deploy();
+    distributionTokens = await Promise.all(
+      new Array(12).fill(1).map(() => ERC20.deploy()),
+    );
     staking = await Staking.deploy(rail.address);
     treasury = await Treasury.deploy();
     feeDistribution = await FeeDistribution.deploy();
@@ -32,7 +34,7 @@ describe('Treasury/FeeDistribution', () => {
     users = signers.map((signer) => ({
       signer,
       rail: rail.connect(signer),
-      secondToken: secondToken.connect(signer),
+      distributionTokens: distributionTokens.map((token) => token.connect(signer)),
       staking: staking.connect(signer),
       feeDistribution: feeDistribution.connect(signer),
     }));
@@ -44,8 +46,13 @@ describe('Treasury/FeeDistribution', () => {
     await feeDistribution.initializeFeeDistribution(
       users[0].signer.address,
       staking.address,
+      treasury.address,
+      14n,
+      distributionTokens.map((token) => token.address),
     );
   });
 
-  it('Should earmark correctly', async () => {});
+  it('Should earmark correctly', async () => {
+
+  });
 });
