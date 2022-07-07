@@ -16,21 +16,27 @@ let users;
 
 describe('Treasury/FeeDistribution', () => {
   beforeEach(async () => {
+    // Get signers list
     const signers = await ethers.getSigners();
 
+    // Get contracts
     const FeeDistribution = await ethers.getContractFactory('FeeDistribution');
     const ERC20 = await ethers.getContractFactory('TestERC20');
     const Staking = await ethers.getContractFactory('Staking');
     const Treasury = await ethers.getContractFactory('Treasury');
 
+    // Deploy contracts
     rail = await ERC20.deploy();
-    distributionTokens = await Promise.all(
-      new Array(12).fill(1).map(() => ERC20.deploy()),
-    );
     staking = await Staking.deploy(rail.address);
     treasury = await Treasury.deploy();
     feeDistribution = await FeeDistribution.deploy();
 
+    // Deploy a bunch of tokens to use as distribution tokens
+    distributionTokens = await Promise.all(
+      new Array(12).fill(1).map(() => ERC20.deploy()),
+    );
+
+    // Setup contract connections for each signer
     users = signers.map((signer) => ({
       signer,
       rail: rail.connect(signer),
@@ -39,6 +45,7 @@ describe('Treasury/FeeDistribution', () => {
       feeDistribution: feeDistribution.connect(signer),
     }));
 
+    // Initialize contracts
     await treasury.initializeTreasury(
       users[0].signer.address,
     );
@@ -50,6 +57,12 @@ describe('Treasury/FeeDistribution', () => {
       14n,
       distributionTokens.map((token) => token.address),
     );
+
+    // Send distribution tokens balance to treasury
+    await Promise.all(distributionTokens.map(async (token) => {
+      const balance = await token.balanceOf(users[0].signer.address);
+      await token.transfer(treasury.address, balance);
+    }));
   });
 
   it('Should earmark correctly', async () => {
