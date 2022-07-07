@@ -13,6 +13,7 @@ let distributionTokens;
 let treasury;
 let staking;
 let users;
+let distributionInterval;
 
 describe('Treasury/FeeDistribution', () => {
   beforeEach(async () => {
@@ -54,9 +55,12 @@ describe('Treasury/FeeDistribution', () => {
       users[0].signer.address,
       staking.address,
       treasury.address,
-      14n,
+      0n,
       distributionTokens.map((token) => token.address),
     );
+
+    // Get distribution interval time
+    distributionInterval = await feeDistribution.DISTRIBUTION_INTERVAL();
 
     // Send distribution tokens balance to treasury
     await Promise.all(distributionTokens.map(async (token) => {

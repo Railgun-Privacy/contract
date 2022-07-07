@@ -25,14 +25,22 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
   // Treasury contract
   Treasury public treasury;
 
+  // Staking intervals per distribution interval
+  uint256 private constant STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER = 14; // 14 days
+
+  // Staking contract constant imported locally for cheaper calculations
+  // solhint-disable-next-line var-name-mixedcase
+  uint256 public STAKING_DEPLOY_TIME;
+
+  // Distribution interval, calculated at initialization time
+  // solhint-disable-next-line var-name-mixedcase
+  uint256 public DISTRIBUTION_INTERVAL;
+
   // Number of basis points that equal 100%
-  uint120 private constant BASIS_POINTS = 10000;
+  uint256 private constant BASIS_POINTS = 10000;
 
   // Basis points to distribute each interval
   uint256 public intervalBP;
-
-  // Staking intervals to distribution intervals multiplier
-  uint256 private constant STAKING_DISTRIBUTION_MULTIPLIER = 14; // 14 days
 
   // Fee distribution claimed
   event Claim(IERC20 token, address account, uint256 amount, uint256 startInterval, uint256 endInterval);
@@ -79,6 +87,10 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
     treasury = _treasury;
     staking = _staking;
 
+    // Get staking contract constants
+    STAKING_DEPLOY_TIME = staking.DEPLOY_TIME();
+    DISTRIBUTION_INTERVAL = staking.SNAPSHOT_INTERVAL() * STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER;
+
     // Set starting interval
     startingInterval = _startingInterval;
 
@@ -97,12 +109,30 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
   }
 
   /**
+   * @notice Gets interval at time
+   * @param _time - time to get interval of
+   * @return interval
+   */
+  function intervalAtTime(uint256 _time) public view returns (uint256) {
+    require(_time >= STAKING_DEPLOY_TIME, "Staking: Requested time is before contract was deployed");
+    return (_time - STAKING_DEPLOY_TIME) / DISTRIBUTION_INTERVAL;
+  }
+
+  /**
+   * @notice Converts distribution interval to staking interval
+   * @param _distributionInterval - distribution interval to get staking interval of
+   * @return staking interval
+   */
+  function distributionIntervalToStakingInterval(uint256 _distributionInterval) public view return (uint256) {
+    return _distributionInterval * STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER;
+  }
+
+  /**
    * @notice Gets current interval
    * @return interval
    */
   function currentInterval() public view returns (uint256) {
-    // TODO: Simplify
-    return staking.currentInterval() / STAKING_DISTRIBUTION_MULTIPLIER;
+    return intervalAtTime(block.timestamp);
   }
 
   /**
