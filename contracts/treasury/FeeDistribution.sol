@@ -123,7 +123,7 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
    * @param _distributionInterval - distribution interval to get staking interval of
    * @return staking interval
    */
-  function distributionIntervalToStakingInterval(uint256 _distributionInterval) public view return (uint256) {
+  function distributionIntervalToStakingInterval(uint256 _distributionInterval) public view returns (uint256) {
     return _distributionInterval * STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER;
   }
 
