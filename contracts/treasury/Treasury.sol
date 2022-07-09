@@ -16,7 +16,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 contract Treasury is Initializable, AccessControlUpgradeable {
   using SafeERC20 for IERC20;
 
-  bytes32 private constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
+  bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
   /**
    * @notice Sets initial admin
@@ -29,7 +29,7 @@ contract Treasury is Initializable, AccessControlUpgradeable {
     AccessControlUpgradeable.__AccessControl_init();
 
     // Set owner
-    AccessControlUpgradeable._setupRole(DEFAULT_ADMIN_ROLE, _admin);
+    AccessControlUpgradeable._grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
     // Give owner the transfer role
     AccessControlUpgradeable.grantRole(TRANSFER_ROLE, _admin);

@@ -37,7 +37,7 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
   uint256 public DISTRIBUTION_INTERVAL;
 
   // Number of basis points that equal 100%
-  uint256 private constant BASIS_POINTS = 10000;
+  uint256 public constant BASIS_POINTS = 10000;
 
   // Basis points to distribute each interval
   uint256 public intervalBP;
@@ -171,6 +171,9 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
    * @param _token - token to calculate earmarks for
    */
   function earmark(IERC20 _token) public {
+    // Check that token is on distribution list
+    require(tokens[_token], "FeeDistribution: Token is not on distribution list");
+
     // Get intervals
     uint256 _currentInterval = currentInterval();
     uint256 _lastEarmarkedInterval = lastEarmarkedInterval[_token];
