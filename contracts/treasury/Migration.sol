@@ -31,7 +31,7 @@ contract TreasuryMigration {
   /**
    * @notice Migrates ETH from old treasury
    */
-  function transferETH() external {
+  function migrateETH() external {
     // Transfer all ETH to new treasury
     oldTreasury.transferETH(newTreasury, address(oldTreasury).balance);
   }
@@ -39,7 +39,7 @@ contract TreasuryMigration {
   /**
    * @notice Migrates ERC20s from old treasury
    */
-  function transferERC20(IERC20[] calldata _tokens) external {
+  function migrateERC20(IERC20[] calldata _tokens) external {
     // Loop through each token
     for (uint256 i = 0; i < _tokens.length; i += 1) {
       // Fetch balance
