@@ -41,7 +41,7 @@ contract Treasury is Initializable, AccessControlUpgradeable {
    * @param _amount - Amount of ETH to transfer
    */
   function transferETH(address payable _to, uint256 _amount) external onlyRole(TRANSFER_ROLE) {
-    require(_to != address(0), "Treasury: Preventing potential accidental burn");
+    require(_to != address(0), "Treasury: Preventing accidental burn");
     //solhint-disable-next-line avoid-low-level-calls
     (bool sent,) = _to.call{value: _amount}("");
     require(sent, "Failed to send Ether");
@@ -54,7 +54,7 @@ contract Treasury is Initializable, AccessControlUpgradeable {
    * @param _amount - Amount of tokens to transfer
    */
   function transferERC20(IERC20 _token, address _to, uint256 _amount) external onlyRole(TRANSFER_ROLE) {
-    require(_to != address(0), "Treasury: Preventing potential accidental burn");
+    require(_to != address(0), "Treasury: Preventing accidental burn");
     _token.safeTransfer(_to, _amount);
   }
 

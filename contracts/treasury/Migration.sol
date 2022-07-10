@@ -7,16 +7,16 @@ import { TreasuryOld } from "../treasury/TreasuryOld.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title FeeDistribution
+ * @title Treasury Migration
  * @author Railgun Contributors
- * @notice Distributes treasury funds to stakers
+ * @notice Migrates treasury funds from one contract to another
  */
 contract TreasuryMigration {
   // Old treasury contract
-  TreasuryOld public oldTreasury;
+  TreasuryOld immutable public oldTreasury;
 
   // New treasury contract
-  address payable public newTreasury;
+  address immutable payable public newTreasury;
 
   /**
    * @notice Set treasury addresses
