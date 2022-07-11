@@ -70,7 +70,7 @@ contract IntervalPayouts {
    */
   function ready() public view returns (bool) {
     // No more payouts after last payout is done
-    if (nextInterval > totalPayouts) {
+    if (nextInterval >= totalPayouts) {
       return false;
     }
 

@@ -16,7 +16,7 @@ contract TreasuryMigration {
   TreasuryOld immutable public oldTreasury;
 
   // New treasury contract
-  address immutable payable public newTreasury;
+  address payable immutable public newTreasury;
 
   /**
    * @notice Set treasury addresses
