@@ -32,7 +32,7 @@ contract Treasury is Initializable, AccessControlUpgradeable {
     AccessControlUpgradeable._grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
     // Give owner the transfer role
-    AccessControlUpgradeable.grantRole(TRANSFER_ROLE, _admin);
+    AccessControlUpgradeable._grantRole(TRANSFER_ROLE, _admin);
   }
 
   /**
