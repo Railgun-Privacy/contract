@@ -16,104 +16,70 @@ ethers.provider = new ethers.providers.JsonRpcProvider({
 
 const DEPLOYCONFIG = {
   delegator: '0xb6d513f6222ee92fff975e901bd792e2513fb53b',
-  implementation: '0xbcfa4de73afb071c9ff18a20a22f818e657c541a',
-  proxy: '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9',
+  implementation: '0xc6368d9998ea333b37eb869f4e1749b9296e6d09',
+  proxy: '0xbf0Af567D60318f66460Ec78b464589E3f9dA48e',
   proxyAdmin: '0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8',
   rail: '0xe76c6c83af64e4c60245d8c7de953df673a7a33d',
   staking: '0xee6a649aa3766bd117e12c161726b693a1b2ee20',
   treasury: '0xc851fbe0f07a326ce0326ccc70c2a62732e74d6c',
   voting: '0xfc4b580c9bda2eef4e94d9fb4bcb1f7a61660cf9',
-  dai: '0x6b175474e89094c44da98b954eedeac495271d0f',
 };
-
-const addresses = [
-  '0xaE8A17EB859E024cF6B541802B08932B2268dcEe',
-  '0x5a02474A3083Bc969f20F92E7a8bd3824EC607f0',
-  '0xA4f2eA0a81179362558eBC1d2Bc817c9a0134ee3',
-];
-
-const amountsDai = [
-  2800000n * (10n ** 18n),
-  1200000n * (10n ** 18n),
-  1400000n * (10n ** 18n),
-];
-
-const amountsRail = [
-  0n,
-  0n,
-  2250000n * (10n ** 18n),
-];
 
 const PROPOSALDOCUMENT = '';
 
 const BALANCE_SLOT = 1;
 
+const NEW_DEPLOYMENTS = {};
+
 async function prep() {
-  // Mock add Rail balance
-  const newBalance = '0x00000000000000000000000000000000000000000001dc74be914d16aa400000';
+  // Get new contracts to deploy
+  const Treasury = await ethers.getContractFactory('Treasury');
+  const Proxy = await ethers.getContractFactory('PausableUpgradableProxy');
+  const TreasuryMigration = await ethers.getContractFactory('TreasuryMigration');
 
-  const index = ethers.utils.solidityKeccak256(
-    ['uint256', 'uint256'],
-    [DEPLOYCONFIG.treasury, BALANCE_SLOT],
+  // Deploy proxy and implementation
+  const treasuryImplementation = await Treasury.deploy();
+  const treasuryProxy = await Proxy.deploy((await ethers.getSigners())[0].address);
+  await treasuryProxy.deployTransaction.wait();
+
+  // Set proxy implementation
+  await treasuryProxy.upgrade(treasuryImplementation.address);
+  await treasuryProxy.unpause();
+  await (await treasuryProxy.transferOwnership(DEPLOYCONFIG.proxyAdmin)).wait();
+
+  // Initialize treasury owner as governance
+  const newTreasury = Treasury.attach(treasuryProxy.address);
+  await newTreasury.initializeTreasury(DEPLOYCONFIG.delegator);
+
+  // Deploy treasury migration contract
+  const treasuryMigration = await TreasuryMigration.deploy(
+    DEPLOYCONFIG.treasury,
+    newTreasury.address,
   );
+  await treasuryMigration.deployTransaction.wait();
 
-  await ethers.provider.send('hardhat_setStorageAt', [
-    DEPLOYCONFIG.rail,
-    index,
-    newBalance,
-  ]);
-
-  await ethers.provider.send('evm_mine');
+  // Store new deployments
+  NEW_DEPLOYMENTS.treasuryImplementation = treasuryImplementation.address;
+  NEW_DEPLOYMENTS.treasuryProxy = treasuryProxy.address;
+  NEW_DEPLOYMENTS.treasuryMigration = treasuryMigration.address;
 }
 
 async function getProposalCalls() {
-  const treasury = (await ethers.getContractFactory('Treasury')).attach(DEPLOYCONFIG.treasury);
+  console.log(NEW_DEPLOYMENTS);
+  const rail = DEPLOYCONFIG;
 
-  const calls = [];
-
-  amountsDai.forEach((amount, index) => {
-    if (amount > 0n) {
-      calls.push({
-        callContract: DEPLOYCONFIG.treasury,
-        data: treasury.interface.encodeFunctionData('transferERC20(address,address,uint256)', [
-          DEPLOYCONFIG.dai,
-          addresses[index],
-          amount,
-        ]),
-        value: 0,
-      });
-    }
-  });
-
-  amountsRail.forEach((amount, index) => {
-    if (amount > 0n) {
-      calls.push({
-        callContract: DEPLOYCONFIG.treasury,
-        data: treasury.interface.encodeFunctionData('transferERC20(address,address,uint256)', [
-          DEPLOYCONFIG.rail,
-          addresses[index],
-          amount,
-        ]),
-        value: 0,
-      });
-    }
-  });
-
-  return calls;
+  return [
+    {
+      callContract: DEPLOYCONFIG.rail,
+      data: rail.interface.encodeFunctionData('balanceOf(address)', [(await ethers.getSigners())[0].address]),
+      value: 0,
+    },
+  ];
 }
 
 async function testProposalUpgrade() {
-  const rail = (await ethers.getContractFactory('TestERC20')).attach(DEPLOYCONFIG.rail);
-  const dai = (await ethers.getContractFactory('TestERC20')).attach(DEPLOYCONFIG.dai);
-
-  // Check balance increase has happened
-  await Promise.all(amountsDai.map(async (amount, addressIndex) => {
-    expect(await dai.balanceOf(addresses[addressIndex])).to.equal(amount);
-  }));
-
-  await Promise.all(amountsRail.map(async (amount, addressIndex) => {
-    expect(await rail.balanceOf(addresses[addressIndex])).to.equal(amount);
-  }));
+  // WRITE TESTS TO CHECK FOR SUCCESSFUL UPGRADE HERE
+  expect(3).to.equal(3);
 }
 
 async function becomeWhale() {
@@ -211,6 +177,8 @@ async function main() {
 }
 
 async function submit() {
+  console.log('\nRUNNING PREP');
+  await prep();
   console.log('\nGETTING PROPOSAL CALLS');
   const calls = await getProposalCalls();
   console.log('\nSUBMITTING PROPOSAL');
@@ -219,6 +187,8 @@ async function submit() {
 }
 
 async function adminDeployToRopsten() {
+  console.log('\nRUNNING PREP');
+  await prep();
   console.log('\nGETTING PROPOSAL CALLS');
   const calls = await getProposalCalls();
   console.log('\nRUNNING CALLS');
