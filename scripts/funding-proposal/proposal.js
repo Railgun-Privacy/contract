@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 /* eslint-disable jsdoc/require-jsdoc */
 const readline = require('readline');
+const hre = require('hardhat');
 const { ethers } = require('hardhat');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
@@ -16,8 +17,9 @@ ethers.provider = new ethers.providers.JsonRpcProvider({
 
 const DEPLOYCONFIG = {
   delegator: '0xb6d513f6222ee92fff975e901bd792e2513fb53b',
-  implementation: '0xc6368d9998ea333b37eb869f4e1749b9296e6d09',
-  proxy: '0xbf0Af567D60318f66460Ec78b464589E3f9dA48e',
+  implementation: '0xbcfa4de73afb071c9ff18a20a22f818e657c541a',
+  betaProxy: '0xbf0af567d60318f66460ec78b464589e3f9da48e',
+  proxy: '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9',
   proxyAdmin: '0x4f8e20f55f879bee7bc010bd6bd2138b34ac65c8',
   rail: '0xe76c6c83af64e4c60245d8c7de953df673a7a33d',
   staking: '0xee6a649aa3766bd117e12c161726b693a1b2ee20',
@@ -174,14 +176,42 @@ async function prep() {
 }
 
 async function getProposalCalls() {
-  const rail = DEPLOYCONFIG;
+  const railgunLogicArtifact = hre.artifacts.readArtifactSync('RailgunLogic');
+  const railgunInterface = new ethers.utils.Interface(railgunLogicArtifact.abi);
+  const oldTreasury = (await ethers.getContractFactory('TreasuryOld')).attach(DEPLOYCONFIG.treasury);
+  const newTreasury = (await ethers.getContractFactory('Treasury')).attach(NEW_DEPLOYMENTS.treasuryProxy);
+
+  const TRANSFER_ROLE = await newTreasury.TRANSFER_ROLE();
+
+  const intervalPayoutCalls = NEW_DEPLOYMENTS.intervalPayouts.map((payoutContract) => ({
+    callContract: NEW_DEPLOYMENTS.treasuryProxy,
+    data: newTreasury.interface.encodeFunctionData('grantRole(bytes32,address)', [
+      TRANSFER_ROLE,
+      payoutContract,
+    ]),
+    value: 0,
+  }));
 
   return [
+    // Change treasury to new treasury
     {
-      callContract: DEPLOYCONFIG.rail,
-      data: rail.interface.encodeFunctionData('balanceOf(address)', [(await ethers.getSigners())[0].address]),
+      callContract: DEPLOYCONFIG.proxy,
+      data: railgunInterface.encodeFunctionData('changeTreasury(address)', [NEW_DEPLOYMENTS.treasuryProxy]),
       value: 0,
     },
+    {
+      callContract: DEPLOYCONFIG.betaProxy,
+      data: railgunInterface.encodeFunctionData('changeTreasury(address)', [NEW_DEPLOYMENTS.treasuryProxy]),
+      value: 0,
+    },
+    // Transfer ownership of old treasury to treasury migrator contract
+    {
+      callContract: DEPLOYCONFIG.treasury,
+      data: oldTreasury.interface.encodeFunctionData('transferOwnership(address)', [NEW_DEPLOYMENTS.treasuryMigration]),
+      value: 0,
+    },
+    // Give interval payout contracts the right to access treasury funds
+    ...intervalPayoutCalls,
   ];
 }
 
