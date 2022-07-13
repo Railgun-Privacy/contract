@@ -31,6 +31,62 @@ const BALANCE_SLOT = 1;
 
 const NEW_DEPLOYMENTS = {};
 
+const PAYMENT_CONFIG = [
+  {
+    to: '0xaE8A17EB859E024cF6B541802B08932B2268dcEe',
+    token: '0x6b175474e89094c44da98b954eedeac495271d0f',
+    amount: 925000n * 10n ** 18n,
+    interval: 1n, // Single payout
+    payouts: 1n,
+    startTime: 1657800000n, // Thursday, July 14, 2022 12:00:00 PM UTC
+  },
+  {
+    to: '0x5a02474A3083Bc969f20F92E7a8bd3824EC607f0',
+    token: '0x6b175474e89094c44da98b954eedeac495271d0f',
+    amount: 75000n * 10n ** 18n,
+    interval: 1n, // Single payout
+    payouts: 1n,
+    startTime: 1657800000n, // Thursday, July 14, 2022 12:00:00 PM UTC
+  },
+  {
+    to: '0xA4f2eA0a81179362558eBC1d2Bc817c9a0134ee3',
+    token: '0x6b175474e89094c44da98b954eedeac495271d0f',
+    amount: 100000n * 10n ** 18n,
+    interval: 1n, // Single payout
+    payouts: 1n,
+    startTime: 1657800000n, // Thursday, July 14, 2022 12:00:00 PM UTC
+  },
+  {
+    to: '0xaE8A17EB859E024cF6B541802B08932B2268dcEe',
+    token: '0x6b175474e89094c44da98b954eedeac495271d0f',
+    amount: 1850000n * 10n ** 18n,
+    interval: 23650000n, // 9 months
+    payouts: 3n,
+    startTime: 1669625000n, // Monday, November 28, 2022 8:43:20 AM UTC
+  },
+  {
+    to: '0x5a02474A3083Bc969f20F92E7a8bd3824EC607f0',
+    token: '0x6b175474e89094c44da98b954eedeac495271d0f',
+    amount: 150000n * 10n ** 18n,
+    interval: 23650000n, // 9 months
+    payouts: 3n,
+    startTime: 1669625000n, // Monday, November 28, 2022 8:43:20 AM UTC
+  },
+  {
+    to: '0xA4f2eA0a81179362558eBC1d2Bc817c9a0134ee3',
+    token: '0x6b175474e89094c44da98b954eedeac495271d0f',
+    amount: 200000n * 10n ** 18n,
+    interval: 23650000n, // 9 months
+    payouts: 3n,
+    startTime: 1669625000n, // Monday, November 28, 2022 8:43:20 AM UTC
+  },
+];
+
+function logVerify(verifyDetails) {
+  console.log('\nVerification Details:');
+  console.dir(verifyDetails, { depth: null });
+}
+
 async function prep() {
   // Get new contracts to deploy
   const Treasury = await ethers.getContractFactory('Treasury');
@@ -58,14 +114,66 @@ async function prep() {
   );
   await treasuryMigration.deployTransaction.wait();
 
+  // Deploy payout contracts
+  const IntervalPayouts = await ethers.getContractFactory('IntervalPayouts');
+  NEW_DEPLOYMENTS.intervalPayouts = [];
+  await Promise.all(PAYMENT_CONFIG.map(async (payout) => {
+    const intervalPayouts = await IntervalPayouts.deploy(
+      newTreasury.address,
+      payout.to,
+      payout.token,
+      payout.amount,
+      payout.interval,
+      payout.payouts,
+      payout.startTime,
+    );
+
+    await intervalPayouts.deployTransaction.wait();
+
+    logVerify({
+      address: treasuryProxy.address,
+      constructorArguments: [
+        newTreasury.address,
+        payout.to,
+        payout.amount,
+        payout.interval,
+        payout.payouts,
+        payout.startTime,
+      ],
+    });
+
+    NEW_DEPLOYMENTS.intervalPayouts.push(intervalPayouts.address);
+  }));
+
+  // Verify contracts on etherscan
+  logVerify({
+    address: treasuryImplementation.address,
+  });
+
+  logVerify({
+    address: treasuryProxy.address,
+    constructorArguments: [
+      (await ethers.getSigners())[0].address,
+    ],
+  });
+
+  logVerify({
+    address: treasuryMigration.address,
+    constructorArguments: [
+      DEPLOYCONFIG.treasury,
+      newTreasury.address,
+    ],
+  });
+
   // Store new deployments
   NEW_DEPLOYMENTS.treasuryImplementation = treasuryImplementation.address;
   NEW_DEPLOYMENTS.treasuryProxy = treasuryProxy.address;
   NEW_DEPLOYMENTS.treasuryMigration = treasuryMigration.address;
+
+  console.log(NEW_DEPLOYMENTS);
 }
 
 async function getProposalCalls() {
-  console.log(NEW_DEPLOYMENTS);
   const rail = DEPLOYCONFIG;
 
   return [
