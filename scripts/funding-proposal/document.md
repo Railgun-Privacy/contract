@@ -1,7 +1,3 @@
-Below is the first (1/4) of a set of funding proposals that aim to replace Proposal Four, with an eye towards including the constructive comments raised from the group discussion.
-
-# Treasury Budget Proposal: Protocol Development
-
 While total decentralization is something we all strive for, we must contend with a reality: groups and individuals make up the early success of projects. Decentralization comes in progressive steps. 
 
 While the primary funding and operating mechanism behind RAILGUN over the last 18 months is coming to an end, this presents us with a great opportunity to embark on our decentralization journey.

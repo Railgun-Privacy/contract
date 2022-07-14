@@ -27,7 +27,7 @@ const DEPLOYCONFIG = {
   voting: '0xfc4b580c9bda2eef4e94d9fb4bcb1f7a61660cf9',
 };
 
-const PROPOSALDOCUMENT = '';
+const PROPOSALDOCUMENT = 'QmUyZ3AWB9zyQGDnpYyDkkURkCyQxeHDHt6ypm5jdzTYZX';
 
 const BALANCE_SLOT = 1;
 
