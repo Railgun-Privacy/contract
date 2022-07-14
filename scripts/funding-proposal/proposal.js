@@ -233,34 +233,34 @@ async function testProposalUpgrade() {
   const TreasuryMigration = await ethers.getContractFactory('TreasuryMigration');
   const treasuryMigration = TreasuryMigration.attach(NEW_DEPLOYMENTS.treasuryMigration);
 
-  await ethers.provider.send('hardhat_setBalance', [
-    DEPLOYCONFIG.treasury,
-    '0x1000',
-  ]);
-  await ethers.provider.send('hardhat_setBalance', [
-    NEW_DEPLOYMENTS.treasuryProxy,
-    '0x00',
-  ]);
+  const ERC20 = await ethers.getContractFactory('TestERC20');
+  const erc20 = await ERC20.deploy();
+  await erc20.deployTransaction.wait();
 
-  await (await treasuryMigration.migrateETH()).wait();
+  await erc20.transfer(DEPLOYCONFIG.treasury, 1000n);
 
-  expect(await ethers.provider.getBalance(
+  await (await treasuryMigration.migrateERC20([
+    erc20.address,
+    '0x6b175474e89094c44da98b954eedeac495271d0f', // DAI
+  ])).wait();
+
+  expect(await erc20.balanceOf(
     DEPLOYCONFIG.treasury,
   )).to.equal(0n);
-  expect(await ethers.provider.getBalance(
+  expect(await erc20.balanceOf(
     NEW_DEPLOYMENTS.treasuryProxy,
-  )).to.equal(4096n);
+  )).to.equal(1000n);
 
   // Check interval payouts have been given the right permissions
   await hre.ethers.provider.send('evm_increaseTime', [
-    100000000000000000000000,
+    30000000,
   ]);
   await hre.ethers.provider.send('evm_mine');
-  const IntervalPayout = hre.artifacts.readArtifactSync('IntervalPayouts');
+  const IntervalPayout = await ethers.getContractFactory('IntervalPayouts');
 
   await Promise.all(NEW_DEPLOYMENTS.intervalPayouts.map(async (contract) => {
     const intervalPayout = IntervalPayout.attach(contract);
-    await expect(intervalPayout.payout()).should.eventually.be.fulfilled;
+    await expect(intervalPayout.payout()).to.eventually.be.fulfilled;
   }));
 }
 
