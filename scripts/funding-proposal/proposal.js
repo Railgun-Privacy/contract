@@ -10,10 +10,10 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-ethers.provider = new ethers.providers.JsonRpcProvider({
-  url: ethers.provider.connection.url,
-  timeout: 2147483647,
-});
+// ethers.provider = new ethers.providers.JsonRpcProvider({
+//   url: ethers.provider.connection.url,
+//   timeout: 2147483647,
+// });
 
 const DEPLOYCONFIG = {
   delegator: '0xb6d513f6222ee92fff975e901bd792e2513fb53b',
@@ -97,17 +97,18 @@ async function prep() {
 
   // Deploy proxy and implementation
   const treasuryImplementation = await Treasury.deploy();
+  await treasuryImplementation.deployTransaction.wait();
   const treasuryProxy = await Proxy.deploy((await ethers.getSigners())[0].address);
   await treasuryProxy.deployTransaction.wait();
 
   // Set proxy implementation
-  await treasuryProxy.upgrade(treasuryImplementation.address);
-  await treasuryProxy.unpause();
+  await (await treasuryProxy.upgrade(treasuryImplementation.address)).wait();
+  await (await treasuryProxy.unpause()).wait();
   await (await treasuryProxy.transferOwnership(DEPLOYCONFIG.proxyAdmin)).wait();
 
   // Initialize treasury owner as governance
   const newTreasury = Treasury.attach(treasuryProxy.address);
-  await newTreasury.initializeTreasury(DEPLOYCONFIG.delegator);
+  await (await newTreasury.initializeTreasury(DEPLOYCONFIG.delegator)).wait();
 
   // Deploy treasury migration contract
   const treasuryMigration = await TreasuryMigration.deploy(
@@ -119,7 +120,10 @@ async function prep() {
   // Deploy payout contracts
   const IntervalPayouts = await ethers.getContractFactory('IntervalPayouts');
   NEW_DEPLOYMENTS.intervalPayouts = [];
-  await Promise.all(PAYMENT_CONFIG.map(async (payout) => {
+  for (let i = 0; i < PAYMENT_CONFIG.length; i += 1) {
+    const payout = PAYMENT_CONFIG[i];
+
+    // eslint-disable-next-line no-await-in-loop
     const intervalPayouts = await IntervalPayouts.deploy(
       newTreasury.address,
       payout.to,
@@ -130,6 +134,7 @@ async function prep() {
       payout.startTime,
     );
 
+    // eslint-disable-next-line no-await-in-loop
     await intervalPayouts.deployTransaction.wait();
 
     logVerify({
@@ -145,7 +150,7 @@ async function prep() {
     });
 
     NEW_DEPLOYMENTS.intervalPayouts.push(intervalPayouts.address);
-  }));
+  }
 
   // Verify contracts on etherscan
   logVerify({
