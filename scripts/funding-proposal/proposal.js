@@ -172,6 +172,7 @@ async function prep() {
   NEW_DEPLOYMENTS.treasuryProxy = treasuryProxy.address;
   NEW_DEPLOYMENTS.treasuryMigration = treasuryMigration.address;
 
+  console.log('\nNew Deployments:');
   console.log(NEW_DEPLOYMENTS);
 }
 
@@ -216,8 +217,51 @@ async function getProposalCalls() {
 }
 
 async function testProposalUpgrade() {
-  // WRITE TESTS TO CHECK FOR SUCCESSFUL UPGRADE HERE
-  expect(3).to.equal(3);
+  // Check treasury addresses are updated
+  const railgunLogicArtifact = hre.artifacts.readArtifactSync('RailgunLogic');
+  const railgun = new ethers.Contract(
+    DEPLOYCONFIG.proxy,
+    railgunLogicArtifact.abi,
+    (await ethers.getSigners())[0],
+  );
+  const railgunBeta = railgun.attach(DEPLOYCONFIG.betaProxy);
+
+  expect(await railgun.treasury()).to.equal(NEW_DEPLOYMENTS.treasuryProxy);
+  expect(await railgunBeta.treasury()).to.equal(NEW_DEPLOYMENTS.treasuryProxy);
+
+  // Check migration contract has the right permissions
+  const TreasuryMigration = await ethers.getContractFactory('TreasuryMigration');
+  const treasuryMigration = TreasuryMigration.attach(NEW_DEPLOYMENTS.treasuryMigration);
+
+  await ethers.provider.send('hardhat_setBalance', [
+    DEPLOYCONFIG.treasury,
+    '0x1000',
+  ]);
+  await ethers.provider.send('hardhat_setBalance', [
+    NEW_DEPLOYMENTS.treasuryProxy,
+    '0x00',
+  ]);
+
+  await (await treasuryMigration.migrateETH()).wait();
+
+  expect(await ethers.provider.getBalance(
+    DEPLOYCONFIG.treasury,
+  )).to.equal(0n);
+  expect(await ethers.provider.getBalance(
+    NEW_DEPLOYMENTS.treasuryProxy,
+  )).to.equal(4096n);
+
+  // Check interval payouts have been given the right permissions
+  await hre.ethers.provider.send('evm_increaseTime', [
+    100000000000000000000000,
+  ]);
+  await hre.ethers.provider.send('evm_mine');
+  const IntervalPayout = hre.artifacts.readArtifactSync('IntervalPayouts');
+
+  await Promise.all(NEW_DEPLOYMENTS.intervalPayouts.map(async (contract) => {
+    const intervalPayout = IntervalPayout.attach(contract);
+    await expect(intervalPayout.payout()).should.eventually.be.fulfilled;
+  }));
 }
 
 async function becomeWhale() {
