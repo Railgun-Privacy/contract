@@ -10,14 +10,16 @@ import { Staking } from "../governance/Staking.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { BitMaps } from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
 /**
- * @title FeeDistribution
+ * @title GovernorRewards
  * @author Railgun Contributors
- * @notice Distributes treasury funds to stakers
+ * @notice Distributes treasury funds to active governor
  */
-contract FeeDistribution is Initializable, OwnableUpgradeable {
+contract GovernorRewards is Initializable, OwnableUpgradeable {
   using SafeERC20 for IERC20;
+  using BitMaps for BitMaps.BitMap;
 
   // Staking contract
   Staking public staking;
@@ -46,8 +48,9 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
   event Claim(IERC20 token, address account, uint256 amount, uint256 startInterval, uint256 endInterval);
 
   // Bitmap of claimed intervals
+  // Internal types not allowed on public variables so custom getter needs to be created
   // Account -> Token -> IntervalClaimed
-  mapping(address => mapping(IERC20 => mapping(uint256 => bool))) public claimedBitmap;
+  mapping(address => mapping(IERC20 => BitMaps.BitMap)) private claimedBitmap;
 
   // Earmaked tokens for each interval
   // Token -> Interval -> Amount
@@ -98,6 +101,17 @@ contract FeeDistribution is Initializable, OwnableUpgradeable {
     for (uint256 i = 0; i < _tokens.length; i += 1) {
       tokens[_tokens[i]] = true;
     }
+  }
+
+  /**
+   * @notice Gets wheather a interval has been claimed or not
+   * @param _account - account to check claim status for
+   * @param _token - token to get claim status for
+   * @param _interval - interval to check for
+   * @return claimed
+   */
+  function getClaimed(address _account, IERC20 _token, uint256 _interval) external view returns (bool) {
+    return claimedBitmap[_account][_token].get(_interval);
   }
 
   /**

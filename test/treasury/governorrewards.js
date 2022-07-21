@@ -17,7 +17,7 @@ let users;
 let distributionInterval;
 let basisPoints;
 
-describe('Treasury/FeeDistribution', () => {
+describe('Treasury/GovernorRewards', () => {
   beforeEach(async () => {
     // Get signers list
     const signers = await ethers.getSigners();
