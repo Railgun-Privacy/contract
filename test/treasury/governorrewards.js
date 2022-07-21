@@ -25,7 +25,7 @@ describe('Treasury/GovernorRewards', () => {
     // Get contracts
     const GovernorRewards = await ethers.getContractFactory('GovernorRewards');
     const ERC20 = await ethers.getContractFactory('TestERC20');
-    const Staking = await ethers.getContractFactory('Staking');
+    const Staking = await ethers.getContractFactory('StakingStub');
     const Treasury = await ethers.getContractFactory('Treasury');
 
     // Deploy contracts
@@ -118,6 +118,59 @@ describe('Treasury/GovernorRewards', () => {
       expect(await governorRewards.earmarked(distributionTokens[0].address, 0n)).to.equal(
         treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark,
       );
+    }
+  });
+
+  it('Should validate hints correctly', async () => {
+    const stakingSnapshotInterval = Number((await staking.SNAPSHOT_INTERVAL()).toString());
+
+    const snapshotIntervals = [];
+
+    // Increast time to second interval
+    await ethers.provider.send('evm_increaseTime', [stakingSnapshotInterval * 2]);
+    await ethers.provider.send('evm_mine');
+
+    // Loop through 10 intervals
+    for (let i = 2; i < 15; i += 1) {
+      // Random chance to take a snapshot
+      if (Math.random() < 0.3) {
+        // eslint-disable-next-line no-await-in-loop
+        await staking.snapshotStub((await ethers.getSigners())[0].address);
+
+        snapshotIntervals.push(i);
+      }
+
+      // Increase time to next interval
+      // eslint-disable-next-line no-await-in-loop
+      await ethers.provider.send('evm_increaseTime', [stakingSnapshotInterval]);
+      // eslint-disable-next-line no-await-in-loop
+      await ethers.provider.send('evm_mine');
+    }
+
+    // Increase time without taking snapshots
+    await ethers.provider.send('evm_increaseTime', [stakingSnapshotInterval * 10]);
+    await ethers.provider.send('evm_mine');
+
+    for (let interval = 0; interval < 15; interval += 1) {
+      for (let hint = 0; hint < 15; hint += 1) {
+        const expectedHint = snapshotIntervals.findIndex((el) => el >= interval) >= 0
+          ? snapshotIntervals.findIndex((el) => el >= interval)
+          : snapshotIntervals.length;
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await governorRewards.validateGlobalSnapshotHint(
+          BigInt(interval),
+          BigInt(hint),
+        )).to.equal(expectedHint === hint);
+
+        // eslint-disable-next-line no-await-in-loop
+        expect(await governorRewards.validateAccountSnapshotHint(
+          BigInt(interval),
+          // eslint-disable-next-line no-await-in-loop
+          (await ethers.getSigners())[0].address,
+          BigInt(hint),
+        )).to.equal(expectedHint === hint);
+      }
     }
   });
 });

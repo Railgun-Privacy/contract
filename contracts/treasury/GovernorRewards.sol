@@ -181,6 +181,73 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   }
 
   /**
+   * @notice Verifies hint is correct for global snapshots
+   * @param _stakingInterval - interval to check hint against
+   * @param _hint - off-chain computed index of interval
+   * @return valid
+   */
+  function validateGlobalSnapshotHint(uint256 _stakingInterval, uint256 _hint) public view returns (bool) {
+    require(_stakingInterval <= staking.currentInterval(), "Staking: Interval out of bounds");
+
+    // Check if hint is correct, else fall back to binary search
+    return (
+      _hint <= staking.globalsSnapshotLength()
+      && (_hint == 0 || staking.globalsSnapshot(_hint - 1).interval < _stakingInterval)
+      && (_hint == staking.globalsSnapshotLength() || staking.globalsSnapshot(_hint).interval >= _stakingInterval)
+    );
+  }
+
+  /**
+   * @notice Fetch and decompress series of global snapshots
+   * @param _startingInterval - starting interval to fetch from
+   * @param _endingInterval - interval to fetch to
+   * @param _hint - off-chain computed index of interval
+   * @return array of snapshot data
+   */
+  function fetchGlobalSnapshots(
+    uint256 _startingInterval,
+    uint256 _endingInterval,
+    uint256 _hint
+  ) public view returns (uint256[] memory) {
+
+  }
+
+  /**
+   * @notice Verifies hint is correct for account snapshots
+   * @param _stakingInterval - interval to check hint against
+   * @param _account - account of interval
+   * @param _hint - off-chain computed index of interval
+   * @return array of snapshot data
+   */
+  function validateAccountSnapshotHint(uint256 _stakingInterval, address _account, uint256 _hint) public view returns (bool) {
+    require(_stakingInterval <= staking.currentInterval(), "Staking: Interval out of bounds");
+
+    // Check if hint is correct, else fall back to binary search
+    return (
+      _hint <= staking.accountSnapshotLength(_account)
+      && (_hint == 0 || staking.accountSnapshot(_account, _hint - 1).interval < _stakingInterval)
+      && (_hint == staking.accountSnapshotLength(_account) || staking.accountSnapshot(_account, _hint).interval >= _stakingInterval)
+    );
+  }
+
+  /**
+   * @notice Fetch and decompress series of account snapshots
+   * @param _startingInterval - starting interval to fetch from
+   * @param _endingInterval - interval to fetch to
+   * @param _account - account to get snapshot of
+   * @param _hint - off-chain computed index of interval
+   * @return array of snapshot data
+   */
+  function fetchAccountSnapshots(
+    uint256 _startingInterval,
+    uint256 _endingInterval,
+    address _account,
+    uint256 _hint
+  ) public view returns (uint256[] memory) {
+    
+  }
+
+  /**
    * @notice Earmarks tokens for past intervals
    * @param _token - token to calculate earmarks for
    */
@@ -217,5 +284,15 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       // Transfer tokens
       treasury.transferERC20(_token, address(this), totalDistributionAmounts);
     }
+  }
+
+  function calculateRewards(
+    IERC20[] calldata _token,
+    address _account,
+    uint256 _startingInterval,
+    uint256 _endingInterval,
+    uint256 _startingHint
+  ) public returns (uint256) {
+
   }
 }
