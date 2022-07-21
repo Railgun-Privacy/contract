@@ -73,7 +73,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @param _startingInterval - interval to start distribution at
    * @param _tokens - tokens to distribute
    */
-  function initializeFeeDistribution(
+  function initializeGovernorRewards(
     address _owner,
     Staking _staking,
     Treasury _treasury,
@@ -186,7 +186,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    */
   function earmark(IERC20 _token) public {
     // Check that token is on distribution list
-    require(tokens[_token], "FeeDistribution: Token is not on distribution list");
+    require(tokens[_token], "GovernorRewards: Token is not on distribution list");
 
     // Get intervals
     uint256 _currentInterval = currentInterval();

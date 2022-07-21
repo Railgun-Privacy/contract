@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 
 const { expect } = chai;
 
-let feeDistribution;
+let governorRewards;
 let rail;
 let distributionTokens;
 let treasury;
@@ -23,7 +23,7 @@ describe('Treasury/GovernorRewards', () => {
     const signers = await ethers.getSigners();
 
     // Get contracts
-    const FeeDistribution = await ethers.getContractFactory('FeeDistribution');
+    const GovernorRewards = await ethers.getContractFactory('GovernorRewards');
     const ERC20 = await ethers.getContractFactory('TestERC20');
     const Staking = await ethers.getContractFactory('Staking');
     const Treasury = await ethers.getContractFactory('Treasury');
@@ -32,7 +32,7 @@ describe('Treasury/GovernorRewards', () => {
     rail = await ERC20.deploy();
     staking = await Staking.deploy(rail.address);
     treasury = await Treasury.deploy();
-    feeDistribution = await FeeDistribution.deploy();
+    governorRewards = await GovernorRewards.deploy();
 
     // Deploy a bunch of tokens to use as distribution tokens
     distributionTokens = await Promise.all(
@@ -45,7 +45,7 @@ describe('Treasury/GovernorRewards', () => {
       rail: rail.connect(signer),
       distributionTokens: distributionTokens.map((token) => token.connect(signer)),
       staking: staking.connect(signer),
-      feeDistribution: feeDistribution.connect(signer),
+      governorRewards: governorRewards.connect(signer),
     }));
 
     // Initialize contracts
@@ -53,7 +53,7 @@ describe('Treasury/GovernorRewards', () => {
       users[0].signer.address,
     );
 
-    await feeDistribution.initializeFeeDistribution(
+    await governorRewards.initializeGovernorRewards(
       users[0].signer.address,
       staking.address,
       treasury.address,
@@ -62,11 +62,11 @@ describe('Treasury/GovernorRewards', () => {
     );
 
     // Set all distribution tokens to distribute
-    await feeDistribution.addTokens(distributionTokens.map((token) => token.address));
+    await governorRewards.addTokens(distributionTokens.map((token) => token.address));
 
     // Get constants
-    distributionInterval = (await feeDistribution.DISTRIBUTION_INTERVAL()).toNumber();
-    basisPoints = (await feeDistribution.BASIS_POINTS()).toNumber();
+    distributionInterval = (await governorRewards.DISTRIBUTION_INTERVAL()).toNumber();
+    basisPoints = (await governorRewards.BASIS_POINTS()).toNumber();
 
     // Send distribution tokens balance to treasury
     await Promise.all(distributionTokens.map(async (token) => {
@@ -74,10 +74,10 @@ describe('Treasury/GovernorRewards', () => {
     }));
 
     // Set fee distribution interval
-    await feeDistribution.setIntervalBP(10n);
+    await governorRewards.setIntervalBP(10n);
 
     // Give fee distribution contract transfer role
-    await treasury.grantRole(await treasury.TRANSFER_ROLE(), feeDistribution.address);
+    await treasury.grantRole(await treasury.TRANSFER_ROLE(), governorRewards.address);
   });
 
   it('Should earmark correctly', async () => {
@@ -88,7 +88,7 @@ describe('Treasury/GovernorRewards', () => {
     for (let i = 0; i < distributionTokens; i += 1) {
       // Set fee distribution interval
       // eslint-disable-next-line no-await-in-loop
-      await feeDistribution.setIntervalBP(BigInt(i));
+      await governorRewards.setIntervalBP(BigInt(i));
 
       // Get treasury balance before earmark
       // eslint-disable-next-line no-await-in-loop
@@ -96,7 +96,7 @@ describe('Treasury/GovernorRewards', () => {
 
       // Earmark token
       // eslint-disable-next-line no-await-in-loop
-      await feeDistribution.earmark(distributionTokens[0].address);
+      await governorRewards.earmark(distributionTokens[0].address);
 
       // Get treasury balance after earmark
       // eslint-disable-next-line no-await-in-loop
@@ -109,13 +109,13 @@ describe('Treasury/GovernorRewards', () => {
 
       // Check that the right amount was added to the fee distribution contract
       // eslint-disable-next-line no-await-in-loop
-      expect(await distributionTokens[0].balanceOf(feeDistribution.address)).to.equal(
+      expect(await distributionTokens[0].balanceOf(governorRewards.address)).to.equal(
         treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark,
       );
 
       // Check that the right amount was entered in the earmarked record
       // eslint-disable-next-line no-await-in-loop
-      expect(await feeDistribution.earmarked(distributionTokens[0].address, 0n)).to.equal(
+      expect(await governorRewards.earmarked(distributionTokens[0].address, 0n)).to.equal(
         treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark,
       );
     }
