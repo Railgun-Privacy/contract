@@ -28,7 +28,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   Treasury public treasury;
 
   // Staking intervals per distribution interval
-  uint256 private constant STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER = 14; // 14 days
+  uint256 public constant STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER = 14; // 14 days
 
   // Staking contract constant imported locally for cheaper calculations
   // solhint-disable-next-line var-name-mixedcase

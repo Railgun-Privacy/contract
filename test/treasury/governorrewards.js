@@ -16,6 +16,7 @@ let staking;
 let users;
 let distributionInterval;
 let stakingInterval;
+let stakingDistributionIntervalMultiplier;
 let basisPoints;
 
 describe('Treasury/GovernorRewards', () => {
@@ -72,6 +73,9 @@ describe('Treasury/GovernorRewards', () => {
     );
 
     // Get constants
+    stakingDistributionIntervalMultiplier = (
+      await governorRewards.STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER()
+    ).toNumber();
     distributionInterval = (await governorRewards.DISTRIBUTION_INTERVAL()).toNumber();
     basisPoints = (await governorRewards.BASIS_POINTS()).toNumber();
     stakingInterval = (await staking.SNAPSHOT_INTERVAL()).toNumber();
@@ -129,24 +133,38 @@ describe('Treasury/GovernorRewards', () => {
     }
   });
 
-  it('Should retrieve snapshot sequence correctly', async () => {
-    // Increase time to second interval
-    await ethers.provider.send('evm_increaseTime', [stakingInterval * 2]);
-    await ethers.provider.send('evm_mine');
+  // eslint-disable-next-line func-names
+  it('Should retrieve snapshot sequence correctly', async function () {
+    let intervals = 50;
 
-    let currentVotingPower = 0n;
-    const votingPower = [];
+    if (process.env.LONG_TESTS === 'extra') {
+      this.timeout(5 * 60 * 60 * 1000);
+      intervals = 100;
+    } else if (process.env.LONG_TESTS === 'complete') {
+      this.timeout(5 * 60 * 60 * 1000);
+      intervals = 1000;
+    }
 
-    // Loop through 100 intervals
-    for (let i = 2; i < 15; i += 1) {
+    // Fast forward to first interval
+    await hre.ethers.provider.send('evm_increaseTime', [distributionInterval]);
+    await hre.ethers.provider.send('evm_mine');
+
+    let currentVotingPower = 0;
+    const votingPower = [0];
+
+    // Loop through and create intervals
+    for (let i = stakingDistributionIntervalMultiplier; i < intervals; i += 1) {
+      // Store voting power snapshot
+      if (i % stakingDistributionIntervalMultiplier === 0) {
+        votingPower.push(currentVotingPower);
+      }
+
       // Random chance to stake
       if (Math.random() < 0.3) {
         // eslint-disable-next-line no-await-in-loop
-        await staking.stake(100n);
-        currentVotingPower += 100n;
+        await staking.stake(100);
+        currentVotingPower += 100;
       }
-
-      votingPower.push(currentVotingPower);
 
       // Increase time to next interval
       // eslint-disable-next-line no-await-in-loop
@@ -154,6 +172,36 @@ describe('Treasury/GovernorRewards', () => {
       // eslint-disable-next-line no-await-in-loop
       await ethers.provider.send('evm_mine');
     }
+
+    // Check account with correct hints
+    expect((await governorRewards.fetchAccountSnapshots(
+      0,
+      votingPower.length,
+      users[0].signer.address,
+      votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
+    )).map((val) => val.toNumber())).to.deep.equal(votingPower);
+
+    // Check account with incorrect hints
+    expect((await governorRewards.fetchAccountSnapshots(
+      0,
+      votingPower.length,
+      users[0].signer.address,
+      votingPower.map(() => 0),
+    )).map((val) => val.toNumber())).to.deep.equal(votingPower);
+
+    // Check global with correct hints
+    expect((await governorRewards.fetchGlobalSnapshots(
+      0,
+      votingPower.length,
+      votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
+    )).map((val) => val.toNumber())).to.deep.equal(votingPower);
+
+    // Check global with incorrect hints
+    expect((await governorRewards.fetchGlobalSnapshots(
+      0,
+      votingPower.length,
+      votingPower.map(() => 0),
+    )).map((val) => val.toNumber())).to.deep.equal(votingPower);
 
     // Increase time without taking snapshots
     await ethers.provider.send('evm_increaseTime', [stakingInterval * 10]);
