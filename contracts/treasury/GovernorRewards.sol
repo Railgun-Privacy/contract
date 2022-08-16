@@ -128,7 +128,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @return interval
    */
   function intervalAtTime(uint256 _time) public view returns (uint256) {
-    require(_time >= STAKING_DEPLOY_TIME, "Staking: Requested time is before contract was deployed");
+    require(_time >= STAKING_DEPLOY_TIME, "GovernorRewards: Requested time is before contract was deployed");
     return (_time - STAKING_DEPLOY_TIME) / DISTRIBUTION_INTERVAL;
   }
 
@@ -181,53 +181,34 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   }
 
   /**
-   * @notice Verifies hint is correct for global snapshots
-   * @param _stakingInterval - interval to check hint against
-   * @param _hint - off-chain computed index of interval
-   * @return valid
-   */
-  function validateGlobalSnapshotHint(uint256 _stakingInterval, uint256 _hint) public view returns (bool) {
-    require(_stakingInterval <= staking.currentInterval(), "Staking: Interval out of bounds");
-
-    // Check if hint is correct, else fall back to binary search
-    return (
-      _hint <= staking.globalsSnapshotLength()
-      && (_hint == 0 || staking.globalsSnapshot(_hint - 1).interval < _stakingInterval)
-      && (_hint == staking.globalsSnapshotLength() || staking.globalsSnapshot(_hint).interval >= _stakingInterval)
-    );
-  }
-
-  /**
-   * @notice Fetch and decompress series of global snapshots
+   * @notice Fetch and decompress global voting power snapshots
    * @param _startingInterval - starting interval to fetch from
    * @param _endingInterval - interval to fetch to
-   * @param _hint - off-chain computed index of interval
+   * @param _hints - off-chain computed indexes of intervals
    * @return array of snapshot data
    */
   function fetchGlobalSnapshots(
     uint256 _startingInterval,
     uint256 _endingInterval,
-    uint256 _hint
+    uint256[] calldata _hints
   ) public view returns (uint256[] memory) {
+    uint256 length = _endingInterval - _startingInterval;
 
-  }
+    require(_hints.length == length, "GovernorRewards: Incorrect number of hints given");
 
-  /**
-   * @notice Verifies hint is correct for account snapshots
-   * @param _stakingInterval - interval to check hint against
-   * @param _account - account of interval
-   * @param _hint - off-chain computed index of interval
-   * @return array of snapshot data
-   */
-  function validateAccountSnapshotHint(uint256 _stakingInterval, address _account, uint256 _hint) public view returns (bool) {
-    require(_stakingInterval <= staking.currentInterval(), "Staking: Interval out of bounds");
+    // Create snapshots array
+    uint256[] memory snapshots = new uint256[](_endingInterval - _startingInterval);
 
-    // Check if hint is correct, else fall back to binary search
-    return (
-      _hint <= staking.accountSnapshotLength(_account)
-      && (_hint == 0 || staking.accountSnapshot(_account, _hint - 1).interval < _stakingInterval)
-      && (_hint == staking.accountSnapshotLength(_account) || staking.accountSnapshot(_account, _hint).interval >= _stakingInterval)
-    );
+    // Loop through each requested snapshot and retrieve voting power
+    for (uint256 i = 0; i < length; i += 1) {
+      snapshots[i] = staking.globalsSnapshotAt(
+        distributionIntervalToStakingInterval(_startingInterval + i),
+        _hints[i]
+      ).totalVotingPower;
+    }
+
+    // Return voting power
+    return snapshots;
   }
 
   /**
@@ -235,16 +216,33 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @param _startingInterval - starting interval to fetch from
    * @param _endingInterval - interval to fetch to
    * @param _account - account to get snapshot of
-   * @param _hint - off-chain computed index of interval
+   * @param _hints - off-chain computed indexes of intervals
    * @return array of snapshot data
    */
   function fetchAccountSnapshots(
     uint256 _startingInterval,
     uint256 _endingInterval,
     address _account,
-    uint256 _hint
+    uint256[] calldata _hints
   ) public view returns (uint256[] memory) {
-    
+    uint256 length = _endingInterval - _startingInterval;
+
+    require(_hints.length == length, "GovernorRewards: Incorrect number of hints given");
+
+    // Create snapshots array
+    uint256[] memory snapshots = new uint256[](_endingInterval - _startingInterval);
+
+    // Loop through each requested snapshot and retrieve voting power
+    for (uint256 i = 0; i < length; i += 1) {
+      snapshots[i] = staking.accountSnapshotAt(
+        _account,
+        distributionIntervalToStakingInterval(_startingInterval + i),
+        _hints[i]
+      ).votingPower;
+    }
+
+    // Return voting power
+    return snapshots;
   }
 
   /**

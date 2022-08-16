@@ -15,6 +15,7 @@ let treasury;
 let staking;
 let users;
 let distributionInterval;
+let stakingInterval;
 let basisPoints;
 
 describe('Treasury/GovernorRewards', () => {
@@ -48,6 +49,15 @@ describe('Treasury/GovernorRewards', () => {
       governorRewards: governorRewards.connect(signer),
     }));
 
+    // Send staking tokens to each signer and allow staking
+    for (let i = 0; i < users.length; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await rail.transfer(users[i].signer.address, 100000n);
+
+      // eslint-disable-next-line no-await-in-loop
+      await users[i].rail.approve(staking.address, 2n ** 256n - 1n);
+    }
+
     // Initialize contracts
     await treasury.initializeTreasury(
       users[0].signer.address,
@@ -61,12 +71,10 @@ describe('Treasury/GovernorRewards', () => {
       distributionTokens.map((token) => token.address),
     );
 
-    // Set all distribution tokens to distribute
-    await governorRewards.addTokens(distributionTokens.map((token) => token.address));
-
     // Get constants
     distributionInterval = (await governorRewards.DISTRIBUTION_INTERVAL()).toNumber();
     basisPoints = (await governorRewards.BASIS_POINTS()).toNumber();
+    stakingInterval = (await staking.SNAPSHOT_INTERVAL()).toNumber();
 
     // Send distribution tokens balance to treasury
     await Promise.all(distributionTokens.map(async (token) => {
@@ -121,56 +129,34 @@ describe('Treasury/GovernorRewards', () => {
     }
   });
 
-  it('Should validate hints correctly', async () => {
-    const stakingSnapshotInterval = Number((await staking.SNAPSHOT_INTERVAL()).toString());
-
-    const snapshotIntervals = [];
-
-    // Increast time to second interval
-    await ethers.provider.send('evm_increaseTime', [stakingSnapshotInterval * 2]);
+  it('Should retrieve snapshot sequence correctly', async () => {
+    // Increase time to second interval
+    await ethers.provider.send('evm_increaseTime', [stakingInterval * 2]);
     await ethers.provider.send('evm_mine');
 
-    // Loop through 10 intervals
+    let currentVotingPower = 0n;
+    const votingPower = [];
+
+    // Loop through 100 intervals
     for (let i = 2; i < 15; i += 1) {
-      // Random chance to take a snapshot
+      // Random chance to stake
       if (Math.random() < 0.3) {
         // eslint-disable-next-line no-await-in-loop
-        await staking.snapshotStub((await ethers.getSigners())[0].address);
-
-        snapshotIntervals.push(i);
+        await staking.stake(100n);
+        currentVotingPower += 100n;
       }
+
+      votingPower.push(currentVotingPower);
 
       // Increase time to next interval
       // eslint-disable-next-line no-await-in-loop
-      await ethers.provider.send('evm_increaseTime', [stakingSnapshotInterval]);
+      await ethers.provider.send('evm_increaseTime', [stakingInterval]);
       // eslint-disable-next-line no-await-in-loop
       await ethers.provider.send('evm_mine');
     }
 
     // Increase time without taking snapshots
-    await ethers.provider.send('evm_increaseTime', [stakingSnapshotInterval * 10]);
+    await ethers.provider.send('evm_increaseTime', [stakingInterval * 10]);
     await ethers.provider.send('evm_mine');
-
-    for (let interval = 0; interval < 15; interval += 1) {
-      for (let hint = 0; hint < 15; hint += 1) {
-        const expectedHint = snapshotIntervals.findIndex((el) => el >= interval) >= 0
-          ? snapshotIntervals.findIndex((el) => el >= interval)
-          : snapshotIntervals.length;
-
-        // eslint-disable-next-line no-await-in-loop
-        expect(await governorRewards.validateGlobalSnapshotHint(
-          BigInt(interval),
-          BigInt(hint),
-        )).to.equal(expectedHint === hint);
-
-        // eslint-disable-next-line no-await-in-loop
-        expect(await governorRewards.validateAccountSnapshotHint(
-          BigInt(interval),
-          // eslint-disable-next-line no-await-in-loop
-          (await ethers.getSigners())[0].address,
-          BigInt(hint),
-        )).to.equal(expectedHint === hint);
-      }
-    }
   });
 });
