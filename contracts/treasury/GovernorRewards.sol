@@ -245,38 +245,6 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   }
 
   /**
-   * @notice Prefetches global snapshot data
-   * @param _startingInterval - starting interval to fetch from
-   * @param _endingInterval - interval to fetch to
-   * @param _hints - off-chain computed indexes of intervals
-   */
-  function prefetchGlobalSnapshots(
-    uint256 _startingInterval,
-    uint256 _endingInterval,
-    uint256[] calldata _hints
-  ) public {
-    uint256 length = _endingInterval - _startingInterval + 1;
-
-    require(_startingInterval <= nextSnapshotPreCalcInterval, "GovernorRewards: Starting interval too late");
-    require(_endingInterval <= currentInterval(), "GovernorRewards: Can't prefetch future intervals");
-
-    // Fetch snapshots
-    uint256[] memory snapshots = fetchGlobalSnapshots(
-      _startingInterval,
-      _endingInterval,
-      _hints
-    );
-
-    // Store precalculated snapshots
-    for (uint256 i; i < length; i+= 1) {
-      precalulatedGlobalSnapshots[_startingInterval + i] = snapshots[i];
-    }
-
-    // Set next precalc interval
-    nextSnapshotPreCalcInterval = _endingInterval + 1;
-  }
-
-  /**
    * @notice Earmarks tokens for past intervals
    * @param _token - token to calculate earmarks for
    */
@@ -315,6 +283,43 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
       // Transfer tokens
       treasury.transferERC20(_token, address(this), totalDistributionAmounts);
+    }
+  }
+
+  /**
+   * @notice Prefetches global snapshot data
+   * @param _startingInterval - starting interval to fetch from
+   * @param _endingInterval - interval to fetch to
+   * @param _hints - off-chain computed indexes of intervals
+   */
+  function prefetchGlobalSnapshots(
+    uint256 _startingInterval,
+    uint256 _endingInterval,
+    uint256[] calldata _hints,
+    IERC20[] calldata _postProcessTokens
+  ) public {
+    uint256 length = _endingInterval - _startingInterval + 1;
+
+    require(_startingInterval <= nextSnapshotPreCalcInterval, "GovernorRewards: Starting interval too late");
+    require(_endingInterval <= currentInterval(), "GovernorRewards: Can't prefetch future intervals");
+
+    // Fetch snapshots
+    uint256[] memory snapshots = fetchGlobalSnapshots(
+      _startingInterval,
+      _endingInterval,
+      _hints
+    );
+
+    // Store precalculated snapshots
+    for (uint256 i; i < length; i+= 1) {
+      precalulatedGlobalSnapshots[_startingInterval + i] = snapshots[i];
+    }
+
+    // Set next precalc interval
+    nextSnapshotPreCalcInterval = _endingInterval + 1;
+
+    for (uint256 i = 0; i < _postProcessTokens.length; i += 1) {
+      earmark(_postProcessTokens[i]);
     }
   }
 

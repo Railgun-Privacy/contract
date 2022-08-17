@@ -207,6 +207,7 @@ describe('Treasury/GovernorRewards', () => {
       0,
       votingPower.length - 1,
       votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
+      [],
     );
   });
 
@@ -217,8 +218,6 @@ describe('Treasury/GovernorRewards', () => {
     // Fast forward to first interval
     await hre.ethers.provider.send('evm_increaseTime', [distributionInterval]);
     await hre.ethers.provider.send('evm_mine');
-
-    await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0]);
 
     for (let i = 0; i < distributionTokens.length; i += 1) {
       // Set fee distribution interval
@@ -233,7 +232,7 @@ describe('Treasury/GovernorRewards', () => {
 
       // Earmark token
       // eslint-disable-next-line no-await-in-loop
-      await governorRewards.earmark(distributionTokens[i].address);
+      await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0], [distributionTokens[i].address]);
 
       // Get treasury balance after earmark
       // eslint-disable-next-line no-await-in-loop
@@ -266,8 +265,6 @@ describe('Treasury/GovernorRewards', () => {
     await hre.ethers.provider.send('evm_increaseTime', [distributionInterval]);
     await hre.ethers.provider.send('evm_mine');
 
-    await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0]);
-
     for (let i = 0; i < distributionTokens.length; i += 1) {
       // Set fee distribution interval
       // eslint-disable-next-line no-await-in-loop
@@ -281,7 +278,7 @@ describe('Treasury/GovernorRewards', () => {
 
       // Earmark token
       // eslint-disable-next-line no-await-in-loop
-      await governorRewards.earmark(distributionTokens[i].address);
+      await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0], [distributionTokens[i].address]);
 
       // Get treasury balance after earmark
       // eslint-disable-next-line no-await-in-loop
