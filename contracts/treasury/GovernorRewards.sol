@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
+import "hardhat/console.sol";
+
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -20,6 +22,10 @@ import { BitMaps } from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 contract GovernorRewards is Initializable, OwnableUpgradeable {
   using SafeERC20 for IERC20;
   using BitMaps for BitMaps.BitMap;
+
+  // NOTE: The order of instantiation MUST stay the same across upgrades
+  // add new variables to the bottom of the list
+  // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
   // Staking contract
   Staking public staking;
@@ -61,6 +67,12 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
   // Last interval that we've earmarked for each token
   mapping(IERC20 => uint256) public lastEarmarkedInterval;
+
+  // Last interval we've precalculated global snapshot data for
+  uint256 public nextSnapshotPreCalcInterval = 0;
+
+  // Precalculated global snapshots
+  mapping(uint256 => uint256) public precalulatedGlobalSnapshots;
 
   // Starting interval
   uint256 public startingInterval;
@@ -246,6 +258,39 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   }
 
   /**
+   * @notice Prefetches global snapshot data
+   * @param _startingInterval - starting interval to fetch from
+   * @param _endingInterval - interval to fetch to
+   * @param _hints - off-chain computed indexes of intervals
+   */
+  function prefetchGlobalSnapshots(
+    uint256 _startingInterval,
+    uint256 _endingInterval,
+    uint256[] calldata _hints
+  ) public {
+    uint256 length = _endingInterval - _startingInterval;
+
+    require(_hints.length == length, "GovernorRewards: Incorrect number of hints given");
+    require(_startingInterval <= nextSnapshotPreCalcInterval, "GovernorRewards: Starting interval too late");
+    require(_endingInterval <= currentInterval(), "GovernorRewards: Can't prefetch future intervals");
+
+    // Fetch snapshots
+    uint256[] memory snapshots = fetchGlobalSnapshots(
+      _startingInterval,
+      _endingInterval,
+      _hints
+    );
+
+    // Store precalculated snapshots
+    for (uint256 i; i < length; i+= 1) {
+      precalulatedGlobalSnapshots[_startingInterval + i] = snapshots[i];
+    }
+
+    // Set next precalc interval
+    nextSnapshotPreCalcInterval = _endingInterval + 1;
+  }
+
+  /**
    * @notice Earmarks tokens for past intervals
    * @param _token - token to calculate earmarks for
    */
@@ -253,29 +298,32 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     // Check that token is on distribution list
     require(tokens[_token], "GovernorRewards: Token is not on distribution list");
 
+    console.log(nextSnapshotPreCalcInterval);
+
     // Get intervals
-    uint256 _currentInterval = currentInterval();
+    // Will throw if nextSnapshotPreCalcInterval = 0
+    uint256 _calcToInterval = nextSnapshotPreCalcInterval - 1;
     uint256 _lastEarmarkedInterval = lastEarmarkedInterval[_token];
 
-    // Get token earmarked mapping
+    // Get token earmarked array
     mapping(uint256 => uint256) storage tokenEarmarked = earmarked[_token];
 
     // Don't process if we haven't advanced at least one interval
-    if (_currentInterval > _lastEarmarkedInterval) {
+    if (_calcToInterval > _lastEarmarkedInterval) {
       // Get balance from treasury
       uint256 treasuryBalance = _token.balanceOf(address(treasury));
 
       // Get distribution amount per interval
       uint256 distributionAmountPerInterval = treasuryBalance * intervalBP / BASIS_POINTS
-        / (_currentInterval - _lastEarmarkedInterval);
+        / (_calcToInterval - _lastEarmarkedInterval);
 
       // Get total distribution amount
       // We multiply again here instead of using treasuryBalance * intervalBP / BASIS_POINTS
       // to prevent rounding amounts from being lost
-      uint256 totalDistributionAmounts = distributionAmountPerInterval * (_currentInterval - _lastEarmarkedInterval);
+      uint256 totalDistributionAmounts = distributionAmountPerInterval * (_calcToInterval - _lastEarmarkedInterval);
 
       // Store earmarked amounts
-      for (uint256 i = _currentInterval; i < _currentInterval; i += 1) {
+      for (uint256 i = _calcToInterval; i < _calcToInterval; i += 1) {
         tokenEarmarked[i] = distributionAmountPerInterval;
       }
 
@@ -285,7 +333,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   }
 
   function calculateRewards(
-    IERC20[] calldata _token,
+    IERC20[] calldata _tokens,
     address _account,
     uint256 _startingInterval,
     uint256 _endingInterval,
