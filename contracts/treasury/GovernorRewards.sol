@@ -2,8 +2,6 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import "hardhat/console.sol";
-
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -68,14 +66,11 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   // Last interval that we've earmarked for each token
   mapping(IERC20 => uint256) public lastEarmarkedInterval;
 
-  // Last interval we've precalculated global snapshot data for
-  uint256 public nextSnapshotPreCalcInterval = 0;
+  // Next interval to precalculate global snapshot data for
+  uint256 public nextSnapshotPreCalcInterval;
 
   // Precalculated global snapshots
   mapping(uint256 => uint256) public precalulatedGlobalSnapshots;
-
-  // Starting interval
-  uint256 public startingInterval;
 
   /**
    * @notice Sets contracts addresses and initial value
@@ -107,7 +102,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     DISTRIBUTION_INTERVAL = staking.SNAPSHOT_INTERVAL() * STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER;
 
     // Set starting interval
-    startingInterval = _startingInterval;
+    nextSnapshotPreCalcInterval = _startingInterval;
 
     // Set initial tokens to distribute
     for (uint256 i = 0; i < _tokens.length; i += 1) {
@@ -166,14 +161,6 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @param _tokens - new tokens to distribute
    */
   function addTokens(IERC20[] calldata _tokens) external onlyOwner {
-    // Get current interval
-    uint256 _currentInterval = currentInterval();
-
-    // Don't set last earmarked interval to less than starting interval
-    if (_currentInterval < startingInterval) { 
-      _currentInterval = startingInterval;
-    }
-
     // Add tokens to distribution set
     for (uint256 i = 0; i < _tokens.length; i += 1) {
       tokens[_tokens[i]] = true;
@@ -204,12 +191,12 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256 _endingInterval,
     uint256[] calldata _hints
   ) public view returns (uint256[] memory) {
-    uint256 length = _endingInterval - _startingInterval;
+    uint256 length = _endingInterval - _startingInterval + 1;
 
     require(_hints.length == length, "GovernorRewards: Incorrect number of hints given");
 
     // Create snapshots array
-    uint256[] memory snapshots = new uint256[](_endingInterval - _startingInterval);
+    uint256[] memory snapshots = new uint256[](length);
 
     // Loop through each requested snapshot and retrieve voting power
     for (uint256 i = 0; i < length; i += 1) {
@@ -237,12 +224,12 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     address _account,
     uint256[] calldata _hints
   ) public view returns (uint256[] memory) {
-    uint256 length = _endingInterval - _startingInterval;
+    uint256 length = _endingInterval - _startingInterval + 1;
 
     require(_hints.length == length, "GovernorRewards: Incorrect number of hints given");
 
     // Create snapshots array
-    uint256[] memory snapshots = new uint256[](_endingInterval - _startingInterval);
+    uint256[] memory snapshots = new uint256[](length);
 
     // Loop through each requested snapshot and retrieve voting power
     for (uint256 i = 0; i < length; i += 1) {
@@ -268,9 +255,8 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256 _endingInterval,
     uint256[] calldata _hints
   ) public {
-    uint256 length = _endingInterval - _startingInterval;
+    uint256 length = _endingInterval - _startingInterval + 1;
 
-    require(_hints.length == length, "GovernorRewards: Incorrect number of hints given");
     require(_startingInterval <= nextSnapshotPreCalcInterval, "GovernorRewards: Starting interval too late");
     require(_endingInterval <= currentInterval(), "GovernorRewards: Can't prefetch future intervals");
 
@@ -298,8 +284,6 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     // Check that token is on distribution list
     require(tokens[_token], "GovernorRewards: Token is not on distribution list");
 
-    console.log(nextSnapshotPreCalcInterval);
-
     // Get intervals
     // Will throw if nextSnapshotPreCalcInterval = 0
     uint256 _calcToInterval = nextSnapshotPreCalcInterval - 1;
@@ -318,13 +302,15 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
         / (_calcToInterval - _lastEarmarkedInterval);
 
       // Get total distribution amount
-      // We multiply again here instead of using treasuryBalance * intervalBP / BASIS_POINTS
-      // to prevent rounding amounts from being lost
-      uint256 totalDistributionAmounts = distributionAmountPerInterval * (_calcToInterval - _lastEarmarkedInterval);
+      uint256 totalDistributionAmounts = 0;
 
       // Store earmarked amounts
-      for (uint256 i = _calcToInterval; i < _calcToInterval; i += 1) {
-        tokenEarmarked[i] = distributionAmountPerInterval;
+      for (uint256 i = _lastEarmarkedInterval; i < _calcToInterval; i += 1) {
+        // Skip for intervals that have no voting power as those tokens will be unclaimable
+        if (precalulatedGlobalSnapshots[i] > 0) {
+          tokenEarmarked[i] = distributionAmountPerInterval;
+          totalDistributionAmounts += distributionAmountPerInterval;
+        }
       }
 
       // Transfer tokens

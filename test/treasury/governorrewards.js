@@ -72,14 +72,6 @@ describe('Treasury/GovernorRewards', () => {
       distributionTokens.map((token) => token.address),
     );
 
-    // Get constants
-    stakingDistributionIntervalMultiplier = (
-      await governorRewards.STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER()
-    ).toNumber();
-    distributionInterval = (await governorRewards.DISTRIBUTION_INTERVAL()).toNumber();
-    basisPoints = (await governorRewards.BASIS_POINTS()).toNumber();
-    stakingInterval = (await staking.SNAPSHOT_INTERVAL()).toNumber();
-
     // Send distribution tokens balance to treasury
     await Promise.all(distributionTokens.map(async (token) => {
       await token.transfer(treasury.address, 100000n * 10n ** 18n);
@@ -87,6 +79,14 @@ describe('Treasury/GovernorRewards', () => {
 
     // Set fee distribution interval
     await governorRewards.setIntervalBP(10n);
+
+    // Get constants
+    stakingDistributionIntervalMultiplier = (
+      await governorRewards.STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER()
+    ).toNumber();
+    distributionInterval = (await governorRewards.DISTRIBUTION_INTERVAL()).toNumber();
+    basisPoints = (await governorRewards.BASIS_POINTS()).toNumber();
+    stakingInterval = (await staking.SNAPSHOT_INTERVAL()).toNumber();
 
     // Give fee distribution contract transfer role
     await treasury.grantRole(await treasury.TRANSFER_ROLE(), governorRewards.address);
@@ -104,15 +104,15 @@ describe('Treasury/GovernorRewards', () => {
       intervals = 1000;
     }
 
-    // Fast forward to first interval
-    await hre.ethers.provider.send('evm_increaseTime', [distributionInterval]);
-    await hre.ethers.provider.send('evm_mine');
+    // Increase time to first interval
+    await ethers.provider.send('evm_increaseTime', [stakingInterval]);
+    await ethers.provider.send('evm_mine');
 
     let currentVotingPower = 0;
     const votingPower = [0];
 
     // Loop through and create intervals
-    for (let i = stakingDistributionIntervalMultiplier; i < intervals; i += 1) {
+    for (let i = 1; i < intervals; i += 1) {
       // Store voting power snapshot
       if (i % stakingDistributionIntervalMultiplier === 0) {
         votingPower.push(currentVotingPower);
@@ -135,7 +135,7 @@ describe('Treasury/GovernorRewards', () => {
     // Check account with correct hints
     expect((await governorRewards.fetchAccountSnapshots(
       0,
-      votingPower.length,
+      votingPower.length - 1,
       users[0].signer.address,
       votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
     )).map((val) => val.toNumber())).to.deep.equal(votingPower);
@@ -143,7 +143,7 @@ describe('Treasury/GovernorRewards', () => {
     // Check account with incorrect hints
     expect((await governorRewards.fetchAccountSnapshots(
       0,
-      votingPower.length,
+      votingPower.length - 1,
       users[0].signer.address,
       votingPower.map(() => 0),
     )).map((val) => val.toNumber())).to.deep.equal(votingPower);
@@ -151,14 +151,14 @@ describe('Treasury/GovernorRewards', () => {
     // Check global with correct hints
     expect((await governorRewards.fetchGlobalSnapshots(
       0,
-      votingPower.length,
+      votingPower.length - 1,
       votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
     )).map((val) => val.toNumber())).to.deep.equal(votingPower);
 
     // Check global with incorrect hints
     expect((await governorRewards.fetchGlobalSnapshots(
       0,
-      votingPower.length,
+      votingPower.length - 1,
       votingPower.map(() => 0),
     )).map((val) => val.toNumber())).to.deep.equal(votingPower);
   });
@@ -175,15 +175,15 @@ describe('Treasury/GovernorRewards', () => {
       intervals = 1000;
     }
 
-    // Fast forward to first interval
-    await hre.ethers.provider.send('evm_increaseTime', [distributionInterval]);
-    await hre.ethers.provider.send('evm_mine');
+    // Increase time to first interval
+    await ethers.provider.send('evm_increaseTime', [stakingInterval]);
+    await ethers.provider.send('evm_mine');
 
     let currentVotingPower = 0;
     const votingPower = [0];
 
     // Loop through and create intervals
-    for (let i = stakingDistributionIntervalMultiplier; i < intervals; i += 1) {
+    for (let i = 1; i < intervals; i += 1) {
       // Store voting power snapshot
       if (i % stakingDistributionIntervalMultiplier === 0) {
         votingPower.push(currentVotingPower);
@@ -211,11 +211,14 @@ describe('Treasury/GovernorRewards', () => {
   });
 
   it('Should earmark correctly', async () => {
+    // Stake tokens
+    await staking.stake(100n);
+
     // Fast forward to first interval
     await hre.ethers.provider.send('evm_increaseTime', [distributionInterval]);
     await hre.ethers.provider.send('evm_mine');
 
-    await governorRewards.prefetchGlobalSnapshots(0, 1, [0]);
+    await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0]);
 
     for (let i = 0; i < distributionTokens.length; i += 1) {
       // Set fee distribution interval
@@ -223,8 +226,10 @@ describe('Treasury/GovernorRewards', () => {
       await governorRewards.setIntervalBP(i);
 
       // Get treasury balance before earmark
-      // eslint-disable-next-line no-await-in-loop
-      const treasuryBalanceBeforeEarmark = await distributionTokens[i].balanceOf(treasury.address);
+      const treasuryBalanceBeforeEarmark = BigInt(
+        // eslint-disable-next-line no-await-in-loop
+        await distributionTokens[i].balanceOf(treasury.address),
+      );
 
       // Earmark token
       // eslint-disable-next-line no-await-in-loop
@@ -232,11 +237,14 @@ describe('Treasury/GovernorRewards', () => {
 
       // Get treasury balance after earmark
       // eslint-disable-next-line no-await-in-loop
-      const treasuryBalanceAfterEarmark = await distributionTokens[i].balanceOf(treasury.address);
+      const treasuryBalanceAfterEarmark = BigInt(
+        // eslint-disable-next-line no-await-in-loop
+        await distributionTokens[i].balanceOf(treasury.address),
+      );
 
       // Check that the right amount was subtracted from treasury
       expect(treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark).to.equal(
-        (BigInt(treasuryBalanceBeforeEarmark) * BigInt(i)) / BigInt(basisPoints),
+        (treasuryBalanceBeforeEarmark * BigInt(i)) / BigInt(basisPoints),
       );
 
       // Check that the right amount was added to the fee distribution contract
@@ -247,9 +255,51 @@ describe('Treasury/GovernorRewards', () => {
 
       // Check that the right amount was entered in the earmarked record
       // eslint-disable-next-line no-await-in-loop
-      expect(await governorRewards.earmarked(distributionTokens[i].address, 0n)).to.equal(
+      expect(await governorRewards.earmarked(distributionTokens[i].address, 0)).to.equal(
         treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark,
       );
+    }
+  });
+
+  it('Shouldn\'t earmark if no tokens are staked', async () => {
+    // Fast forward to first interval
+    await hre.ethers.provider.send('evm_increaseTime', [distributionInterval]);
+    await hre.ethers.provider.send('evm_mine');
+
+    await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0]);
+
+    for (let i = 0; i < distributionTokens.length; i += 1) {
+      // Set fee distribution interval
+      // eslint-disable-next-line no-await-in-loop
+      await governorRewards.setIntervalBP(i);
+
+      // Get treasury balance before earmark
+      const treasuryBalanceBeforeEarmark = BigInt(
+        // eslint-disable-next-line no-await-in-loop
+        await distributionTokens[i].balanceOf(treasury.address),
+      );
+
+      // Earmark token
+      // eslint-disable-next-line no-await-in-loop
+      await governorRewards.earmark(distributionTokens[i].address);
+
+      // Get treasury balance after earmark
+      // eslint-disable-next-line no-await-in-loop
+      const treasuryBalanceAfterEarmark = BigInt(
+        // eslint-disable-next-line no-await-in-loop
+        await distributionTokens[i].balanceOf(treasury.address),
+      );
+
+      // Check that nothing was subtracted from treasury
+      expect(treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark).to.equal(0n);
+
+      // Check that nothing was added to the fee distribution contract
+      // eslint-disable-next-line no-await-in-loop
+      expect(await distributionTokens[i].balanceOf(governorRewards.address)).to.equal(0n);
+
+      // Check that nothing was entered in the earmarked record
+      // eslint-disable-next-line no-await-in-loop
+      expect(await governorRewards.earmarked(distributionTokens[i].address, 0)).to.equal(0n);
     }
   });
 });
