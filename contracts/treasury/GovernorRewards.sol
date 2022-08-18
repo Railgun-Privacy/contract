@@ -283,6 +283,9 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
       // Transfer tokens
       treasury.transferERC20(_token, address(this), totalDistributionAmounts);
+
+      // Store last earmarked interval for token
+      lastEarmarkedInterval[_token] = _calcToInterval;
     }
   }
 
@@ -323,13 +326,46 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     }
   }
 
+  /**
+   * @notice Calculates rewards to payout for each token
+   * @param _tokens - tokens to calculate rewards for
+   * @param _account - account to calculate rewards for
+   * @param _startingInterval - starting interval to calculate from
+   * @param _endingInterval - interval to calculate to
+   * @param _hints - off-chain computed indexes of intervals
+   * @param _ignoreClaimed - whether to include already claimed tokens in calculation
+   */
   function calculateRewards(
     IERC20[] calldata _tokens,
     address _account,
     uint256 _startingInterval,
     uint256 _endingInterval,
-    uint256 _startingHint
-  ) public returns (uint256) {
+    uint256[] calldata _hints,
+    bool _ignoreClaimed
+  ) public view returns (uint256[] memory) {
+    // Get account snapshots
+    uint256[] memory accountSnapshots = fetchAccountSnapshots(_startingInterval, _endingInterval, _account, _hints);
 
+    // Loop through each token and accumulate reward
+    uint256[] memory rewards = new uint256[](_tokens.length);
+    for (uint256 token = 0; token < _tokens.length; token += 1) {
+      // Get claimed bitmap for token
+      BitMaps.BitMap storage tokenClaimedMap = claimedBitmap[_account][_tokens[token]];
+
+      // Get earmarked for token
+      mapping(uint256 => uint256) storage tokenEarmarked = earmarked[_tokens[token]];
+
+      // Loop through each snapshot and accumulate rewards
+      uint256 tokenReward = 0;
+      for (uint256 interval = _startingInterval; interval <= _endingInterval; interval += 1) {
+        if (!_ignoreClaimed || !tokenClaimedMap.get(interval)) {
+          tokenReward += tokenEarmarked[interval]
+            * accountSnapshots[interval - _startingInterval]
+            / precalulatedGlobalSnapshots[interval - _startingInterval];
+        }
+      }
+    }
+
+    return rewards;
   }
 }
