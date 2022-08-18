@@ -411,6 +411,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     // Loop through and transfer tokens (seperate loop to prevent reentrancy)
     for (uint256 token = 0; token < _tokens.length; token += 1) {
       _tokens[token].safeTransfer(_account, rewards[token]);
+      emit Claim(_tokens[token], _account, rewards[token], _startingInterval, _endingInterval);
     }
   }
 }
