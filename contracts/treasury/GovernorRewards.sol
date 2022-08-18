@@ -300,7 +300,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256 _endingInterval,
     uint256[] calldata _hints,
     IERC20[] calldata _postProcessTokens
-  ) public {
+  ) external {
     uint256 length = _endingInterval - _startingInterval + 1;
 
     require(_startingInterval <= nextSnapshotPreCalcInterval, "GovernorRewards: Starting interval too late");
@@ -349,6 +349,8 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     // Loop through each token and accumulate reward
     uint256[] memory rewards = new uint256[](_tokens.length);
     for (uint256 token = 0; token < _tokens.length; token += 1) {
+      require(_endingInterval <= lastEarmarkedInterval[_tokens[token]], "GovernorRewards: Tried to claim beyond last earmarked interval");
+
       // Get claimed bitmap for token
       BitMaps.BitMap storage tokenClaimedMap = claimedBitmap[_account][_tokens[token]];
 
@@ -358,6 +360,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       // Loop through each snapshot and accumulate rewards
       uint256 tokenReward = 0;
       for (uint256 interval = _startingInterval; interval <= _endingInterval; interval += 1) {
+        // Skip if already claimed if we're ignoring claimed amounts
         if (!_ignoreClaimed || !tokenClaimedMap.get(interval)) {
           tokenReward += tokenEarmarked[interval]
             * accountSnapshots[interval - _startingInterval]
@@ -367,5 +370,47 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     }
 
     return rewards;
+  }
+
+  /**
+   * @notice Pays out rewards for block of 
+   * @param _tokens - tokens to calculate rewards for
+   * @param _account - account to calculate rewards for
+   * @param _startingInterval - starting interval to calculate from
+   * @param _endingInterval - interval to calculate to
+   * @param _hints - off-chain computed indexes of intervals=
+   */
+  function claim(
+    IERC20[] calldata _tokens,
+    address _account,
+    uint256 _startingInterval,
+    uint256 _endingInterval,
+    uint256[] calldata _hints
+  ) external {
+    // Calculate rewards
+    uint256[] memory rewards = calculateRewards(
+      _tokens,
+      _account,
+      _startingInterval,
+      _endingInterval,
+      _hints,
+      true
+    );
+
+    // Mark all claimed intervals
+    for (uint256 token = 0; token < _tokens.length; token += 1) {
+      // Get claimed bitmap for token
+      BitMaps.BitMap storage tokenClaimedMap = claimedBitmap[_account][_tokens[token]];
+
+      // Set all claimed intervals
+      for (uint256 interval = _startingInterval; interval <= _endingInterval; interval += 1) {
+        tokenClaimedMap.set(interval);
+      }
+    }
+
+    // Loop through and transfer tokens (seperate loop to prevent reentrancy)
+    for (uint256 token = 0; token < _tokens.length; token += 1) {
+      _tokens[token].safeTransfer(_account, rewards[token]);
+    }
   }
 }
