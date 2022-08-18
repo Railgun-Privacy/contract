@@ -93,7 +93,7 @@ describe('Treasury/GovernorRewards', () => {
   });
 
   // eslint-disable-next-line func-names
-  it('Should retrieve snapshot sequence correctly', async function () {
+  it('Should retrieve snapshot sequence', async function () {
     let intervals = 50;
 
     if (process.env.LONG_TESTS === 'extra') {
@@ -164,7 +164,7 @@ describe('Treasury/GovernorRewards', () => {
   });
 
   // eslint-disable-next-line func-names
-  it('Should precalculate global snapshots correctly', async function () {
+  it('Should precalculate global snapshots', async function () {
     let intervals = 50;
 
     if (process.env.LONG_TESTS === 'extra') {
@@ -211,7 +211,7 @@ describe('Treasury/GovernorRewards', () => {
     );
   });
 
-  it('Should earmark correctly', async () => {
+  it('Should earmark', async () => {
     // Stake tokens
     await staking.stake(100n);
 
@@ -298,5 +298,45 @@ describe('Treasury/GovernorRewards', () => {
       // eslint-disable-next-line no-await-in-loop
       expect(await governorRewards.earmarked(distributionTokens[i].address, 0)).to.equal(0n);
     }
+  });
+
+  it('Should calculate rewards', async () => {
+    // Stake tokens
+    await users[0].staking.stake(100n);
+    await users[1].staking.stake(100n);
+
+    // Increase time to 10th interval
+    await ethers.provider.send('evm_increaseTime', [distributionInterval * 10]);
+    await ethers.provider.send('evm_mine');
+
+    // Prefetch data
+    await governorRewards.prefetchGlobalSnapshots(
+      0,
+      9,
+      new Array(10).fill(0),
+      distributionTokens.map((token) => token.address),
+    );
+
+    // Calculate rewards
+    const user1reward = (await governorRewards.calculateRewards(
+      distributionTokens.map((token) => token.address),
+      users[0].signer.address,
+      0,
+      9,
+      new Array(10).fill(0),
+      false,
+    )).map(BigInt);
+
+    const user2reward = (await governorRewards.calculateRewards(
+      distributionTokens.map((token) => token.address),
+      users[1].signer.address,
+      0,
+      9,
+      new Array(10).fill(0),
+      false,
+    )).map(BigInt);
+
+    // Rewards should be the same for equal stakes
+    expect(user1reward).to.deep.equal(user2reward);
   });
 });

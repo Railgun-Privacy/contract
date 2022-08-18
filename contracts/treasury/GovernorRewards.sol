@@ -367,6 +367,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
             / precalulatedGlobalSnapshots[interval - _startingInterval];
         }
       }
+      rewards[token] = tokenReward;
     }
 
     return rewards;
