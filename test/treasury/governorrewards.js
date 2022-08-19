@@ -338,5 +338,19 @@ describe('Treasury/GovernorRewards', () => {
 
     // Rewards should be the same for equal stakes
     expect(user1reward).to.deep.equal(user2reward);
+
+    // Get total rewards
+    let totalRewards = 0n;
+    for (let i = 0; i <= 9; i += 1) {
+      const intervalEarmarked = BigInt(
+        // eslint-disable-next-line no-await-in-loop
+        await governorRewards.earmarked(distributionTokens[0].address, 0),
+      );
+
+      totalRewards += intervalEarmarked / 2n;
+    }
+
+    // Check rewards are what we expect
+    expect(user1reward[0]).to.equal(totalRewards);
   });
 });
