@@ -203,12 +203,19 @@ describe('Treasury/GovernorRewards', () => {
       await ethers.provider.send('evm_mine');
     }
 
+    // Prefetch global snapshots
     await governorRewards.prefetchGlobalSnapshots(
       0,
       votingPower.length - 1,
       votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
       [],
     );
+
+    // Check fetched values
+    for (let i = 0; i < votingPower.length; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      expect(await governorRewards.precalculatedGlobalSnapshots(i)).to.equal(votingPower[i]);
+    }
   });
 
   it('Should earmark', async () => {
@@ -242,8 +249,8 @@ describe('Treasury/GovernorRewards', () => {
       );
 
       // Check that the right amount was subtracted from treasury
-      expect(treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark).to.equal(
-        (treasuryBalanceBeforeEarmark * BigInt(i)) / BigInt(basisPoints),
+      expect((treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark).toString()).to.equal(
+        ((treasuryBalanceBeforeEarmark * BigInt(i)) / BigInt(basisPoints)).toString(),
       );
 
       // Check that the right amount was added to the fee distribution contract
@@ -253,9 +260,13 @@ describe('Treasury/GovernorRewards', () => {
       );
 
       // Check that the right amount was entered in the earmarked record
-      // eslint-disable-next-line no-await-in-loop
-      expect(await governorRewards.earmarked(distributionTokens[i].address, 0)).to.equal(
-        treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark,
+      expect(
+        // eslint-disable-next-line no-await-in-loop
+        (BigInt(await governorRewards.earmarked(distributionTokens[i].address, 0))
+        // eslint-disable-next-line no-await-in-loop
+        + BigInt(await governorRewards.earmarked(distributionTokens[i].address, 1))).toString(),
+      ).to.equal(
+        (treasuryBalanceBeforeEarmark - treasuryBalanceAfterEarmark).toString(),
       );
     }
   });
@@ -297,6 +308,8 @@ describe('Treasury/GovernorRewards', () => {
       // Check that nothing was entered in the earmarked record
       // eslint-disable-next-line no-await-in-loop
       expect(await governorRewards.earmarked(distributionTokens[i].address, 0)).to.equal(0n);
+      // eslint-disable-next-line no-await-in-loop
+      expect(await governorRewards.earmarked(distributionTokens[i].address, 1)).to.equal(0n);
     }
   });
 
@@ -344,13 +357,13 @@ describe('Treasury/GovernorRewards', () => {
     for (let i = 0; i <= 9; i += 1) {
       const intervalEarmarked = BigInt(
         // eslint-disable-next-line no-await-in-loop
-        await governorRewards.earmarked(distributionTokens[0].address, 0),
+        await governorRewards.earmarked(distributionTokens[0].address, i),
       );
 
       totalRewards += intervalEarmarked / 2n;
     }
 
     // Check rewards are what we expect
-    expect(user1reward[0]).to.equal(totalRewards);
+    expect(user1reward[0].toString()).to.equal(totalRewards.toString());
   });
 });

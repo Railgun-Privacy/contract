@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
+import "hardhat/console.sol";
+
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -63,14 +65,14 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   // Tokens to airdrop
   mapping(IERC20 => bool) public tokens;
 
-  // Last interval that we've earmarked for each token
-  mapping(IERC20 => uint256) public lastEarmarkedInterval;
+  // Next interval to earmark for each token
+  mapping(IERC20 => uint256) public nextEarmarkInterval;
 
   // Next interval to precalculate global snapshot data for
   uint256 public nextSnapshotPreCalcInterval;
 
   // Precalculated global snapshots
-  mapping(uint256 => uint256) public precalulatedGlobalSnapshots;
+  mapping(uint256 => uint256) public precalculatedGlobalSnapshots;
 
   /**
    * @notice Sets contracts addresses and initial value
@@ -164,7 +166,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     // Add tokens to distribution set
     for (uint256 i = 0; i < _tokens.length; i += 1) {
       tokens[_tokens[i]] = true;
-      lastEarmarkedInterval[_tokens[i]] = currentInterval();
+      nextEarmarkInterval[_tokens[i]] = currentInterval();
     }
   }
 
@@ -255,27 +257,27 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     // Get intervals
     // Will throw if nextSnapshotPreCalcInterval = 0
     uint256 _calcToInterval = nextSnapshotPreCalcInterval - 1;
-    uint256 _lastEarmarkedInterval = lastEarmarkedInterval[_token];
+    uint256 _calcFromInterval = nextEarmarkInterval[_token];
 
     // Get token earmarked array
     mapping(uint256 => uint256) storage tokenEarmarked = earmarked[_token];
 
     // Don't process if we haven't advanced at least one interval
-    if (_calcToInterval > _lastEarmarkedInterval) {
+    if (_calcToInterval >= _calcFromInterval) {
       // Get balance from treasury
       uint256 treasuryBalance = _token.balanceOf(address(treasury));
 
       // Get distribution amount per interval
       uint256 distributionAmountPerInterval = treasuryBalance * intervalBP / BASIS_POINTS
-        / (_calcToInterval - _lastEarmarkedInterval);
+        / (_calcToInterval - _calcFromInterval + 1);
 
       // Get total distribution amount
       uint256 totalDistributionAmounts = 0;
 
       // Store earmarked amounts
-      for (uint256 i = _lastEarmarkedInterval; i < _calcToInterval; i += 1) {
+      for (uint256 i = _calcFromInterval; i <= _calcToInterval; i += 1) {
         // Skip for intervals that have no voting power as those tokens will be unclaimable
-        if (precalulatedGlobalSnapshots[i] > 0) {
+        if (precalculatedGlobalSnapshots[i] > 0) {
           tokenEarmarked[i] = distributionAmountPerInterval;
           totalDistributionAmounts += distributionAmountPerInterval;
         }
@@ -285,7 +287,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       treasury.transferERC20(_token, address(this), totalDistributionAmounts);
 
       // Store last earmarked interval for token
-      lastEarmarkedInterval[_token] = _calcToInterval;
+      nextEarmarkInterval[_token] = _calcToInterval + 1;
     }
   }
 
@@ -314,8 +316,8 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     );
 
     // Store precalculated snapshots
-    for (uint256 i; i < length; i+= 1) {
-      precalulatedGlobalSnapshots[_startingInterval + i] = snapshots[i];
+    for (uint256 i = 0; i < length; i+= 1) {
+      precalculatedGlobalSnapshots[_startingInterval + i] = snapshots[i];
     }
 
     // Set next precalc interval
@@ -349,7 +351,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     // Loop through each token and accumulate reward
     uint256[] memory rewards = new uint256[](_tokens.length);
     for (uint256 token = 0; token < _tokens.length; token += 1) {
-      require(_endingInterval <= lastEarmarkedInterval[_tokens[token]], "GovernorRewards: Tried to claim beyond last earmarked interval");
+      require(_endingInterval < nextEarmarkInterval[_tokens[token]], "GovernorRewards: Tried to claim beyond last earmarked interval");
 
       // Get claimed bitmap for token
       BitMaps.BitMap storage tokenClaimedMap = claimedBitmap[_account][_tokens[token]];
@@ -364,7 +366,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
         if (!_ignoreClaimed || !tokenClaimedMap.get(interval)) {
           tokenReward += tokenEarmarked[interval]
             * accountSnapshots[interval - _startingInterval]
-            / precalulatedGlobalSnapshots[interval - _startingInterval];
+            / precalculatedGlobalSnapshots[interval - _startingInterval];
         }
       }
       rewards[token] = tokenReward;
