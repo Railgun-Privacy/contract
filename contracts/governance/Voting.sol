@@ -19,6 +19,7 @@ contract Voting {
   uint256 public constant VOTING_NAY_END_OFFSET = 6 days;
   uint256 public constant EXECUTION_START_OFFSET = 7 days;
   uint256 public constant EXECUTION_END_OFFSET = 14 days;
+  uint256 public constant SPONSOR_LOCKOUT_TIME = 7 days;
 
   // Threshold constants
   uint256 public constant QUORUM = 2000000e18; // 2 million, 18 decimal places
@@ -41,6 +42,9 @@ contract Voting {
 
   // Proposal executed
   event Execution(uint256 indexed id);
+
+  // Proposal executed
+  event VoteKeySet(address indexed account, address votingKey);
 
   // Function call
   struct Call {
@@ -81,13 +85,31 @@ contract Voting {
   // Proposals id => proposal data
   ProposalStruct[] public proposals;
 
-  // Proposal cost ramp
-  // @todo
+  // Voting keys
+  mapping(address => address) public votingKey;
+
+  // Last sponsored proposal data
+  struct LastSponsored {
+    uint256 lastSponsorTime;
+    uint256 proposalID;
+  }
+  mapping(address => LastSponsored) public lastSponsored;
 
   /* solhint-disable var-name-mixedcase */
   Staking public immutable STAKING_CONTRACT;
   Delegator public immutable DELEGATOR_CONTRACT;
   /* solhint-enable var-name-mixedcase */
+
+  // Only voting key modifier
+  modifier onlyVotingKey(address _account) {
+    // Only voting key or main key can call
+    require(
+      msg.sender == _account || msg.sender == votingKey[_account],
+      "Voting: Caller not authorized"
+    );
+
+    _;
+  }
 
   /**
    * @notice Sets governance token ID and delegator contract
@@ -142,6 +164,16 @@ contract Voting {
     return proposals[_id].voted[_account];
   }
 
+
+  /**
+   * @notice Sets voting key for account
+   * @param _votingKey - voting key address
+   */
+  function setVotingKey(address _votingKey) external {
+    votingKey[msg.sender] = _votingKey;
+    emit VoteKeySet(msg.sender, _votingKey);
+  }
+
   /**
    * @notice Creates governance proposal
    * @param _proposalDocument - IPFS multihash of proposal document
@@ -187,10 +219,18 @@ contract Voting {
    * @notice Sponsor proposal
    * @param _id - id of proposal to sponsor
    * @param _amount - amount to sponsor with
+   * @param _account - account to vote with
    * @param _hint - hint for snapshot search
    */
 
-  function sponsorProposal(uint256 _id, uint256 _amount, uint256 _hint) external {
+  function sponsorProposal(uint256 _id, uint256 _amount, address _account, uint256 _hint) external onlyVotingKey(_account) {
+    // Prevent proposal spam
+    require(
+      lastSponsored[_account].proposalID == _id
+      || block.timestamp - lastSponsored[_account].lastSponsorTime > 7 days,
+      "Voting: Can only sponsor one proposal per week"
+    );
+
     ProposalStruct storage proposal = proposals[_id];
 
     // Check proposal hasn't already gone to vote
@@ -199,33 +239,38 @@ contract Voting {
     // Check proposal is still in sponsor window
     require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
 
+    // Set last sponsored info
+    lastSponsored[_account].proposalID = _id;
+    lastSponsored[_account].lastSponsorTime = block.timestamp;
+
     // Get address sponsor voting power
     Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
-      msg.sender,
+      _account,
       proposal.sponsorInterval,
       _hint
     );
 
     // Can't sponsor with more than voting power
-    require(proposal.sponsors[msg.sender] + _amount <= snapshot.votingPower, "Voting: Not enough voting power");
+    require(proposal.sponsors[_account] + _amount <= snapshot.votingPower, "Voting: Not enough voting power");
 
     // Update address sponsorship amount on proposal
-    proposal.sponsors[msg.sender] += _amount;
+    proposal.sponsors[_account] += _amount;
 
     // Update sponsor total
     proposal.sponsorship += _amount;
 
     // Emit event
-    emit Sponsorship(_id, msg.sender, _amount);
+    emit Sponsorship(_id, _account, _amount);
   }
 
   /**
    * @notice Unsponsor proposal
    * @param _id - id of proposal to sponsor
+   * @param _account - account to vote with
    * @param _amount - amount to sponsor with
    */
 
-  function unsponsorProposal(uint256 _id, uint256 _amount) external {
+  function unsponsorProposal(uint256 _id, uint256 _amount, address _account) external onlyVotingKey(_account) {
     ProposalStruct storage proposal = proposals[_id];
 
     // Check proposal hasn't already gone to vote
@@ -235,16 +280,16 @@ contract Voting {
     require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
 
     // Can't unsponsor more than sponsored
-    require(_amount <= proposal.sponsors[msg.sender], "Voting: Amount greater than sponsored");
+    require(_amount <= proposal.sponsors[_account], "Voting: Amount greater than sponsored");
 
     // Update address sponsorship amount on proposal
-    proposal.sponsors[msg.sender] -= _amount;
+    proposal.sponsors[_account] -= _amount;
 
     // Update sponsor total
     proposal.sponsorship -= _amount;
 
     // Emit event
-    emit SponsorshipRevocation(_id, msg.sender, _amount);
+    emit SponsorshipRevocation(_id, _account, _amount);
   }
 
   /**
@@ -280,10 +325,11 @@ contract Voting {
    * @param _id - id of proposal to call to vote
    * @param _amount - amount of voting power to allocate
    * @param _affirmative - whether to vote yay (true) or nay (false) on this proposal
+   * @param _account - account to vote with
    * @param _hint - hint for snapshot search
    */
 
-  function vote(uint256 _id, uint256 _amount, bool _affirmative, uint256 _hint) external {
+  function vote(uint256 _id, uint256 _amount, bool _affirmative, address _account, uint256 _hint) external onlyVotingKey(_account) {
     ProposalStruct storage proposal = proposals[_id];
 
     // Check vote has been called
@@ -301,16 +347,16 @@ contract Voting {
 
     // Get address voting power
     Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
-      msg.sender,
+      _account,
       proposal.votingInterval,
       _hint
     );
 
     // Check address isn't voting with more voting power than it has
-    require(proposal.voted[msg.sender] + _amount <= snapshot.votingPower, "Voting: Not enough voting power to cast this vote");
+    require(proposal.voted[_account] + _amount <= snapshot.votingPower, "Voting: Not enough voting power to cast this vote");
 
     // Update account voted amount
-    proposal.voted[msg.sender] += _amount;
+    proposal.voted[_account] += _amount;
 
     // Update voting totals
     if (_affirmative) {
@@ -320,7 +366,7 @@ contract Voting {
     }
 
     // Emit event
-    emit VoteCast(_id, msg.sender, _affirmative, _amount);
+    emit VoteCast(_id, _account, _affirmative, _amount);
   }
 
   /**

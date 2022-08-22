@@ -26,9 +26,17 @@ let executionStartOffset;
 let executionEndOffset;
 let quorum;
 let proposalSponsorThreshold;
+let sponsorLockoutTime;
+
+// User addresses
+let user1;
+let user2;
 
 describe('Governance/Voting', () => {
   beforeEach(async () => {
+    // Get users
+    [user1, user2] = await ethers.getSigners();
+
     // Get build artifacts
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     const Staking = await ethers.getContractFactory('StakingStub');
@@ -82,6 +90,7 @@ describe('Governance/Voting', () => {
     executionEndOffset = await voting.EXECUTION_END_OFFSET();
     quorum = await voting.QUORUM();
     proposalSponsorThreshold = await voting.PROPOSAL_SPONSOR_THRESHOLD();
+    sponsorLockoutTime = await voting.SPONSOR_LOCKOUT_TIME();
   });
 
   it('Should go through vote lifecycle correctly', async () => {
@@ -105,7 +114,7 @@ describe('Governance/Voting', () => {
     expect(proposal.sponsorInterval).to.equal(1n);
 
     // Trying to cast vote should fail
-    await expect(voting.vote(0n, 100n, true, 0n)).to.eventually.be.rejectedWith(
+    await expect(voting.vote(0n, 100n, true, user1.address, 0n)).to.eventually.be.rejectedWith(
       'Voting: Vote hasn\'t been called for this proposal',
     );
 
@@ -115,10 +124,10 @@ describe('Governance/Voting', () => {
     );
 
     // Sponsor proposal
-    await voting.sponsorProposal(0n, proposalSponsorThreshold, 0n);
+    await voting.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n);
 
     // Trying to cast vote should fail
-    await expect(voting.vote(0n, 100n, true, 0n)).to.eventually.be.rejectedWith(
+    await expect(voting.vote(0n, 100n, true, user1.address, 0n)).to.eventually.be.rejectedWith(
       'Voting: Vote hasn\'t been called for this proposal',
     );
 
@@ -128,10 +137,10 @@ describe('Governance/Voting', () => {
     );
 
     // Unsponsor vote
-    await voting.unsponsorProposal(0n, proposalSponsorThreshold);
+    await voting.unsponsorProposal(0n, proposalSponsorThreshold, user1.address);
 
     // Unsponsoring more than sponsored should fail
-    await expect(voting.unsponsorProposal(0n, proposalSponsorThreshold))
+    await expect(voting.unsponsorProposal(0n, proposalSponsorThreshold, user1.address))
       .to.eventually.be.rejectedWith('Voting: Amount greater than sponsored');
 
     // Trying to call vote should fail
@@ -140,7 +149,7 @@ describe('Governance/Voting', () => {
     );
 
     // Sponsor proposal
-    await voting.sponsorProposal(0n, proposalSponsorThreshold, 0n);
+    await voting.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n);
 
     // Send to vote
     await voting.callVote(0n);
@@ -163,7 +172,7 @@ describe('Governance/Voting', () => {
     );
 
     // Trying to vote should fail
-    await expect(voting.vote(0n, quorum, true, 0n)).to.eventually.be.rejectedWith(
+    await expect(voting.vote(0n, quorum, true, user1.address, 0n)).to.eventually.be.rejectedWith(
       'Voting: Voting window hasn\'t opened',
     );
 
@@ -172,10 +181,10 @@ describe('Governance/Voting', () => {
     await ethers.provider.send('evm_mine');
 
     // Cast vote
-    await voting.vote(0n, quorum, true, 0n);
-    await voting.vote(0n, quorum, true, 0n);
-    await voting.vote(0n, quorum, true, 0n);
-    await voting.vote(0n, quorum, true, 0n);
+    await voting.vote(0n, quorum, true, user1.address, 0n);
+    await voting.vote(0n, quorum, true, user1.address, 0n);
+    await voting.vote(0n, quorum, true, user1.address, 0n);
+    await voting.vote(0n, quorum, true, user1.address, 0n);
 
     // Trying to execute should fail
     await expect(voting.executeProposal(0n)).to.eventually.be.rejectedWith(
@@ -190,12 +199,12 @@ describe('Governance/Voting', () => {
     await ethers.provider.send('evm_mine');
 
     // Vote yes should fail
-    await expect(voting.vote(0n, quorum, true, 0n)).to.eventually.be.rejectedWith(
+    await expect(voting.vote(0n, quorum, true, user1.address, 0n)).to.eventually.be.rejectedWith(
       'Voting: Affirmative voting window has closed',
     );
 
     // Cast a no vote
-    await voting.vote(0n, quorum, false, 0n);
+    await voting.vote(0n, quorum, false, user1.address, 0n);
 
     // Increase time to no window end
     await ethers.provider.send('evm_increaseTime', [
@@ -205,7 +214,7 @@ describe('Governance/Voting', () => {
     await ethers.provider.send('evm_mine');
 
     // Vote no should fail
-    await expect(voting.vote(0n, quorum, false, 0n)).to.eventually.be.rejectedWith(
+    await expect(voting.vote(0n, quorum, false, user1.address, 0n)).to.eventually.be.rejectedWith(
       'Voting: Negative voting window has closed',
     );
 
@@ -261,7 +270,7 @@ describe('Governance/Voting', () => {
 
     // Sponsor should fail
     await expect(
-      voting.sponsorProposal(0n, proposalSponsorThreshold, 0n),
+      voting.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n),
     ).to.eventually.be.rejectedWith(
       'Voting: Sponsoring window passed',
     );
@@ -278,7 +287,7 @@ describe('Governance/Voting', () => {
     ]);
 
     // Sponsor proposal
-    await voting.sponsorProposal(0n, proposalSponsorThreshold, 0n);
+    await voting.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n);
 
     // Send to vote
     await voting.callVote(0n);
@@ -288,7 +297,8 @@ describe('Governance/Voting', () => {
     await ethers.provider.send('evm_mine');
 
     // Cast vote
-    await voting.vote(0n, quorum, false, 0n);
+    await voting.vote(0n, quorum, true, user1.address, 0n);
+    await voting.vote(0n, quorum + 1n, false, user1.address, 0n);
 
     // Increase time to execution window start
     await ethers.provider.send('evm_increaseTime', [
@@ -314,7 +324,7 @@ describe('Governance/Voting', () => {
     ]);
 
     // Sponsor proposal
-    await voting.sponsorProposal(0n, proposalSponsorThreshold, 0n);
+    await voting.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n);
 
     // Send to vote
     await voting.callVote(0n);
@@ -324,7 +334,7 @@ describe('Governance/Voting', () => {
     await ethers.provider.send('evm_mine');
 
     // Cast vote
-    await voting.vote(0n, quorum, true, 0n);
+    await voting.vote(0n, quorum, true, user1.address, 0n);
 
     // Increase time to execution window start
     await ethers.provider.send('evm_increaseTime', [
@@ -341,5 +351,74 @@ describe('Governance/Voting', () => {
 
     // Check greeter has changed
     expect(await target2.greeting()).to.equal('hi');
+  });
+
+  it('Should only be able to sponsor once per week', async () => {
+    // Create 2 proposals
+    await voting.createProposal(proposalDocument, [
+      {
+        callContract: target.address,
+        data: target.interface.encodeFunctionData('a()', []),
+        value: 0,
+      },
+    ]);
+
+    await voting.createProposal(proposalDocument, [
+      {
+        callContract: target.address,
+        data: target.interface.encodeFunctionData('a()', []),
+        value: 0,
+      },
+    ]);
+
+    // Sponsor first proposal
+    await voting.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n);
+
+    // Sponsor second proposal should fail
+    await expect(
+      voting.sponsorProposal(1n, proposalSponsorThreshold, user1.address, 0n),
+    ).to.eventually.be.rejectedWith(
+      'Voting: Can only sponsor one proposal per week',
+    );
+
+    // Increase time to sponsor lockout time end
+    await ethers.provider.send('evm_increaseTime', [
+      Number(sponsorLockoutTime.toString()),
+    ]);
+    await ethers.provider.send('evm_mine');
+
+    // Sponsor second proposal should pass now
+    await expect(
+      voting.sponsorProposal(1n, proposalSponsorThreshold, user1.address, 0n),
+    ).to.eventually.be.fulfilled;
+  });
+
+  it('Should only allow voting key to call', async () => {
+    // Get second user
+    const voting2 = voting.connect(user2);
+
+    // Create proposal
+    await voting.createProposal(proposalDocument, [
+      {
+        callContract: target.address,
+        data: target.interface.encodeFunctionData('a()', []),
+        value: 0,
+      },
+    ]);
+
+    // Sponsor without permission should fail
+    await expect(
+      voting2.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n),
+    ).to.eventually.be.rejectedWith(
+      'Voting: Caller not authorized',
+    );
+
+    // Set voting key
+    await voting.setVotingKey(user2.address);
+
+    // Sponsor with permission should pass
+    await expect(
+      voting2.sponsorProposal(0n, proposalSponsorThreshold, user1.address, 0n),
+    ).to.eventually.be.fulfilled;
   });
 });
