@@ -1,16 +1,16 @@
-# Node/Editors
+# Node
 node_modules
 package-lock.json
 yarn.lock
 .vscode
 
-# Private config files
-networks.config.js
-
 # Hardhat files
 artifacts
 cache
-docs
+coverage
+coverage.json
+typechain
+typechain-types
 
 # Temporary Files
-ephemeral
+scripts/ephemeral
