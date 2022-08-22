@@ -81,6 +81,9 @@ contract Voting {
   // Proposals id => proposal data
   ProposalStruct[] public proposals;
 
+  // Proposal cost ramp
+  // @todo
+
   /* solhint-disable var-name-mixedcase */
   Staking public immutable STAKING_CONTRACT;
   Delegator public immutable DELEGATOR_CONTRACT;
@@ -332,7 +335,7 @@ contract Voting {
     require(proposal.voteCallTime > 0, "Voting: Vote hasn't been called for this proposal");
 
     // Check quorum has been reached
-    require(proposal.yayVotes + proposal.nayVotes >= QUORUM, "Voting: Quorum hasn't been reached");
+    require(proposal.yayVotes >= QUORUM, "Voting: Quorum hasn't been reached");
 
     // Check vote passed
     require(proposal.yayVotes > proposal.nayVotes, "Voting: Proposal hasn't passed vote");
