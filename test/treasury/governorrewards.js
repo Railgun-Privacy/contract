@@ -366,4 +366,92 @@ describe('Treasury/GovernorRewards', () => {
     // Check rewards are what we expect
     expect(user1reward[0].toString()).to.equal(totalRewards.toString());
   });
+
+  it('Should claim', async () => {
+    // Stake tokens
+    await users[1].staking.stake(100n);
+    await users[2].staking.stake(100n);
+
+    // Increase time to 10th interval
+    await ethers.provider.send('evm_increaseTime', [distributionInterval * 10]);
+    await ethers.provider.send('evm_mine');
+
+    // Prefetch data
+    await governorRewards.prefetchGlobalSnapshots(
+      0,
+      9,
+      new Array(10).fill(0),
+      distributionTokens.map((token) => token.address),
+    );
+
+    // Claim rewards
+    await governorRewards.claim(
+      distributionTokens.map((token) => token.address),
+      users[1].signer.address,
+      0,
+      9,
+      new Array(10).fill(0),
+    );
+
+    await governorRewards.claim(
+      distributionTokens.map((token) => token.address),
+      users[2].signer.address,
+      0,
+      9,
+      new Array(10).fill(0),
+    );
+
+    // Get total rewards
+    let totalRewards = 0n;
+    for (let i = 0; i <= 9; i += 1) {
+      const intervalEarmarked = BigInt(
+        // eslint-disable-next-line no-await-in-loop
+        await governorRewards.earmarked(distributionTokens[0].address, i),
+      );
+
+      totalRewards += intervalEarmarked / 2n;
+    }
+
+    // Check rewards have been paid out
+    expect(
+      await distributionTokens[0].balanceOf(users[1].signer.address),
+    ).to.equal(totalRewards);
+
+    expect(
+      await distributionTokens[0].balanceOf(users[2].signer.address),
+    ).to.equal(totalRewards);
+
+    // Calculate rewards should return 0 if ignoring claimed
+    expect((await governorRewards.calculateRewards(
+      distributionTokens.map((token) => token.address),
+      users[1].signer.address,
+      0,
+      9,
+      new Array(10).fill(0),
+      true,
+    ))[0]).to.equal(0n);
+
+    // Calculate rewards should return original value if not ignoring claimed
+    expect((await governorRewards.calculateRewards(
+      distributionTokens.map((token) => token.address),
+      users[1].signer.address,
+      0,
+      9,
+      new Array(10).fill(0),
+      false,
+    ))[0]).to.equal(totalRewards);
+
+    // Claiming rewards twice should move 0 coins
+    await governorRewards.claim(
+      distributionTokens.map((token) => token.address),
+      users[1].signer.address,
+      0,
+      9,
+      new Array(10).fill(0),
+    );
+
+    expect(
+      await distributionTokens[0].balanceOf(users[1].signer.address),
+    ).to.equal(totalRewards);
+  });
 });
