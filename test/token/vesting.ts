@@ -67,10 +67,11 @@ describe('Token/Vesting', () => {
     await clone.claim(0n);
 
     // Now we should be able to withdraw
-    await clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n);
-
-    // Check the tokens were released
-    expect(await testERC20.balanceOf((await ethers.getSigners())[1].address)).to.equal(1000n);
+    await expect(await clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n)).to.changeTokenBalance(
+      testERC20,
+      (await ethers.getSigners())[1].address,
+      1000n,
+    );
   });
 
   it('Should override locktime', async () => {
@@ -97,9 +98,10 @@ describe('Token/Vesting', () => {
     await clone.overrideLock(0n);
 
     // Now we should be able to withdraw
-    await clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n);
-
-    // Check the tokens were released
-    expect(await testERC20.balanceOf((await ethers.getSigners())[1].address)).to.equal(1000n);
+    await expect(clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n)).to.changeTokenBalance(
+      testERC20,
+      (await ethers.getSigners())[1].address,
+      1000n,
+    );
   });
 });

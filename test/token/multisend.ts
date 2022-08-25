@@ -32,10 +32,11 @@ describe('Token/Multisend', function () {
     // Sum total transferred
     const sum = sendTokens.map((tx) => tx.amount).reduce((left, right) => left + right);
 
-    // Send transfer
-    await multisend.multisend(testERC20.address, sendTokens);
-
-    // Check correct amount of tokens transferred
-    expect(await testERC20.balanceOf((await ethers.getSigners())[1].address)).to.equal(sum);
+    // Transfer
+    await expect(multisend.multisend(testERC20.address, sendTokens)).to.changeTokenBalance(
+      testERC20,
+      (await ethers.getSigners())[1].address,
+      sum,
+    );
   });
 });
