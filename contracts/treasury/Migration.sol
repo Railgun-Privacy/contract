@@ -13,10 +13,10 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 contract TreasuryMigration {
   // Old treasury contract
-  TreasuryOld immutable public oldTreasury;
+  TreasuryOld public immutable oldTreasury;
 
   // New treasury contract
-  address payable immutable public newTreasury;
+  address payable public immutable newTreasury;
 
   /**
    * @notice Set treasury addresses

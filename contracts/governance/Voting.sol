@@ -59,24 +59,19 @@ contract Voting {
     address proposer;
     string proposalDocument; // IPFS hash
     Call[] actions;
-
     // Event timestamps
     uint256 publishTime;
     uint256 voteCallTime; // If vote call time is 0, proposal hasn't gone to vote
-
     // Sponsorship info
     uint256 sponsorship;
     mapping(address => uint256) sponsors;
-
     // Execution status
     bool executed;
-
     // Vote data
     // Amount of voting power used for accounts, used for fractional voting from contracts
     mapping(address => uint256) voted;
     uint256 yayVotes;
     uint256 nayVotes;
-
     // Staking snapshots
     uint256 sponsorInterval;
     uint256 votingInterval;
@@ -103,10 +98,7 @@ contract Voting {
   // Only voting key modifier
   modifier onlyVotingKey(address _account) {
     // Only voting key or main key can call
-    require(
-      msg.sender == _account || msg.sender == votingKey[_account],
-      "Voting: Caller not authorized"
-    );
+    require(msg.sender == _account || msg.sender == votingKey[_account], "Voting: Caller not authorized");
 
     _;
   }
@@ -164,7 +156,6 @@ contract Voting {
     return proposals[_id].voted[_account];
   }
 
-
   /**
    * @notice Sets voting key for account
    * @param _votingKey - voting key address
@@ -202,11 +193,7 @@ contract Voting {
 
     // Loop over actions and copy manually as solidity doesn't support copying structs
     for (uint256 i = 0; i < _actions.length; i++) {
-      proposal.actions.push(Call(
-        _actions[i].callContract,
-        _actions[i].data,
-        _actions[i].value
-      ));
+      proposal.actions.push(Call(_actions[i].callContract, _actions[i].data, _actions[i].value));
     }
 
     // Emit event
@@ -223,11 +210,15 @@ contract Voting {
    * @param _hint - hint for snapshot search
    */
 
-  function sponsorProposal(uint256 _id, uint256 _amount, address _account, uint256 _hint) external onlyVotingKey(_account) {
+  function sponsorProposal(
+    uint256 _id,
+    uint256 _amount,
+    address _account,
+    uint256 _hint
+  ) external onlyVotingKey(_account) {
     // Prevent proposal spam
     require(
-      lastSponsored[_account].proposalID == _id
-      || block.timestamp - lastSponsored[_account].lastSponsorTime > 7 days,
+      lastSponsored[_account].proposalID == _id || block.timestamp - lastSponsored[_account].lastSponsorTime > 7 days,
       "Voting: Can only sponsor one proposal per week"
     );
 
@@ -244,11 +235,7 @@ contract Voting {
     lastSponsored[_account].lastSponsorTime = block.timestamp;
 
     // Get address sponsor voting power
-    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
-      _account,
-      proposal.sponsorInterval,
-      _hint
-    );
+    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(_account, proposal.sponsorInterval, _hint);
 
     // Can't sponsor with more than voting power
     require(proposal.sponsors[_account] + _amount <= snapshot.votingPower, "Voting: Not enough voting power");
@@ -270,7 +257,11 @@ contract Voting {
    * @param _amount - amount to sponsor with
    */
 
-  function unsponsorProposal(uint256 _id, uint256 _amount, address _account) external onlyVotingKey(_account) {
+  function unsponsorProposal(
+    uint256 _id,
+    uint256 _amount,
+    address _account
+  ) external onlyVotingKey(_account) {
     ProposalStruct storage proposal = proposals[_id];
 
     // Check proposal hasn't already gone to vote
@@ -329,7 +320,13 @@ contract Voting {
    * @param _hint - hint for snapshot search
    */
 
-  function vote(uint256 _id, uint256 _amount, bool _affirmative, address _account, uint256 _hint) external onlyVotingKey(_account) {
+  function vote(
+    uint256 _id,
+    uint256 _amount,
+    bool _affirmative,
+    address _account,
+    uint256 _hint
+  ) external onlyVotingKey(_account) {
     ProposalStruct storage proposal = proposals[_id];
 
     // Check vote has been called
@@ -339,18 +336,14 @@ contract Voting {
     require(block.timestamp > proposal.voteCallTime + VOTING_START_OFFSET, "Voting: Voting window hasn't opened");
 
     // Check voting window hasn't closed (voting window length conditional on )
-    if(_affirmative) {
+    if (_affirmative) {
       require(block.timestamp < proposal.voteCallTime + VOTING_YAY_END_OFFSET, "Voting: Affirmative voting window has closed");
     } else {
       require(block.timestamp < proposal.voteCallTime + VOTING_NAY_END_OFFSET, "Voting: Negative voting window has closed");
     }
 
     // Get address voting power
-    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
-      _account,
-      proposal.votingInterval,
-      _hint
-    );
+    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(_account, proposal.votingInterval, _hint);
 
     // Check address isn't voting with more voting power than it has
     require(proposal.voted[_account] + _amount <= snapshot.votingPower, "Voting: Not enough voting power to cast this vote");
@@ -376,7 +369,7 @@ contract Voting {
 
   function executeProposal(uint256 _id) external {
     ProposalStruct storage proposal = proposals[_id];
-  
+
     // Check proposal has been called to vote
     require(proposal.voteCallTime > 0, "Voting: Vote hasn't been called for this proposal");
 
@@ -401,18 +394,14 @@ contract Voting {
     // Loop over actions and execute
     for (uint256 i = 0; i < actions.length; i++) {
       // Execute action
-      (bool successful, bytes memory returnData) = DELEGATOR_CONTRACT.callContract(
-        actions[i].callContract,
-        actions[i].data,
-        actions[i].value
-      );
+      (bool successful, bytes memory returnData) = DELEGATOR_CONTRACT.callContract(actions[i].callContract, actions[i].data, actions[i].value);
 
       // If an action fails to execute, catch and bubble up reason with revert
       if (!successful) {
         bytes memory revertData = abi.encode(i, returnData);
         // solhint-disable-next-line no-inline-assembly
         assembly {
-          revert (add (32, revertData), mload (revertData))
+          revert(add(32, revertData), mload(revertData))
         }
       }
     }

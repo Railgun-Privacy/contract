@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Delegator
@@ -24,11 +24,7 @@ contract Delegator is Ownable {
   caller.X.* allows caller to call any function on contract X
   caller.*.Y allows caller to call function Y on any contract
   */
-  mapping(
-    address => mapping(
-      address => mapping(bytes4 => bool)
-    )
-  ) public permissions;
+  mapping(address => mapping(address => mapping(bytes4 => bool))) public permissions;
 
   event GrantPermission(address indexed caller, address indexed contractAddress, bytes4 indexed selector);
   event RevokePermission(address indexed caller, address indexed contractAddress, bytes4 indexed selector);
@@ -53,7 +49,7 @@ contract Delegator is Ownable {
     address _contract,
     bytes4 _selector,
     bool _permission
-   ) public onlyOwner {
+  ) public onlyOwner {
     // If permission set is different to new permission then we execute, otherwise skip
     if (permissions[_caller][_contract][_selector] != _permission) {
       // Set permission bit
@@ -75,18 +71,20 @@ contract Delegator is Ownable {
    * @param _selector - function signature to check
    * @return if caller has permission
    */
-  function checkPermission(address _caller, address _contract, bytes4 _selector) public view returns (bool) {
+  function checkPermission(
+    address _caller,
+    address _contract,
+    bytes4 _selector
+  ) public view returns (bool) {
     /* 
     See comment on permissions mapping for structure
     Comments below use * to signify wildcard and . notation to seperate contract/function
     */
-    return (
-      _caller == Ownable.owner()
-      || permissions[_caller][_contract][_selector] // Owner always has global permissions
-      || permissions[_caller][_contract][0x0] // Permission for function is given
-      || permissions[_caller][address(0)][_selector] // Permission for _contract.* is given
-      || permissions[_caller][address(0)][0x0] // Global permission is given
-    );
+    return (_caller == Ownable.owner() ||
+      permissions[_caller][_contract][_selector] || // Owner always has global permissions
+      permissions[_caller][_contract][0x0] || // Permission for function is given
+      permissions[_caller][address(0)][_selector] || // Permission for _contract.* is given
+      permissions[_caller][address(0)][0x0]); // Global permission is given
   }
 
   /**
@@ -99,7 +97,11 @@ contract Delegator is Ownable {
    * @return success - whether call succeeded
    * @return returnData - return data from function call
    */
-  function callContract(address _contract, bytes calldata _data, uint256 _value) public returns (bool success, bytes memory returnData) {
+  function callContract(
+    address _contract,
+    bytes calldata _data,
+    uint256 _value
+  ) public returns (bool success, bytes memory returnData) {
     // Get selector
     bytes4 selector = bytes4(_data);
 
@@ -107,12 +109,10 @@ contract Delegator is Ownable {
     if (_contract == address(this)) {
       if (selector == this.setPermission.selector) {
         // Decode call data
-        (
-          address caller,
-          address calledContract,
-          bytes4 _permissionSelector,
-          bool permission
-        ) = abi.decode(abi.encodePacked(_data[4:]), (address, address, bytes4, bool));
+        (address caller, address calledContract, bytes4 _permissionSelector, bool permission) = abi.decode(
+          abi.encodePacked(_data[4:]),
+          (address, address, bytes4, bool)
+        );
 
         // Call setPermission
         setPermission(caller, calledContract, _permissionSelector, permission);
@@ -122,9 +122,7 @@ contract Delegator is Ownable {
         return (true, empty);
       } else if (selector == this.transferOwnership.selector) {
         // Decode call data
-        (
-          address newOwner
-        ) = abi.decode(abi.encodePacked(_data[4:]), (address));
+        address newOwner = abi.decode(abi.encodePacked(_data[4:]), (address));
 
         // Call transferOwnership
         Ownable.transferOwnership(newOwner);
@@ -139,7 +137,7 @@ contract Delegator is Ownable {
         // Return success with empty returndata bytes
         bytes memory empty;
         return (true, empty);
-      } else { 
+      } else {
         // Return failed with empty returndata bytes
         bytes memory empty;
         return (false, empty);
@@ -151,6 +149,6 @@ contract Delegator is Ownable {
 
     // Call external contract and return
     // solhint-disable-next-line avoid-low-level-calls
-    return _contract.call{value: _value}(_data);
+    return _contract.call{ value: _value }(_data);
   }
 }

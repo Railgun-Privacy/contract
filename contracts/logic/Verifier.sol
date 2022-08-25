@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { SnarkProof, Transaction, BoundParams, VerifyingKey, SNARK_SCALAR_FIELD } from "./Globals.sol";
 
@@ -22,7 +22,7 @@ contract Verifier is OwnableUpgradeable {
 
   // Snark bypass address, can't be address(0) as many burn prevention mechanisms will disallow transfers to 0
   // Use 0x000000000000000000000000000000000000dEaD as an alternative
-  address constant public SNARK_BYPASS = 0x000000000000000000000000000000000000dEaD;
+  address public constant SNARK_BYPASS = 0x000000000000000000000000000000000000dEaD;
 
   // Verifying key set event
   event VerifyingKeySet(uint256 nullifiers, uint256 commitments, VerifyingKey verifyingKey);
@@ -51,10 +51,7 @@ contract Verifier is OwnableUpgradeable {
    * @param _nullifiers - number of nullifiers this verification key is for
    * @param _commitments - number of commitmets out this verification key is for
    */
-  function getVerificationKey(
-    uint256 _nullifiers,
-    uint256 _commitments
-  ) public view returns (VerifyingKey memory) {
+  function getVerificationKey(uint256 _nullifiers, uint256 _commitments) public view returns (VerifyingKey memory) {
     // Manually add getter so dynamic IC array is included in response
     return verificationKeys[_nullifiers][_commitments];
   }
@@ -65,9 +62,7 @@ contract Verifier is OwnableUpgradeable {
    * @return bound parameters hash
    */
   function hashBoundParams(BoundParams calldata _boundParams) public pure returns (uint256) {
-    return uint256(keccak256(abi.encode(
-      _boundParams
-    ))) % SNARK_SCALAR_FIELD;
+    return uint256(keccak256(abi.encode(_boundParams))) % SNARK_SCALAR_FIELD;
   }
 
   /**
@@ -82,11 +77,7 @@ contract Verifier is OwnableUpgradeable {
     SnarkProof calldata _proof,
     uint256[] memory _inputs
   ) public view returns (bool) {
-    return Snark.verify(
-      _verifyingKey,
-      _proof,
-      _inputs
-    );
+    return Snark.verify(_verifyingKey, _proof, _inputs);
   }
 
   /**
@@ -99,9 +90,7 @@ contract Verifier is OwnableUpgradeable {
     uint256 commitmentsLength = _transaction.commitments.length;
 
     // Retrieve verification key
-    VerifyingKey memory verifyingKey = verificationKeys
-      [nullifiersLength]
-      [commitmentsLength];
+    VerifyingKey memory verifyingKey = verificationKeys[nullifiersLength][commitmentsLength];
 
     // Check if verifying key is set
     require(verifyingKey.alpha1.x != 0, "Verifier: Key not set");
@@ -109,26 +98,22 @@ contract Verifier is OwnableUpgradeable {
     // Calculate inputs
     uint256[] memory inputs = new uint256[](2 + nullifiersLength + commitmentsLength);
     inputs[0] = _transaction.merkleRoot;
-    
+
     // Hash bound parameters
     inputs[1] = hashBoundParams(_transaction.boundParams);
 
     // Loop through nullifiers and add to inputs
-    for (uint i = 0; i < nullifiersLength; i++) {
+    for (uint256 i = 0; i < nullifiersLength; i++) {
       inputs[2 + i] = _transaction.nullifiers[i];
     }
 
     // Loop through commitments and add to inputs
-    for (uint i = 0; i < commitmentsLength; i++) {
+    for (uint256 i = 0; i < commitmentsLength; i++) {
       inputs[2 + nullifiersLength + i] = _transaction.commitments[i];
     }
-    
+
     // Verify snark proof
-    bool validity = verifyProof(
-      verifyingKey,
-      _transaction.proof,
-      inputs
-    );
+    bool validity = verifyProof(verifyingKey, _transaction.proof, inputs);
 
     // Always return true in gas estimation transaction
     // This is so relayer fees can be calculated without needing to compute a proof

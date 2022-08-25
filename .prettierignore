@@ -1,0 +1,13 @@
+node_modules
+artifacts
+cache
+coverage
+coverage.json
+typechain
+typechain-types
+.vscode
+.eslintignore
+.gitignore
+.prettierignore
+.solhintignore
+slither.sh

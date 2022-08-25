@@ -7,7 +7,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Staking } from "../governance/Staking.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
  * @title VestLock
@@ -113,7 +113,7 @@ contract VestLock is Initializable, OwnableUpgradeable {
    */
   function transferETH(address payable _to, uint256 _amount) external locked onlyOwner {
     //solhint-disable-next-line avoid-low-level-calls
-    (bool sent,) = _to.call{value: _amount}("");
+    (bool sent, ) = _to.call{ value: _amount }("");
     require(sent, "Failed to send Ether");
   }
 
@@ -123,7 +123,11 @@ contract VestLock is Initializable, OwnableUpgradeable {
    * @param _to - Address to transfer tokens to
    * @param _amount - Amount of tokens to transfer
    */
-  function transferERC20(IERC20 _token, address _to, uint256 _amount) external locked onlyOwner {
+  function transferERC20(
+    IERC20 _token,
+    address _to,
+    uint256 _amount
+  ) external locked onlyOwner {
     _token.safeTransfer(_to, _amount);
   }
 
@@ -134,10 +138,14 @@ contract VestLock is Initializable, OwnableUpgradeable {
    * @param _data - calldata to pass to contract
    * @param _value - ETH value to include in call
    */
-  function callContract(address _contract, bytes calldata _data, uint256 _value) external locked onlyOwner {
+  function callContract(
+    address _contract,
+    bytes calldata _data,
+    uint256 _value
+  ) external locked onlyOwner {
     // Call external contract and return
     // solhint-disable-next-line avoid-low-level-calls
-    (bool success, ) = _contract.call{value: _value}(_data);
+    (bool success, ) = _contract.call{ value: _value }(_data);
     require(success, "VestLock: failure on external contract call");
   }
 

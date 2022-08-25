@@ -11,10 +11,6 @@ contract SnarkStub {
     SnarkProof calldata _proof,
     uint256[] memory _inputs
   ) public view returns (bool) {
-    return Snark.verify(
-      _verifyingKey,
-      _proof,
-      _inputs
-    );
+    return Snark.verify(_verifyingKey, _proof, _inputs);
   }
 }

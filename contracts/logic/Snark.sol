@@ -25,7 +25,7 @@ library Snark {
     require(lh == rh, "Snark: Invalid negation");
 
     return G1Point(p.x, PRIME_Q - (p.y % PRIME_Q));
-    }
+  }
 
   /**
    * @notice Adds 2 G1 points
@@ -68,7 +68,7 @@ library Snark {
     input[1] = p.y;
     input[2] = s;
     bool success;
-    
+
     // solhint-disable-next-line no-inline-assembly
     assembly {
       success := staticcall(sub(gas(), 2000), 7, input, 0x60, r, 0x40)
@@ -128,14 +128,7 @@ library Snark {
 
     // solhint-disable-next-line no-inline-assembly
     assembly {
-      success := staticcall(
-        sub(gas(), 2000),
-        8,
-        input,
-        PAIRING_INPUT_WIDTH,
-        out,
-        0x20
-      )
+      success := staticcall(sub(gas(), 2000), 8, input, PAIRING_INPUT_WIDTH, out, 0x20)
     }
 
     // Check if operation succeeded
@@ -145,11 +138,11 @@ library Snark {
   }
 
   /**
-    * @notice Verifies snark proof against proving key
-    * @param _vk - Verification Key
-    * @param _proof - snark proof
-    * @param _inputs - inputs
-    */
+   * @notice Verifies snark proof against proving key
+   * @param _vk - Verification Key
+   * @param _proof - snark proof
+   * @param _inputs - inputs
+   */
   function verify(
     VerifyingKey memory _vk,
     SnarkProof memory _proof,
@@ -157,29 +150,20 @@ library Snark {
   ) internal view returns (bool) {
     // Compute the linear combination vkX
     G1Point memory vkX = G1Point(0, 0);
-    
+
     // Loop through every input
-    for (uint i = 0; i < _inputs.length; i++) {
+    for (uint256 i = 0; i < _inputs.length; i++) {
       // Make sure inputs are less than SNARK_SCALAR_FIELD
       require(_inputs[i] < SNARK_SCALAR_FIELD, "Snark: Input > SNARK_SCALAR_FIELD");
 
       // Add to vkX point
       vkX = add(vkX, scalarMul(_vk.ic[i + 1], _inputs[i]));
-  }
+    }
 
     // Compute final vkX point
     vkX = add(vkX, _vk.ic[0]);
 
     // Verify pairing and return
-    return pairing(
-      negate(_proof.a),
-      _proof.b,
-      _vk.alpha1,
-      _vk.beta2,
-      vkX,
-      _vk.gamma2,
-      _proof.c,
-      _vk.delta2
-    );
+    return pairing(negate(_proof.a), _proof.b, _vk.alpha1, _vk.beta2, vkX, _vk.gamma2, _proof.c, _vk.delta2);
   }
 }

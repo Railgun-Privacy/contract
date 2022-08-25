@@ -38,7 +38,7 @@ contract TokenBlacklist is OwnableUpgradeable {
     for (uint256 i = 0; i < _tokens.length; i++) {
       // Don't do anything if the token is already blacklisted
       if (!tokenBlacklist[_tokens[i]]) {
-          // Set token address in blacklist map to true
+        // Set token address in blacklist map to true
         tokenBlacklist[_tokens[i]] = true;
 
         // Emit event for building index of blacklisted tokens offchain

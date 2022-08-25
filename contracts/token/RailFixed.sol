@@ -12,12 +12,16 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  */
 
 contract RailTokenFixedSupply is ERC20 {
-
   /**
    * @notice Mints initial token supply
    */
 
-  constructor(address _initialHolder, uint256 _initialSupply, string memory name, string memory symbol) ERC20(name, symbol) {
+  constructor(
+    address _initialHolder,
+    uint256 _initialSupply,
+    string memory name,
+    string memory symbol
+  ) ERC20(name, symbol) {
     // Mint initial tokens
     _mint(_initialHolder, _initialSupply);
   }

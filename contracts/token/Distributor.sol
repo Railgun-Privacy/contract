@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 
 import { Staking } from "../governance/Staking.sol";
@@ -27,7 +27,11 @@ contract Distributor is Ownable {
    * @param _vestLockImplementation - implementation address for vestlock contract
    */
 
-  constructor(address _admin, address _staking, address _vestLockImplementation) {
+  constructor(
+    address _admin,
+    address _staking,
+    address _vestLockImplementation
+  ) {
     // Set initial admin
     Ownable.transferOwnership(_admin);
 
@@ -46,9 +50,7 @@ contract Distributor is Ownable {
 
   function createVestLock(address _beneficiary, uint256 _releaseTime) external onlyOwner {
     // Deploy clone
-    VestLock vestLock = VestLock(
-      payable(Clones.clone(vestLockImplementation))
-    );
+    VestLock vestLock = VestLock(payable(Clones.clone(vestLockImplementation)));
 
     // Store vest lock
     vestLocks[_beneficiary] = vestLock;

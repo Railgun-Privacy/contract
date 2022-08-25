@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
-import { Create2 } from  "@openzeppelin/contracts/utils/Create2.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 
 /**
  * @title Deployer
@@ -44,23 +44,13 @@ contract Deployer is Ownable {
    * @param _bytecodeHash - keccak256 bytecode hash
    * @return deployment - deployment address
    */
-  function getAddress(
-    bytes32 _salt,
-    bytes32 _bytecodeHash
-  ) public view returns (address deployment) {
+  function getAddress(bytes32 _salt, bytes32 _bytecodeHash) public view returns (address deployment) {
     // Note: We don't use openzeppelin's Create2 library here
     // so that we can maintain compatibility with chains that
     // have a different starting byte to Ethereum (0xff)
 
     // Calculate deployment hash
-    bytes32 hash = keccak256(
-      abi.encodePacked(
-        STARTING_BYTE,
-        address(this),
-        _salt,
-        _bytecodeHash
-      )
-    );
+    bytes32 hash = keccak256(abi.encodePacked(STARTING_BYTE, address(this), _salt, _bytecodeHash));
 
     // Cast last 20 bytes of hash to address
     return address(uint160(uint256(hash)));
@@ -72,10 +62,7 @@ contract Deployer is Ownable {
    * @param _bytecode - bytecode
    * @return deployment - deployment address
    */
-  function getAddressFromBytecode(
-    bytes32 _salt,
-    bytes calldata _bytecode
-  ) external view returns (address deployment) {
+  function getAddressFromBytecode(bytes32 _salt, bytes calldata _bytecode) external view returns (address deployment) {
     // Get bytecode hash
     bytes32 bytecodeHash = keccak256(_bytecode);
 

@@ -5,7 +5,7 @@ pragma abicoder v2;
 // OpenZeppelin v4
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Treasury
@@ -14,6 +14,7 @@ import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract TreasuryOld is Ownable {
   using SafeERC20 for IERC20;
+
   /**
    * @notice Sets initial admin
    */
@@ -29,7 +30,7 @@ contract TreasuryOld is Ownable {
   function transferETH(address payable _to, uint256 _amount) external onlyOwner {
     require(_to != address(0), "Treasury: Preventing potential accidental burn");
     //solhint-disable-next-line avoid-low-level-calls
-    (bool sent,) = _to.call{value: _amount}("");
+    (bool sent, ) = _to.call{ value: _amount }("");
     require(sent, "Failed to send Ether");
   }
 
@@ -39,7 +40,11 @@ contract TreasuryOld is Ownable {
    * @param _to - Address to transfer tokens to
    * @param _amount - Amount of tokens to transfer
    */
-  function transferERC20(IERC20 _token, address _to, uint256 _amount) external onlyOwner {
+  function transferERC20(
+    IERC20 _token,
+    address _to,
+    uint256 _amount
+  ) external onlyOwner {
     require(_to != address(0), "Treasury: Preventing potential accidental burn");
     _token.safeTransfer(_to, _amount);
   }

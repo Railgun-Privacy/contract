@@ -6,7 +6,7 @@ import { Commitments } from "../../logic/Commitments.sol";
 
 contract CommitmentsStub is Commitments {
   constructor() {
-   initializeCommitmentsStub();
+    initializeCommitmentsStub();
   }
 
   function initializeCommitmentsStub() internal initializer {

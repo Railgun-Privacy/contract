@@ -6,7 +6,7 @@ import "hardhat/console.sol";
 
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { OwnableUpgradeable } from  "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Treasury } from "../treasury/Treasury.sol";
 import { Staking } from "../governance/Staking.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -119,7 +119,11 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @param _interval - interval to check for
    * @return claimed
    */
-  function getClaimed(address _account, IERC20 _token, uint256 _interval) external view returns (bool) {
+  function getClaimed(
+    address _account,
+    IERC20 _token,
+    uint256 _interval
+  ) external view returns (bool) {
     return claimedBitmap[_account][_token].get(_interval);
   }
 
@@ -202,10 +206,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
     // Loop through each requested snapshot and retrieve voting power
     for (uint256 i = 0; i < length; i += 1) {
-      snapshots[i] = staking.globalsSnapshotAt(
-        distributionIntervalToStakingInterval(_startingInterval + i),
-        _hints[i]
-      ).totalVotingPower;
+      snapshots[i] = staking.globalsSnapshotAt(distributionIntervalToStakingInterval(_startingInterval + i), _hints[i]).totalVotingPower;
     }
 
     // Return voting power
@@ -235,11 +236,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
     // Loop through each requested snapshot and retrieve voting power
     for (uint256 i = 0; i < length; i += 1) {
-      snapshots[i] = staking.accountSnapshotAt(
-        _account,
-        distributionIntervalToStakingInterval(_startingInterval + i),
-        _hints[i]
-      ).votingPower;
+      snapshots[i] = staking.accountSnapshotAt(_account, distributionIntervalToStakingInterval(_startingInterval + i), _hints[i]).votingPower;
     }
 
     // Return voting power
@@ -268,8 +265,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       uint256 treasuryBalance = _token.balanceOf(address(treasury));
 
       // Get distribution amount per interval
-      uint256 distributionAmountPerInterval = treasuryBalance * intervalBP / BASIS_POINTS
-        / (_calcToInterval - _calcFromInterval + 1);
+      uint256 distributionAmountPerInterval = (treasuryBalance * intervalBP) / BASIS_POINTS / (_calcToInterval - _calcFromInterval + 1);
 
       // Get total distribution amount
       uint256 totalDistributionAmounts = 0;
@@ -309,14 +305,10 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     require(_endingInterval <= currentInterval(), "GovernorRewards: Can't prefetch future intervals");
 
     // Fetch snapshots
-    uint256[] memory snapshots = fetchGlobalSnapshots(
-      _startingInterval,
-      _endingInterval,
-      _hints
-    );
+    uint256[] memory snapshots = fetchGlobalSnapshots(_startingInterval, _endingInterval, _hints);
 
     // Store precalculated snapshots
-    for (uint256 i = 0; i < length; i+= 1) {
+    for (uint256 i = 0; i < length; i += 1) {
       precalculatedGlobalSnapshots[_startingInterval + i] = snapshots[i];
     }
 
@@ -364,9 +356,9 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       for (uint256 interval = _startingInterval; interval <= _endingInterval; interval += 1) {
         // Skip if already claimed if we're ignoring claimed amounts
         if (!_ignoreClaimed || !tokenClaimedMap.get(interval)) {
-          tokenReward += tokenEarmarked[interval]
-            * accountSnapshots[interval - _startingInterval]
-            / precalculatedGlobalSnapshots[interval - _startingInterval];
+          tokenReward +=
+            (tokenEarmarked[interval] * accountSnapshots[interval - _startingInterval]) /
+            precalculatedGlobalSnapshots[interval - _startingInterval];
         }
       }
       rewards[token] = tokenReward;
@@ -376,7 +368,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   }
 
   /**
-   * @notice Pays out rewards for block of 
+   * @notice Pays out rewards for block of
    * @param _tokens - tokens to calculate rewards for
    * @param _account - account to calculate rewards for
    * @param _startingInterval - starting interval to calculate from
@@ -391,14 +383,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256[] calldata _hints
   ) external {
     // Calculate rewards
-    uint256[] memory rewards = calculateRewards(
-      _tokens,
-      _account,
-      _startingInterval,
-      _endingInterval,
-      _hints,
-      true
-    );
+    uint256[] memory rewards = calculateRewards(_tokens, _account, _startingInterval, _endingInterval, _hints, true);
 
     // Mark all claimed intervals
     for (uint256 token = 0; token < _tokens.length; token += 1) {

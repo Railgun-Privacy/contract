@@ -78,8 +78,12 @@ contract PausableUpgradableProxy {
 
       switch result
       // delegatecall returns 0 on error.
-      case 0 { revert(0, returndatasize()) }
-      default { return(0, returndatasize()) }
+      case 0 {
+        revert(0, returndatasize())
+      }
+      default {
+        return(0, returndatasize())
+      }
     }
   }
 
@@ -149,7 +153,7 @@ contract PausableUpgradableProxy {
   /**
    * @notice Pauses contract
    */
-  function pause() external onlyOwner  {
+  function pause() external onlyOwner {
     // Get paused slot
     StorageSlot.BooleanSlot storage paused = StorageSlot.getBooleanSlot(PAUSED_SLOT);
 

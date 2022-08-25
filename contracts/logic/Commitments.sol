@@ -57,7 +57,6 @@ contract Commitments is Initializable {
   // treeNumber -> root -> seen
   mapping(uint256 => mapping(uint256 => bool)) public rootHistory;
 
-
   /**
    * @notice Calculates initial values for Merkle Tree
    * @dev OpenZeppelin initializer ensures this can only be called once
@@ -104,10 +103,7 @@ contract Commitments is Initializable {
    * @return hash result
    */
   function hashLeftRight(uint256 _left, uint256 _right) public pure returns (uint256) {
-    return PoseidonT3.poseidon([
-      _left,
-      _right
-    ]);
+    return PoseidonT3.poseidon([_left, _right]);
   }
 
   /**
@@ -142,7 +138,9 @@ contract Commitments is Initializable {
 
     // Create new tree if current one can't contain new leaves
     // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + count) >= (2 ** TREE_DEPTH)) { newTree(); }
+    if ((nextLeafIndex + count) >= (2**TREE_DEPTH)) {
+      newTree();
+    }
 
     // Current index is the index at each level to insert the hash
     uint256 levelInsertionIndex = nextLeafIndex;
@@ -209,7 +207,7 @@ contract Commitments is Initializable {
       // Get count of elements for next level
       count = nextLevelHashIndex + 1;
     }
- 
+
     // Update the Merkle tree root
     merkleRoot = _leafHashes[0];
     rootHistory[treeNumber][merkleRoot] = true;

@@ -13,25 +13,25 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 contract IntervalPayouts {
   // Treasury contract
-  Treasury immutable public treasury;
+  Treasury public immutable treasury;
 
   // Beneficiary
-  address payable immutable public beneficiary;
+  address payable public immutable beneficiary;
 
   // ETH/ERC20 token
-  address immutable public token;
+  address public immutable token;
 
   // Amount to pay out per interval
-  uint256 immutable public amount;
+  uint256 public immutable amount;
 
   // Interval length
-  uint256 immutable public intervalLength;
+  uint256 public immutable intervalLength;
 
   // Total number of payouts
-  uint256 immutable public totalPayouts;
+  uint256 public immutable totalPayouts;
 
   // Starting time
-  uint256 immutable public startTime;
+  uint256 public immutable startTime;
 
   // Next interval to be processed
   uint256 public nextInterval = 0;

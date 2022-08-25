@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { Ownable } from  "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { PausableUpgradableProxy } from "./Proxy.sol";
 
 /**
@@ -25,7 +25,7 @@ contract ProxyAdmin is Ownable {
    * @param _proxy - proxy to administrate
    * @param _newOwner - Address to transfer ownership to
    */
-  function transferProxyOwnership(PausableUpgradableProxy _proxy, address _newOwner) external onlyOwner{
+  function transferProxyOwnership(PausableUpgradableProxy _proxy, address _newOwner) external onlyOwner {
     require(_newOwner != address(0), "ProxyAdmin: Preventing potential accidental burn");
     _proxy.transferOwnership(_newOwner);
   }
@@ -35,7 +35,7 @@ contract ProxyAdmin is Ownable {
    * @param _proxy - Proxy to upgrade
    * @param _newImplementation - Address of the new implementation
    */
-  function upgrade(PausableUpgradableProxy _proxy, address _newImplementation) external onlyOwner{
+  function upgrade(PausableUpgradableProxy _proxy, address _newImplementation) external onlyOwner {
     _proxy.upgrade(_newImplementation);
   }
 
