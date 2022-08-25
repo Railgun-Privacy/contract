@@ -5,7 +5,8 @@ pragma abicoder v2;
 import { G1Point, G2Point, VerifyingKey, SnarkProof, SNARK_SCALAR_FIELD } from "./Globals.sol";
 
 library Snark {
-  uint256 private constant PRIME_Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+  uint256 private constant PRIME_Q =
+    21888242871839275222246405745257275088696311157297823662689037894645226208583;
   uint256 private constant PAIRING_INPUT_SIZE = 24;
   uint256 private constant PAIRING_INPUT_WIDTH = 768; // PAIRING_INPUT_SIZE * 32
 
@@ -164,6 +165,16 @@ library Snark {
     vkX = add(vkX, _vk.ic[0]);
 
     // Verify pairing and return
-    return pairing(negate(_proof.a), _proof.b, _vk.alpha1, _vk.beta2, vkX, _vk.gamma2, _proof.c, _vk.delta2);
+    return
+      pairing(
+        negate(_proof.a),
+        _proof.b,
+        _vk.alpha1,
+        _vk.beta2,
+        vkX,
+        _vk.gamma2,
+        _proof.c,
+        _vk.delta2
+      );
   }
 }

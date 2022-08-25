@@ -34,7 +34,11 @@ const config: HardhatUserConfig = {
   },
 };
 
-async function overwriteArtifact(hre: HardhatRuntimeEnvironment, contractName: string, bytecode: string) {
+async function overwriteArtifact(
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  bytecode: string,
+) {
   const artifact = await hre.artifacts.readArtifact(contractName);
   await hre.artifacts.saveArtifactAndDebugFile({
     ...artifact,
@@ -61,6 +65,12 @@ task('test', 'Runs test suite')
     await runSuper();
   });
 
+task('coverage', 'Generates a code coverage report for tests',
+  async (taskArguments, hre, runSuper) => {
+    process.env.LONG_TESTS = 'complete';
+    await runSuper();
+  });
+
 task('accounts', 'Prints the list of accounts', async (taskArguments, hre) => {
   const accounts = await hre.ethers.getSigners();
   accounts.forEach((account) => {
@@ -72,9 +82,13 @@ task('deploy:test', 'Deploy full deployment for testing purposes', async (taskAr
   await hre.run('run', { script: 'scripts/deploy_test.js' });
 });
 
-task('forktoken', 'Gives 100m balance to address[0] when running in fork mode', async (taskArguments, hre) => {
-  await hre.run('run', { script: 'scripts/grant_balance.js' });
-});
+task(
+  'forktoken',
+  'Gives 100m balance to address[0] when running in fork mode',
+  async (taskArguments, hre) => {
+    await hre.run('run', { script: 'scripts/grant_balance.js' });
+  },
+);
 
 task('fastforward', 'Fast forwards time')
   .addParam('days', 'Days to fast forward (accepts decimal values)')

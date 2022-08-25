@@ -14,7 +14,8 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
  */
 contract PausableUpgradableProxy {
   // Storage slot locations
-  bytes32 private constant IMPLEMENTATION_SLOT = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
+  bytes32 private constant IMPLEMENTATION_SLOT =
+    bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
   bytes32 private constant ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
   bytes32 private constant PAUSED_SLOT = bytes32(uint256(keccak256("eip1967.proxy.paused")) - 1);
 
@@ -138,7 +139,9 @@ contract PausableUpgradableProxy {
    */
   function upgrade(address _newImplementation) external onlyOwner {
     // Get implementation slot
-    StorageSlot.AddressSlot storage implementation = StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT);
+    StorageSlot.AddressSlot storage implementation = StorageSlot.getAddressSlot(
+      IMPLEMENTATION_SLOT
+    );
 
     // If new implementation is identical to old, skip
     if (implementation.value != _newImplementation) {

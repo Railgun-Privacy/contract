@@ -46,7 +46,10 @@ contract RailTokenDAOMintable is Ownable, ERC20 {
    */
 
   function _mint(address _account, uint256 _amount) internal override {
-    require(ERC20.totalSupply() + _amount <= cap, "RailTokenDAOMintable: Can't mint more than hard cap");
+    require(
+      ERC20.totalSupply() + _amount <= cap,
+      "RailTokenDAOMintable: Can't mint more than hard cap"
+    );
     super._mint(_account, _amount);
   }
 
@@ -58,7 +61,11 @@ contract RailTokenDAOMintable is Ownable, ERC20 {
    * @return success
    */
 
-  function governanceMint(address _account, uint256 _amount) external onlyOwner returns (bool success) {
+  function governanceMint(address _account, uint256 _amount)
+    external
+    onlyOwner
+    returns (bool success)
+  {
     _mint(_account, _amount);
     return true;
   }

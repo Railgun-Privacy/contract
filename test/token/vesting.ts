@@ -19,7 +19,13 @@ describe('Token/Vesting', () => {
     const vestLock = await VestLock.deploy();
 
     // Deploy distributor
-    const distributor = await Distributor.deploy((await ethers.getSigners())[0].address, staking.address, vestLock.address);
+    const distributor = await Distributor.deploy(
+      (
+        await ethers.getSigners()
+      )[0].address,
+      staking.address,
+      vestLock.address,
+    );
 
     return {
       testERC20,
@@ -35,18 +41,25 @@ describe('Token/Vesting', () => {
     const VestLock = await ethers.getContractFactory('VestLock');
 
     // Create Vest Lock
-    await distributor.createVestLock((await ethers.getSigners())[0].address, (await time.latest()) + stakeLocktime);
+    await distributor.createVestLock(
+      (
+        await ethers.getSigners()
+      )[0].address,
+      (await time.latest()) + stakeLocktime,
+    );
 
     // Get clone
-    const clone = VestLock.attach(await distributor.vestLocks((await ethers.getSigners())[0].address));
+    const clone = VestLock.attach(
+      await distributor.vestLocks((await ethers.getSigners())[0].address),
+    );
 
     // Transfer tokens to clone
     await testERC20.transfer(clone.address, 1000n);
 
     // Release time not reached, should fail
-    await expect(clone.transferERC20(testERC20.address, (await ethers.getSigners())[0].address, 1000n)).to.be.revertedWith(
-      "VestLock: Vesting hasn't matured yet",
-    );
+    await expect(
+      clone.transferERC20(testERC20.address, (await ethers.getSigners())[0].address, 1000n),
+    ).to.be.revertedWith("VestLock: Vesting hasn't matured yet");
 
     // Stake tokens
     await clone.stake(testERC20.address, 1000n);
@@ -67,13 +80,9 @@ describe('Token/Vesting', () => {
     await clone.claim(0n);
 
     // Now we should be able to withdraw
-    await expect(await clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n)).to.changeTokenBalance(
-      testERC20,
-      (
-        await ethers.getSigners()
-      )[1].address,
-      1000n,
-    );
+    await expect(
+      await clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n),
+    ).to.changeTokenBalance(testERC20, (await ethers.getSigners())[1].address, 1000n);
   });
 
   it('Should override locktime', async () => {
@@ -83,29 +92,32 @@ describe('Token/Vesting', () => {
     const VestLock = await ethers.getContractFactory('VestLock');
 
     // Create Vest Lock
-    await distributor.createVestLock((await ethers.getSigners())[0].address, (await time.latest()) + stakeLocktime);
+    await distributor.createVestLock(
+      (
+        await ethers.getSigners()
+      )[0].address,
+      (await time.latest()) + stakeLocktime,
+    );
 
     // Get clone
-    const clone = VestLock.attach(await distributor.vestLocks((await ethers.getSigners())[0].address));
+    const clone = VestLock.attach(
+      await distributor.vestLocks((await ethers.getSigners())[0].address),
+    );
 
     // Transfer tokens to clone
     await testERC20.transfer(clone.address, 1000n);
 
     // Release time not reached, should fail
-    await expect(clone.transferERC20(testERC20.address, (await ethers.getSigners())[0].address, 1000n)).to.eventually.be.rejectedWith(
-      "VestLock: Vesting hasn't matured yet",
-    );
+    await expect(
+      clone.transferERC20(testERC20.address, (await ethers.getSigners())[0].address, 1000n),
+    ).to.eventually.be.rejectedWith("VestLock: Vesting hasn't matured yet");
 
     // Override locktime
     await clone.overrideLock(0n);
 
     // Now we should be able to withdraw
-    await expect(clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n)).to.changeTokenBalance(
-      testERC20,
-      (
-        await ethers.getSigners()
-      )[1].address,
-      1000n,
-    );
+    await expect(
+      clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n),
+    ).to.changeTokenBalance(testERC20, (await ethers.getSigners())[1].address, 1000n);
   });
 });

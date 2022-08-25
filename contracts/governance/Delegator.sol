@@ -26,8 +26,16 @@ contract Delegator is Ownable {
   */
   mapping(address => mapping(address => mapping(bytes4 => bool))) public permissions;
 
-  event GrantPermission(address indexed caller, address indexed contractAddress, bytes4 indexed selector);
-  event RevokePermission(address indexed caller, address indexed contractAddress, bytes4 indexed selector);
+  event GrantPermission(
+    address indexed caller,
+    address indexed contractAddress,
+    bytes4 indexed selector
+  );
+  event RevokePermission(
+    address indexed caller,
+    address indexed contractAddress,
+    bytes4 indexed selector
+  );
 
   /**
    * @notice Sets initial admin
@@ -109,10 +117,8 @@ contract Delegator is Ownable {
     if (_contract == address(this)) {
       if (selector == this.setPermission.selector) {
         // Decode call data
-        (address caller, address calledContract, bytes4 _permissionSelector, bool permission) = abi.decode(
-          abi.encodePacked(_data[4:]),
-          (address, address, bytes4, bool)
-        );
+        (address caller, address calledContract, bytes4 _permissionSelector, bool permission) = abi
+          .decode(abi.encodePacked(_data[4:]), (address, address, bytes4, bool));
 
         // Call setPermission
         setPermission(caller, calledContract, _permissionSelector, permission);
@@ -145,7 +151,10 @@ contract Delegator is Ownable {
     }
 
     // Check permissions
-    require(checkPermission(msg.sender, _contract, selector), "Delegator: Caller doesn't have permission");
+    require(
+      checkPermission(msg.sender, _contract, selector),
+      "Delegator: Caller doesn't have permission"
+    );
 
     // Call external contract and return
     // solhint-disable-next-line avoid-low-level-calls

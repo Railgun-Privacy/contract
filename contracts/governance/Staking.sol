@@ -38,7 +38,13 @@ contract Staking {
   event Claim(address indexed account, uint256 indexed stakeID);
 
   // Delegate claimed
-  event Delegate(address indexed owner, address indexed _from, address indexed to, uint256 stakeID, uint256 amount);
+  event Delegate(
+    address indexed owner,
+    address indexed _from,
+    address indexed to,
+    uint256 stakeID,
+    uint256 amount
+  );
 
   // Total staked
   uint256 public totalStaked = 0;
@@ -191,7 +197,11 @@ contract Staking {
    * @param _index - index to get snapshot at
    * @return Account snapshot
    */
-  function accountSnapshot(address _account, uint256 _index) external view returns (AccountSnapshot memory) {
+  function accountSnapshot(address _account, uint256 _index)
+    external
+    view
+    returns (AccountSnapshot memory)
+  {
     return accountSnapshots[_account][_index];
   }
 
@@ -275,7 +285,11 @@ contract Staking {
    * @return state
    */
 
-  function globalsSnapshotAtSearch(uint256 _interval) internal view returns (GlobalsSnapshot memory) {
+  function globalsSnapshotAtSearch(uint256 _interval)
+    internal
+    view
+    returns (GlobalsSnapshot memory)
+  {
     require(_interval <= currentInterval(), "Staking: Interval out of bounds");
 
     // Index of element
@@ -321,7 +335,11 @@ contract Staking {
    * @return state
    */
 
-  function globalsSnapshotAt(uint256 _interval, uint256 _hint) external view returns (GlobalsSnapshot memory) {
+  function globalsSnapshotAt(uint256 _interval, uint256 _hint)
+    external
+    view
+    returns (GlobalsSnapshot memory)
+  {
     require(_interval <= currentInterval(), "Staking: Interval out of bounds");
 
     // Check if hint is correct, else fall back to binary search
@@ -342,7 +360,11 @@ contract Staking {
    * @param _interval - interval to get state at
    * @return state
    */
-  function accountSnapshotAtSearch(address _account, uint256 _interval) internal view returns (AccountSnapshot memory) {
+  function accountSnapshotAtSearch(address _account, uint256 _interval)
+    internal
+    view
+    returns (AccountSnapshot memory)
+  {
     require(_interval <= currentInterval(), "Staking: Interval out of bounds");
 
     // Get account snapshots array
@@ -465,7 +487,11 @@ contract Staking {
     stakes[msg.sender][_stakeID].locktime = block.timestamp + STAKE_LOCKTIME;
 
     // Remove voting power
-    moveVotingPower(stakes[msg.sender][_stakeID].delegate, address(0), stakes[msg.sender][_stakeID].amount);
+    moveVotingPower(
+      stakes[msg.sender][_stakeID].delegate,
+      address(0),
+      stakes[msg.sender][_stakeID].amount
+    );
 
     // Emit event
     emit Unlock(msg.sender, _stakeID);
@@ -478,7 +504,8 @@ contract Staking {
 
   function claim(uint256 _stakeID) public {
     require(
-      stakes[msg.sender][_stakeID].locktime != 0 && stakes[msg.sender][_stakeID].locktime < block.timestamp,
+      stakes[msg.sender][_stakeID].locktime != 0 &&
+        stakes[msg.sender][_stakeID].locktime < block.timestamp,
       "Staking: Stake not unlocked"
     );
 

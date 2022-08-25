@@ -51,7 +51,11 @@ contract Verifier is OwnableUpgradeable {
    * @param _nullifiers - number of nullifiers this verification key is for
    * @param _commitments - number of commitmets out this verification key is for
    */
-  function getVerificationKey(uint256 _nullifiers, uint256 _commitments) public view returns (VerifyingKey memory) {
+  function getVerificationKey(uint256 _nullifiers, uint256 _commitments)
+    public
+    view
+    returns (VerifyingKey memory)
+  {
     // Manually add getter so dynamic IC array is included in response
     return verificationKeys[_nullifiers][_commitments];
   }

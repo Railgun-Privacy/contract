@@ -51,7 +51,13 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   uint256 public intervalBP;
 
   // Fee distribution claimed
-  event Claim(IERC20 token, address account, uint256 amount, uint256 startInterval, uint256 endInterval);
+  event Claim(
+    IERC20 token,
+    address account,
+    uint256 amount,
+    uint256 startInterval,
+    uint256 endInterval
+  );
 
   // Bitmap of claimed intervals
   // Internal types not allowed on public variables so custom getter needs to be created
@@ -141,7 +147,10 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @return interval
    */
   function intervalAtTime(uint256 _time) public view returns (uint256) {
-    require(_time >= STAKING_DEPLOY_TIME, "GovernorRewards: Requested time is before contract was deployed");
+    require(
+      _time >= STAKING_DEPLOY_TIME,
+      "GovernorRewards: Requested time is before contract was deployed"
+    );
     return (_time - STAKING_DEPLOY_TIME) / DISTRIBUTION_INTERVAL;
   }
 
@@ -150,7 +159,11 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @param _distributionInterval - distribution interval to get staking interval of
    * @return staking interval
    */
-  function distributionIntervalToStakingInterval(uint256 _distributionInterval) public pure returns (uint256) {
+  function distributionIntervalToStakingInterval(uint256 _distributionInterval)
+    public
+    pure
+    returns (uint256)
+  {
     return _distributionInterval * STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER;
   }
 
@@ -206,7 +219,9 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
     // Loop through each requested snapshot and retrieve voting power
     for (uint256 i = 0; i < length; i += 1) {
-      snapshots[i] = staking.globalsSnapshotAt(distributionIntervalToStakingInterval(_startingInterval + i), _hints[i]).totalVotingPower;
+      snapshots[i] = staking
+        .globalsSnapshotAt(distributionIntervalToStakingInterval(_startingInterval + i), _hints[i])
+        .totalVotingPower;
     }
 
     // Return voting power
@@ -236,7 +251,13 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
     // Loop through each requested snapshot and retrieve voting power
     for (uint256 i = 0; i < length; i += 1) {
-      snapshots[i] = staking.accountSnapshotAt(_account, distributionIntervalToStakingInterval(_startingInterval + i), _hints[i]).votingPower;
+      snapshots[i] = staking
+        .accountSnapshotAt(
+          _account,
+          distributionIntervalToStakingInterval(_startingInterval + i),
+          _hints[i]
+        )
+        .votingPower;
     }
 
     // Return voting power
@@ -265,7 +286,9 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       uint256 treasuryBalance = _token.balanceOf(address(treasury));
 
       // Get distribution amount per interval
-      uint256 distributionAmountPerInterval = (treasuryBalance * intervalBP) / BASIS_POINTS / (_calcToInterval - _calcFromInterval + 1);
+      uint256 distributionAmountPerInterval = (treasuryBalance * intervalBP) /
+        BASIS_POINTS /
+        (_calcToInterval - _calcFromInterval + 1);
 
       // Get total distribution amount
       uint256 totalDistributionAmounts = 0;
@@ -301,8 +324,14 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   ) external {
     uint256 length = _endingInterval - _startingInterval + 1;
 
-    require(_startingInterval <= nextSnapshotPreCalcInterval, "GovernorRewards: Starting interval too late");
-    require(_endingInterval <= currentInterval(), "GovernorRewards: Can't prefetch future intervals");
+    require(
+      _startingInterval <= nextSnapshotPreCalcInterval,
+      "GovernorRewards: Starting interval too late"
+    );
+    require(
+      _endingInterval <= currentInterval(),
+      "GovernorRewards: Can't prefetch future intervals"
+    );
 
     // Fetch snapshots
     uint256[] memory snapshots = fetchGlobalSnapshots(_startingInterval, _endingInterval, _hints);
@@ -338,12 +367,20 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     bool _ignoreClaimed
   ) public view returns (uint256[] memory) {
     // Get account snapshots
-    uint256[] memory accountSnapshots = fetchAccountSnapshots(_startingInterval, _endingInterval, _account, _hints);
+    uint256[] memory accountSnapshots = fetchAccountSnapshots(
+      _startingInterval,
+      _endingInterval,
+      _account,
+      _hints
+    );
 
     // Loop through each token and accumulate reward
     uint256[] memory rewards = new uint256[](_tokens.length);
     for (uint256 token = 0; token < _tokens.length; token += 1) {
-      require(_endingInterval < nextEarmarkInterval[_tokens[token]], "GovernorRewards: Tried to claim beyond last earmarked interval");
+      require(
+        _endingInterval < nextEarmarkInterval[_tokens[token]],
+        "GovernorRewards: Tried to claim beyond last earmarked interval"
+      );
 
       // Get claimed bitmap for token
       BitMaps.BitMap storage tokenClaimedMap = claimedBitmap[_account][_tokens[token]];
@@ -383,7 +420,14 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256[] calldata _hints
   ) external {
     // Calculate rewards
-    uint256[] memory rewards = calculateRewards(_tokens, _account, _startingInterval, _endingInterval, _hints, true);
+    uint256[] memory rewards = calculateRewards(
+      _tokens,
+      _account,
+      _startingInterval,
+      _endingInterval,
+      _hints,
+      true
+    );
 
     // Mark all claimed intervals
     for (uint256 token = 0; token < _tokens.length; token += 1) {

@@ -98,7 +98,10 @@ contract Voting {
   // Only voting key modifier
   modifier onlyVotingKey(address _account) {
     // Only voting key or main key can call
-    require(msg.sender == _account || msg.sender == votingKey[_account], "Voting: Caller not authorized");
+    require(
+      msg.sender == _account || msg.sender == votingKey[_account],
+      "Voting: Caller not authorized"
+    );
 
     _;
   }
@@ -171,7 +174,10 @@ contract Voting {
    * @param _actions - actions to take
    */
 
-  function createProposal(string calldata _proposalDocument, Call[] calldata _actions) external returns (uint256) {
+  function createProposal(string calldata _proposalDocument, Call[] calldata _actions)
+    external
+    returns (uint256)
+  {
     // Don't allow proposals with no actions
     require(_actions.length > 0, "Voting: No actions specified");
 
@@ -218,7 +224,8 @@ contract Voting {
   ) external onlyVotingKey(_account) {
     // Prevent proposal spam
     require(
-      lastSponsored[_account].proposalID == _id || block.timestamp - lastSponsored[_account].lastSponsorTime > 7 days,
+      lastSponsored[_account].proposalID == _id ||
+        block.timestamp - lastSponsored[_account].lastSponsorTime > 7 days,
       "Voting: Can only sponsor one proposal per week"
     );
 
@@ -228,17 +235,27 @@ contract Voting {
     require(proposal.voteCallTime == 0, "Voting: Gone to vote");
 
     // Check proposal is still in sponsor window
-    require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
+    require(
+      block.timestamp < proposal.publishTime + SPONSOR_WINDOW,
+      "Voting: Sponsoring window passed"
+    );
 
     // Set last sponsored info
     lastSponsored[_account].proposalID = _id;
     lastSponsored[_account].lastSponsorTime = block.timestamp;
 
     // Get address sponsor voting power
-    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(_account, proposal.sponsorInterval, _hint);
+    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
+      _account,
+      proposal.sponsorInterval,
+      _hint
+    );
 
     // Can't sponsor with more than voting power
-    require(proposal.sponsors[_account] + _amount <= snapshot.votingPower, "Voting: Not enough voting power");
+    require(
+      proposal.sponsors[_account] + _amount <= snapshot.votingPower,
+      "Voting: Not enough voting power"
+    );
 
     // Update address sponsorship amount on proposal
     proposal.sponsors[_account] += _amount;
@@ -268,7 +285,10 @@ contract Voting {
     require(proposal.voteCallTime == 0, "Voting: Gone to vote");
 
     // Check proposal is still in sponsor window
-    require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
+    require(
+      block.timestamp < proposal.publishTime + SPONSOR_WINDOW,
+      "Voting: Sponsoring window passed"
+    );
 
     // Can't unsponsor more than sponsored
     require(_amount <= proposal.sponsors[_account], "Voting: Amount greater than sponsored");
@@ -292,13 +312,19 @@ contract Voting {
     ProposalStruct storage proposal = proposals[_id];
 
     // Check proposal hasn't exceeded sponsor window
-    require(block.timestamp < proposal.publishTime + SPONSOR_WINDOW, "Voting: Sponsoring window passed");
+    require(
+      block.timestamp < proposal.publishTime + SPONSOR_WINDOW,
+      "Voting: Sponsoring window passed"
+    );
 
     // Check proposal hasn't already gone to vote
     require(proposal.voteCallTime == 0, "Voting: Proposal already gone to vote");
 
     // Proposal must meet sponsorship threshold
-    require(proposal.sponsorship >= PROPOSAL_SPONSOR_THRESHOLD, "Voting: Sponsor threshold not met");
+    require(
+      proposal.sponsorship >= PROPOSAL_SPONSOR_THRESHOLD,
+      "Voting: Sponsor threshold not met"
+    );
 
     // Log vote time (also marks proposal as ready to vote)
     proposal.voteCallTime = block.timestamp;
@@ -333,20 +359,36 @@ contract Voting {
     require(proposal.voteCallTime > 0, "Voting: Vote hasn't been called for this proposal");
 
     // Check Voting window has opened
-    require(block.timestamp > proposal.voteCallTime + VOTING_START_OFFSET, "Voting: Voting window hasn't opened");
+    require(
+      block.timestamp > proposal.voteCallTime + VOTING_START_OFFSET,
+      "Voting: Voting window hasn't opened"
+    );
 
     // Check voting window hasn't closed (voting window length conditional on )
     if (_affirmative) {
-      require(block.timestamp < proposal.voteCallTime + VOTING_YAY_END_OFFSET, "Voting: Affirmative voting window has closed");
+      require(
+        block.timestamp < proposal.voteCallTime + VOTING_YAY_END_OFFSET,
+        "Voting: Affirmative voting window has closed"
+      );
     } else {
-      require(block.timestamp < proposal.voteCallTime + VOTING_NAY_END_OFFSET, "Voting: Negative voting window has closed");
+      require(
+        block.timestamp < proposal.voteCallTime + VOTING_NAY_END_OFFSET,
+        "Voting: Negative voting window has closed"
+      );
     }
 
     // Get address voting power
-    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(_account, proposal.votingInterval, _hint);
+    Staking.AccountSnapshot memory snapshot = STAKING_CONTRACT.accountSnapshotAt(
+      _account,
+      proposal.votingInterval,
+      _hint
+    );
 
     // Check address isn't voting with more voting power than it has
-    require(proposal.voted[_account] + _amount <= snapshot.votingPower, "Voting: Not enough voting power to cast this vote");
+    require(
+      proposal.voted[_account] + _amount <= snapshot.votingPower,
+      "Voting: Not enough voting power to cast this vote"
+    );
 
     // Update account voted amount
     proposal.voted[_account] += _amount;
@@ -380,8 +422,14 @@ contract Voting {
     require(proposal.yayVotes > proposal.nayVotes, "Voting: Proposal hasn't passed vote");
 
     // Check we're in execution window
-    require(block.timestamp > proposal.voteCallTime + EXECUTION_START_OFFSET, "Voting: Execution window hasn't opened");
-    require(block.timestamp < proposal.voteCallTime + EXECUTION_END_OFFSET, "Voting: Execution window has closed");
+    require(
+      block.timestamp > proposal.voteCallTime + EXECUTION_START_OFFSET,
+      "Voting: Execution window hasn't opened"
+    );
+    require(
+      block.timestamp < proposal.voteCallTime + EXECUTION_END_OFFSET,
+      "Voting: Execution window has closed"
+    );
 
     // Check proposal hasn't been executed before
     require(!proposal.executed, "Voting: Proposal has already been executed");
@@ -394,7 +442,11 @@ contract Voting {
     // Loop over actions and execute
     for (uint256 i = 0; i < actions.length; i++) {
       // Execute action
-      (bool successful, bytes memory returnData) = DELEGATOR_CONTRACT.callContract(actions[i].callContract, actions[i].data, actions[i].value);
+      (bool successful, bytes memory returnData) = DELEGATOR_CONTRACT.callContract(
+        actions[i].callContract,
+        actions[i].data,
+        actions[i].value
+      );
 
       // If an action fails to execute, catch and bubble up reason with revert
       if (!successful) {

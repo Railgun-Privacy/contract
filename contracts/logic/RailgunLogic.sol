@@ -49,9 +49,19 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   event FeeChange(uint256 depositFee, uint256 withdrawFee, uint256 nftFee);
 
   // Transaction events
-  event CommitmentBatch(uint256 treeNumber, uint256 startPosition, uint256[] hash, CommitmentCiphertext[] ciphertext);
+  event CommitmentBatch(
+    uint256 treeNumber,
+    uint256 startPosition,
+    uint256[] hash,
+    CommitmentCiphertext[] ciphertext
+  );
 
-  event GeneratedCommitmentBatch(uint256 treeNumber, uint256 startPosition, CommitmentPreimage[] commitments, uint256[2][] encryptedRandom);
+  event GeneratedCommitmentBatch(
+    uint256 treeNumber,
+    uint256 startPosition,
+    CommitmentPreimage[] commitments,
+    uint256[2][] encryptedRandom
+  );
 
   event Nullifiers(uint256 treeNumber, uint256[] nullifier);
 
@@ -185,15 +195,29 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _commitmentPreimage - commitment to hash
    * @return commitment hash
    */
-  function hashCommitment(CommitmentPreimage memory _commitmentPreimage) public pure returns (uint256) {
-    return PoseidonT4.poseidon([_commitmentPreimage.npk, getTokenField(_commitmentPreimage.token), _commitmentPreimage.value]);
+  function hashCommitment(CommitmentPreimage memory _commitmentPreimage)
+    public
+    pure
+    returns (uint256)
+  {
+    return
+      PoseidonT4.poseidon(
+        [
+          _commitmentPreimage.npk,
+          getTokenField(_commitmentPreimage.token),
+          _commitmentPreimage.value
+        ]
+      );
   }
 
   /**
    * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _notes - list of commitments to deposit
    */
-  function generateDeposit(CommitmentPreimage[] calldata _notes, uint256[2][] calldata _encryptedRandom) external {
+  function generateDeposit(
+    CommitmentPreimage[] calldata _notes,
+    uint256[2][] calldata _encryptedRandom
+  ) external {
     // Get notes length
     uint256 notesLength = _notes.length;
 
@@ -201,7 +225,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256[] memory insertionLeaves = new uint256[](notesLength);
     CommitmentPreimage[] memory generatedCommitments = new CommitmentPreimage[](notesLength);
 
-    require(_notes.length == _encryptedRandom.length, "RailgunLogic: notes and encrypted random length doesn't match");
+    require(
+      _notes.length == _encryptedRandom.length,
+      "RailgunLogic: notes and encrypted random length doesn't match"
+    );
 
     for (uint256 notesIter = 0; notesIter < notesLength; notesIter++) {
       // Retrieve note
@@ -211,7 +238,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       require(note.value > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
       // Check if token is on the blacklist
-      require(!TokenBlacklist.tokenBlacklist[note.token.tokenAddress], "RailgunLogic: Token is blacklisted");
+      require(
+        !TokenBlacklist.tokenBlacklist[note.token.tokenAddress],
+        "RailgunLogic: Token is blacklisted"
+      );
 
       // Check ypubkey is in snark scalar field
       require(note.npk < SNARK_SCALAR_FIELD, "RailgunLogic: npk out of range");
@@ -227,7 +257,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         (uint120 base, uint120 fee) = getFee(note.value, true, depositFee);
 
         // Add GeneratedCommitment to event array
-        generatedCommitments[notesIter] = CommitmentPreimage({ npk: note.npk, value: base, token: note.token });
+        generatedCommitments[notesIter] = CommitmentPreimage({
+          npk: note.npk,
+          value: base,
+          token: note.token
+        });
 
         // Calculate commitment hash
         uint256 hash = hashCommitment(generatedCommitments[notesIter]);
@@ -253,7 +287,12 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     }
 
     // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit GeneratedCommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, generatedCommitments, _encryptedRandom);
+    emit GeneratedCommitmentBatch(
+      Commitments.treeNumber,
+      Commitments.nextLeafIndex,
+      generatedCommitments,
+      _encryptedRandom
+    );
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
@@ -264,7 +303,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    */
   function checkSafetyVectors() external {
     // Set safety bit
-    StorageSlot.getBooleanSlot(0x8dea8703c3cf94703383ce38a9c894669dccd4ca8e65ddb43267aa0248711450).value = true;
+    StorageSlot
+      .getBooleanSlot(0x8dea8703c3cf94703383ce38a9c894669dccd4ca8e65ddb43267aa0248711450)
+      .value = true;
 
     // Setup behaviour check
     bool result = false;
@@ -311,7 +352,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // If adaptContract is not zero check that it matches the caller
       require(
-        transaction.boundParams.adaptContract == address(0) || transaction.boundParams.adaptContract == msg.sender,
+        transaction.boundParams.adaptContract == address(0) ||
+          transaction.boundParams.adaptContract == msg.sender,
         "AdaptID doesn't match caller contract"
       );
 
@@ -319,7 +361,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       uint256 treeNumber = transaction.boundParams.treeNumber;
 
       // Check merkle root is valid
-      require(Commitments.rootHistory[treeNumber][transaction.merkleRoot], "RailgunLogic: Invalid Merkle Root");
+      require(
+        Commitments.rootHistory[treeNumber][transaction.merkleRoot],
+        "RailgunLogic: Invalid Merkle Root"
+      );
 
       // Loop through each nullifier
       uint256 nullifiersLength = transaction.nullifiers.length;
@@ -328,7 +373,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         uint256 nullifier = transaction.nullifiers[nullifierIter];
 
         // Check if nullifier has been seen before
-        require(!Commitments.nullifiers[treeNumber][nullifier], "RailgunLogic: Nullifier already seen");
+        require(
+          !Commitments.nullifiers[treeNumber][nullifier],
+          "RailgunLogic: Nullifier already seen"
+        );
 
         // Push to nullifiers
         Commitments.nullifiers[treeNumber][nullifier] = true;
@@ -374,7 +422,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
           IERC20 token = IERC20(address(uint160(transaction.withdrawPreimage.token.tokenAddress)));
 
           // Get base and fee amounts
-          (uint120 base, uint120 fee) = getFee(transaction.withdrawPreimage.value, true, withdrawFee);
+          (uint120 base, uint120 fee) = getFee(
+            transaction.withdrawPreimage.value,
+            true,
+            withdrawFee
+          );
 
           // Transfer base to output address
           token.safeTransfer(output, base);

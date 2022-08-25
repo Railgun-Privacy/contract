@@ -14,7 +14,10 @@ describe('Token/Multisend', function () {
     const multisend = await Multisend.deploy();
 
     // Approve entire balance
-    await testERC20.approve(multisend.address, await testERC20.balanceOf((await ethers.getSigners())[0].address));
+    await testERC20.approve(
+      multisend.address,
+      await testERC20.balanceOf((await ethers.getSigners())[0].address),
+    );
 
     return { testERC20, multisend };
   }

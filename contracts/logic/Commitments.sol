@@ -167,7 +167,10 @@ contract Commitments is Initializable {
         nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
 
         // Calculate the hash for the next level
-        _leafHashes[nextLevelHashIndex] = hashLeftRight(filledSubTrees[level], _leafHashes[insertionElement]);
+        _leafHashes[nextLevelHashIndex] = hashLeftRight(
+          filledSubTrees[level],
+          _leafHashes[insertionElement]
+        );
 
         // Increment
         insertionElement += 1;
