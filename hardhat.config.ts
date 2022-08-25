@@ -35,7 +35,6 @@ const config: HardhatUserConfig = {
 
 async function overwriteArtifact(hre: HardhatRuntimeEnvironment, contractName: string, bytecode: string) {
   const artifact = await hre.artifacts.readArtifact(contractName);
-
   await hre.artifacts.saveArtifactAndDebugFile({
     ...artifact,
     bytecode,
@@ -47,11 +46,41 @@ task(
   'Compiles the entire project, building all artifacts and injecting precompiled artifacts',
   async (taskArguments, hre, runSuper) => {
     await runSuper();
-
     await overwriteArtifact(hre, 'PoseidonT3', poseidonContract.createCode(2));
-
     await overwriteArtifact(hre, 'PoseidonT4', poseidonContract.createCode(3));
   },
 );
+
+task('test', 'Runs test suite')
+  .addOptionalParam('longtests', 'extra = longer tests enabled; complete = full test suite enabled')
+  .setAction(async (taskArguments, hre, runSuper) => {
+    if (taskArguments.longtests === 'extra' || taskArguments.longtests === 'complete') {
+      process.env.LONG_TESTS = taskArguments.longtests;
+    }
+    await runSuper();
+  });
+
+task('accounts', 'Prints the list of accounts', async (taskArguments, hre) => {
+  const accounts = await hre.ethers.getSigners();
+  accounts.forEach((account) => {
+    console.log(account.address);
+  });
+});
+
+task('deploy:test', 'Deploy full deployment for testing purposes', async (taskArguments, hre) => {
+  await hre.run('run', { script: 'scripts/deploy_test.js' });
+});
+
+task('forktoken', 'Gives 100m balance to address[0] when running in fork mode', async (taskArguments, hre) => {
+  await hre.run('run', { script: 'scripts/grant_balance.js' });
+});
+
+task('fastforward', 'Fast forwards time')
+  .addParam('days', 'Days to fast forward (accepts decimal values)')
+  .setAction(async (taskArguments, hre) => {
+    await hre.ethers.provider.send('evm_increaseTime', [86400 * taskArguments.days]);
+    console.log(`Fast forwarded ${taskArguments.days} days`);
+    await hre.ethers.provider.send('evm_mine', []);
+  });
 
 export default config;
