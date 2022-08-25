@@ -51,6 +51,18 @@ describe('Governance/Delegator', () => {
     )).to.be.revertedWith('Ownable: caller is not the owner');
 
     // Set permission to true
+    await expect(delegatorAdmin.setPermission(
+      (await ethers.getSigners())[0].address,
+      targetAlpha.address,
+      targetAlpha.interface.getSighash('a'),
+      true,
+    )).to.emit(delegatorAdmin, 'GrantPermission').withArgs(
+      (await ethers.getSigners())[0].address,
+      targetAlpha.address,
+      targetAlpha.interface.getSighash('a'),
+    );
+
+    // Calling multiple times shouldn't have impact
     await delegatorAdmin.setPermission(
       (await ethers.getSigners())[0].address,
       targetAlpha.address,
@@ -64,6 +76,25 @@ describe('Governance/Delegator', () => {
       targetAlpha.address,
       targetAlpha.interface.getSighash('a'),
     )).to.equal(true);
+
+    // Set permission to false
+    await expect(delegatorAdmin.setPermission(
+      (await ethers.getSigners())[0].address,
+      targetAlpha.address,
+      targetAlpha.interface.getSighash('a'),
+      false,
+    )).to.emit(delegatorAdmin, 'RevokePermission').withArgs(
+      (await ethers.getSigners())[0].address,
+      targetAlpha.address,
+      targetAlpha.interface.getSighash('a'),
+    );
+
+    // Permission should now be false
+    expect(await delegator.checkPermission(
+      (await ethers.getSigners())[0].address,
+      targetAlpha.address,
+      targetAlpha.interface.getSighash('a'),
+    )).to.equal(false);
   });
 
   it('Should be able to call function with permission', async () => {
@@ -202,5 +233,26 @@ describe('Governance/Delegator', () => {
     await expect(
       delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
     ).to.eventually.be.fulfilled;
+
+    // Check all intercepts
+    await expect(delegatorAdmin.callContract(
+      delegator.address,
+      delegator.interface.encodeFunctionData('transferOwnership', [
+        (await ethers.getSigners())[0].address,
+      ]),
+      0,
+    )).to.eventually.be.fulfilled;
+
+    await expect(delegator.callContract(
+      delegator.address,
+      '0x00000000',
+      0,
+    )).to.eventually.be.fulfilled;
+
+    await expect(delegator.callContract(
+      delegator.address,
+      delegator.interface.encodeFunctionData('renounceOwnership'),
+      0,
+    )).to.eventually.be.fulfilled;
   });
 });
