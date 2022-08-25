@@ -35,7 +35,9 @@ describe('Token/Multisend', function () {
     // Transfer
     await expect(multisend.multisend(testERC20.address, sendTokens)).to.changeTokenBalance(
       testERC20,
-      (await ethers.getSigners())[1].address,
+      (
+        await ethers.getSigners()
+      )[1].address,
       sum,
     );
   });

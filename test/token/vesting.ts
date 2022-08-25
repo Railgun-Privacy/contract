@@ -31,11 +31,11 @@ describe('Token/Vesting', () => {
   it('Should setup vesting', async () => {
     const { testERC20, staking, distributor } = await loadFixture(deploy);
 
-    const stakeLocktime = Number((await staking.STAKE_LOCKTIME()));
+    const stakeLocktime = Number(await staking.STAKE_LOCKTIME());
     const VestLock = await ethers.getContractFactory('VestLock');
 
     // Create Vest Lock
-    await distributor.createVestLock((await ethers.getSigners())[0].address, await time.latest() + stakeLocktime);
+    await distributor.createVestLock((await ethers.getSigners())[0].address, (await time.latest()) + stakeLocktime);
 
     // Get clone
     const clone = VestLock.attach(await distributor.vestLocks((await ethers.getSigners())[0].address));
@@ -69,7 +69,9 @@ describe('Token/Vesting', () => {
     // Now we should be able to withdraw
     await expect(await clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n)).to.changeTokenBalance(
       testERC20,
-      (await ethers.getSigners())[1].address,
+      (
+        await ethers.getSigners()
+      )[1].address,
       1000n,
     );
   });
@@ -77,11 +79,11 @@ describe('Token/Vesting', () => {
   it('Should override locktime', async () => {
     const { testERC20, staking, distributor } = await loadFixture(deploy);
 
-    const stakeLocktime = Number((await staking.STAKE_LOCKTIME()));
+    const stakeLocktime = Number(await staking.STAKE_LOCKTIME());
     const VestLock = await ethers.getContractFactory('VestLock');
 
     // Create Vest Lock
-    await distributor.createVestLock((await ethers.getSigners())[0].address, await time.latest() + stakeLocktime);
+    await distributor.createVestLock((await ethers.getSigners())[0].address, (await time.latest()) + stakeLocktime);
 
     // Get clone
     const clone = VestLock.attach(await distributor.vestLocks((await ethers.getSigners())[0].address));
@@ -100,7 +102,9 @@ describe('Token/Vesting', () => {
     // Now we should be able to withdraw
     await expect(clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000n)).to.changeTokenBalance(
       testERC20,
-      (await ethers.getSigners())[1].address,
+      (
+        await ethers.getSigners()
+      )[1].address,
       1000n,
     );
   });

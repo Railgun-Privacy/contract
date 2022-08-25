@@ -9,9 +9,7 @@ describe('Governance/Delegator', () => {
     const TargetNumber = await ethers.getContractFactory('GovernanceTargetNumberStub');
 
     // Deploy delegator
-    const delegator = await Delegator.deploy(
-      (await ethers.getSigners())[1].address,
-    );
+    const delegator = await Delegator.deploy((await ethers.getSigners())[1].address);
 
     // Connect to delegator as admin account
     const delegatorAdmin = delegator.connect((await ethers.getSigners())[1]);
@@ -29,181 +27,116 @@ describe('Governance/Delegator', () => {
   }
 
   it('Should set permissions', async () => {
-    const {
-      delegator,
-      delegatorAdmin,
-      targetAlpha,
-    } = await loadFixture(deploy);
+    const { delegator, delegatorAdmin, targetAlpha } = await loadFixture(deploy);
 
     // Permission should be false initially
-    expect(await delegator.checkPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-    )).to.equal(false);
+    expect(
+      await delegator.checkPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a')),
+    ).to.equal(false);
 
     // Shouldn't allow non-admin to set permissions
-    await expect(delegator.setPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-      true,
-    )).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(
+      delegator.setPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a'), true),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
 
     // Set permission to true
-    await expect(delegatorAdmin.setPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-      true,
-    )).to.emit(delegatorAdmin, 'GrantPermission').withArgs(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-    );
+    await expect(
+      delegatorAdmin.setPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a'), true),
+    )
+      .to.emit(delegatorAdmin, 'GrantPermission')
+      .withArgs((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a'));
 
     // Calling multiple times shouldn't have impact
-    await delegatorAdmin.setPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-      true,
-    );
+    await delegatorAdmin.setPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a'), true);
 
     // Permission should now be true
-    expect(await delegator.checkPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-    )).to.equal(true);
+    expect(
+      await delegator.checkPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a')),
+    ).to.equal(true);
 
     // Set permission to false
-    await expect(delegatorAdmin.setPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-      false,
-    )).to.emit(delegatorAdmin, 'RevokePermission').withArgs(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-    );
+    await expect(
+      delegatorAdmin.setPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a'), false),
+    )
+      .to.emit(delegatorAdmin, 'RevokePermission')
+      .withArgs((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a'));
 
     // Permission should now be false
-    expect(await delegator.checkPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-    )).to.equal(false);
+    expect(
+      await delegator.checkPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a')),
+    ).to.equal(false);
   });
 
   it('Should be able to call function with permission', async () => {
-    const {
-      delegator,
-      delegatorAdmin,
-      targetAlpha,
-      targetNumber,
-    } = await loadFixture(deploy);
+    const { delegator, delegatorAdmin, targetAlpha, targetNumber } = await loadFixture(deploy);
 
     // Set permission to true
-    await delegatorAdmin.setPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-      true,
-    );
+    await delegatorAdmin.setPermission((await ethers.getSigners())[0].address, targetAlpha.address, targetAlpha.interface.getSighash('a'), true);
 
     //Should be able to call function
-    await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0)).to.eventually.be.fulfilled;
 
     // Other function and contract calls should fail
-    await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b'), 0),
-    ).to.be.revertedWith('Delegator: Caller doesn\'t have permission');
+    await expect(delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b'), 0)).to.be.revertedWith(
+      "Delegator: Caller doesn't have permission",
+    );
 
-    await expect(
-      delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('a'), 0),
-    ).to.be.revertedWith('Delegator: Caller doesn\'t have permission');
+    await expect(delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('a'), 0)).to.be.revertedWith(
+      "Delegator: Caller doesn't have permission",
+    );
   });
 
   it('Should be able to call function with wildcard contract permission', async () => {
-    const {
-      delegator,
-      delegatorAdmin,
-      targetAlpha,
-      targetNumber,
-    } = await loadFixture(deploy);
+    const { delegator, delegatorAdmin, targetAlpha, targetNumber } = await loadFixture(deploy);
 
     // Set permission to call function on any contract
     await delegatorAdmin.setPermission(
-      (await ethers.getSigners())[0].address,
+      (
+        await ethers.getSigners()
+      )[0].address,
       ethers.constants.AddressZero,
       targetAlpha.interface.getSighash('a'),
       true,
     );
 
     // Should be able to call function on both target contracts
-    await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0)).to.eventually.be.fulfilled;
 
-    await expect(
-      delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('a'), 0)).to.eventually.be.fulfilled;
 
     // Other function calls should fail
-    await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b'), 0),
-    ).to.be.revertedWith('Delegator: Caller doesn\'t have permission');
+    await expect(delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b'), 0)).to.be.revertedWith(
+      "Delegator: Caller doesn't have permission",
+    );
 
-    await expect(
-      delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('b'), 0),
-    ).to.be.revertedWith('Delegator: Caller doesn\'t have permission');
+    await expect(delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('b'), 0)).to.be.revertedWith(
+      "Delegator: Caller doesn't have permission",
+    );
   });
 
   it('Should be able to call function with wildcard function permission', async () => {
-    const {
-      delegator,
-      delegatorAdmin,
-      targetAlpha,
-      targetNumber,
-    } = await loadFixture(deploy);
+    const { delegator, delegatorAdmin, targetAlpha, targetNumber } = await loadFixture(deploy);
 
     // Set permission to call any function on target
-    await delegatorAdmin.setPermission(
-      (await ethers.getSigners())[0].address,
-      targetAlpha.address,
-      '0x00000000',
-      true,
-    );
+    await delegatorAdmin.setPermission((await ethers.getSigners())[0].address, targetAlpha.address, '0x00000000', true);
 
     // Any function on target should be callable
-    await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0)).to.eventually.be.fulfilled;
 
-    await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b'), 0),
-    ).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b'), 0)).to.eventually.be.fulfilled;
 
     // Other contracts should fail
-    await expect(
-      delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('a'), 0),
-    ).to.be.revertedWith('Delegator: Caller doesn\'t have permission');
+    await expect(delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('a'), 0)).to.be.revertedWith(
+      "Delegator: Caller doesn't have permission",
+    );
 
-    await expect(
-      delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('b'), 0),
-    ).to.be.revertedWith('Delegator: Caller doesn\'t have permission');
+    await expect(delegator.callContract(targetNumber.address, targetNumber.interface.encodeFunctionData('b'), 0)).to.be.revertedWith(
+      "Delegator: Caller doesn't have permission",
+    );
   });
 
   it('Should intercept calls to self', async () => {
-    const {
-      delegator,
-      delegatorAdmin,
-      targetAlpha,
-    } = await loadFixture(deploy);
+    const { delegator, delegatorAdmin, targetAlpha } = await loadFixture(deploy);
 
     // Should intercept call to self and change permission
     await delegatorAdmin.callContract(
@@ -218,41 +151,34 @@ describe('Governance/Delegator', () => {
     );
 
     // Should still check for permissions on self-intercept
-    await expect(delegator.callContract(
-      delegator.address,
-      delegator.interface.encodeFunctionData('setPermission', [
-        (await ethers.getSigners())[0].address,
-        targetAlpha.address,
-        targetAlpha.interface.getSighash('a'),
-        true,
-      ]),
-      0,
-    )).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(
+      delegator.callContract(
+        delegator.address,
+        delegator.interface.encodeFunctionData('setPermission', [
+          (await ethers.getSigners())[0].address,
+          targetAlpha.address,
+          targetAlpha.interface.getSighash('a'),
+          true,
+        ]),
+        0,
+      ),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
 
     // Permission should be changed
-    await expect(
-      delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0)).to.eventually.be.fulfilled;
 
     // Check all intercepts
-    await expect(delegatorAdmin.callContract(
-      delegator.address,
-      delegator.interface.encodeFunctionData('transferOwnership', [
-        (await ethers.getSigners())[0].address,
-      ]),
-      0,
-    )).to.eventually.be.fulfilled;
+    await expect(
+      delegatorAdmin.callContract(
+        delegator.address,
+        delegator.interface.encodeFunctionData('transferOwnership', [(await ethers.getSigners())[0].address]),
+        0,
+      ),
+    ).to.eventually.be.fulfilled;
 
-    await expect(delegator.callContract(
-      delegator.address,
-      '0x00000000',
-      0,
-    )).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(delegator.address, '0x00000000', 0)).to.eventually.be.fulfilled;
 
-    await expect(delegator.callContract(
-      delegator.address,
-      delegator.interface.encodeFunctionData('renounceOwnership'),
-      0,
-    )).to.eventually.be.fulfilled;
+    await expect(delegator.callContract(delegator.address, delegator.interface.encodeFunctionData('renounceOwnership'), 0)).to.eventually.be
+      .fulfilled;
   });
 });
