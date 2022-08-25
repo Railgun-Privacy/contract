@@ -1,6 +1,7 @@
 import { HardhatUserConfig, task } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 import 'hardhat-local-networks-config-plugin';
+import { time } from '@nomicfoundation/hardhat-network-helpers';
 
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 
@@ -25,7 +26,7 @@ const config: HardhatUserConfig = {
   },
   mocha: mocharc,
   gasReporter: {
-    enabled: process.env.REPORT_GAS !== undefined,
+    enabled: true,
     currency: 'USD',
   },
   etherscan: {
@@ -77,10 +78,9 @@ task('forktoken', 'Gives 100m balance to address[0] when running in fork mode', 
 
 task('fastforward', 'Fast forwards time')
   .addParam('days', 'Days to fast forward (accepts decimal values)')
-  .setAction(async (taskArguments, hre) => {
-    await hre.ethers.provider.send('evm_increaseTime', [86400 * taskArguments.days]);
+  .setAction(async (taskArguments) => {
+    await time.increase(86400 * taskArguments.days);
     console.log(`Fast forwarded ${taskArguments.days} days`);
-    await hre.ethers.provider.send('evm_mine', []);
   });
 
 export default config;
