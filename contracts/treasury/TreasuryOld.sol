@@ -50,12 +50,6 @@ contract TreasuryOld is Ownable {
   }
 
   /**
-   * @notice Recieve ETH
-   */
-  // solhint-disable-next-line no-empty-blocks
-  fallback() external payable {}
-
-  /**
    * @notice Receive ETH
    */
   // solhint-disable-next-line no-empty-blocks

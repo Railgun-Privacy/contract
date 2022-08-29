@@ -23,7 +23,7 @@ describe('Governance/Voting', () => {
     const delegator = await Delegator.deploy((await ethers.getSigners())[0].address);
     const voting = await Voting.deploy(staking.address, delegator.address);
     const target = await Target.deploy();
-    const target2 = await Target2.deploy();
+    const target2 = await Target2.deploy('hello');
 
     // Transfer ownership of delegator to voting
     delegator.transferOwnership(voting.address);
@@ -165,7 +165,7 @@ describe('Governance/Voting', () => {
     );
 
     // Trying to execute should fail
-    await expect(voting.executeProposal(0)).to.eventually.be.rejectedWith(
+    await expect(voting.executeProposal(0)).to.be.rejectedWith(
       "Voting: Vote hasn't been called for this proposal",
     );
 
@@ -454,7 +454,7 @@ describe('Governance/Voting', () => {
 
     // Sponsor second proposal should pass now
     await expect(voting.sponsorProposal(1, proposalSponsorThreshold, users[0].address, 0)).to
-      .eventually.be.fulfilled;
+      .be.fulfilled;
   });
 
   it('Should only allow voting key to call', async () => {
@@ -484,6 +484,6 @@ describe('Governance/Voting', () => {
 
     // Sponsor with permission should pass
     await expect(voting2.sponsorProposal(0, proposalSponsorThreshold, users[0].address, 0)).to
-      .eventually.be.fulfilled;
+      .be.fulfilled;
   });
 });

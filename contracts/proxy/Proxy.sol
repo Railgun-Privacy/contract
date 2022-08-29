@@ -103,14 +103,14 @@ contract PausableUpgradableProxy {
   }
 
   /**
-   * @notice fallback function that delegates calls with calladata
+   * @notice fallback function that delegates calls with calldata
    */
   fallback() external payable {
     delegate();
   }
 
   /**
-   * @notice fallback function that delegates calls with no calladata
+   * @notice fallback function that delegates calls with no calldata
    */
   receive() external payable {
     delegate();

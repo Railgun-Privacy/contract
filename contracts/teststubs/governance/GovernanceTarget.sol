@@ -19,6 +19,10 @@ contract GovernanceTargetAlphaStub {
     require(1 == 2, "1 is not equal to 2");
     return true;
   }
+
+  receive() external payable {
+    require(1 == 2, "1 is not equal to 2");
+  }
 }
 
 contract GovernanceTargetNumberStub {
@@ -38,6 +42,10 @@ contract GovernanceTargetNumberStub {
     require(1 == 2, "1 is not equal to 2");
     return true;
   }
+
+  receive() external payable {
+    require(1 == 2, "1 is not equal to 2");
+  }
 }
 
 contract GovernanceTargetConstructorArgumentStub {
@@ -46,12 +54,34 @@ contract GovernanceTargetConstructorArgumentStub {
   constructor(string memory _greeing) {
     greeting = _greeing;
   }
+
+  function willRevert() external pure returns (bool success) {
+    require(1 == 2, "1 is not equal to 2");
+    return true;
+  }
+
+  receive() external payable {
+    require(1 == 2, "1 is not equal to 2");
+  }
 }
 
 contract GovernanceStateChangeTargetStub {
-  string public greeting = "hello";
+  string public greeting;
+
+  constructor(string memory _greeing) {
+    greeting = _greeing;
+  }
 
   function changeGreeting(string calldata _newGreeting) external {
     greeting = _newGreeting;
+  }
+
+  function willRevert() external pure returns (bool success) {
+    require(1 == 2, "1 is not equal to 2");
+    return true;
+  }
+
+  receive() external payable {
+    require(1 == 2, "1 is not equal to 2");
   }
 }

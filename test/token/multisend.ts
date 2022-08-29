@@ -28,7 +28,7 @@ describe('Token/Multisend', function () {
     // Setup transfer object
     const transfer = {
       to: (await ethers.getSigners())[1].address,
-      amount: 100n,
+      amount: 100,
     };
     const sendTokens = new Array(200).fill(transfer);
 

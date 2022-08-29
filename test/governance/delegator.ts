@@ -141,7 +141,7 @@ describe('Governance/Delegator', () => {
     //Should be able to call function
     await expect(
       delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
 
     // Other function and contract calls should fail
     await expect(
@@ -173,7 +173,7 @@ describe('Governance/Delegator', () => {
     // Should be able to call function on both target contracts
     await expect(
       delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
 
     await expect(
       delegator.callContract(
@@ -181,7 +181,7 @@ describe('Governance/Delegator', () => {
         targetNumber.interface.encodeFunctionData('a'),
         0,
       ),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
 
     // Other function calls should fail
     await expect(
@@ -213,11 +213,11 @@ describe('Governance/Delegator', () => {
     // Any function on target should be callable
     await expect(
       delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
 
     await expect(
       delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('b'), 0),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
 
     // Other contracts should fail
     await expect(
@@ -269,7 +269,7 @@ describe('Governance/Delegator', () => {
     // Permission should be changed
     await expect(
       delegator.callContract(targetAlpha.address, targetAlpha.interface.encodeFunctionData('a'), 0),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
 
     // Check all intercepts
     await expect(
@@ -280,9 +280,9 @@ describe('Governance/Delegator', () => {
         ]),
         0,
       ),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
 
-    await expect(delegator.callContract(delegator.address, '0x00000000', 0)).to.eventually.be
+    await expect(delegator.callContract(delegator.address, '0x00000000', 0)).to.be
       .fulfilled;
 
     await expect(
@@ -291,6 +291,6 @@ describe('Governance/Delegator', () => {
         delegator.interface.encodeFunctionData('renounceOwnership'),
         0,
       ),
-    ).to.eventually.be.fulfilled;
+    ).to.be.fulfilled;
   });
 });
