@@ -4,21 +4,28 @@ import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Governance/Staking', () => {
   async function deploy() {
-    const TestERC20 = await ethers.getContractFactory('TestERC20');
+    const Rail = await ethers.getContractFactory('RailTokenFixedSupply');
     const Staking = await ethers.getContractFactory('StakingStub');
 
     // Deploy with test ERC20 as staking coin
-    const testERC20 = await TestERC20.deploy();
-    const staking = await Staking.deploy(testERC20.address);
+    const rail = await Rail.deploy(
+      (
+        await ethers.getSigners()
+      )[0].address,
+      2n ** 256n - 1n,
+      'RAIL',
+      'RAIL',
+    );
+    const staking = await Staking.deploy(rail.address);
 
     // Approve entire balance for staking
-    await testERC20.approve(
+    await rail.approve(
       staking.address,
-      await testERC20.balanceOf((await ethers.getSigners())[0].address),
+      await rail.balanceOf((await ethers.getSigners())[0].address),
     );
 
     return {
-      testERC20,
+      rail,
       staking,
     };
   }

@@ -1,5 +1,6 @@
 module.exports = {
   skipFiles: [
+    'logic/Poseidon.sol',
     'teststubs/TokenStubs.sol',
     'teststubs/adapt/SimpleSwap.sol',
     'teststubs/governance/GovernanceTarget.sol',
