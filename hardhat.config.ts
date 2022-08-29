@@ -59,20 +59,17 @@ task(
 task('test', 'Runs test suite')
   .addOptionalParam('longtests', 'extra = longer tests enabled; complete = full test suite enabled')
   .setAction(async (taskArguments, hre, runSuper) => {
-    if (taskArguments.longtests === 'extra' || taskArguments.longtests === 'complete') {
+    if (
+      taskArguments.longtests === 'none' ||
+      taskArguments.longtests === 'extra' ||
+      taskArguments.longtests === 'complete'
+    ) {
       process.env.LONG_TESTS = taskArguments.longtests;
+    } else {
+      process.env.LONG_TESTS = 'complete';
     }
     await runSuper();
   });
-
-task(
-  'coverage',
-  'Generates a code coverage report for tests',
-  async (taskArguments, hre, runSuper) => {
-    process.env.LONG_TESTS = 'complete';
-    await runSuper();
-  },
-);
 
 task('accounts', 'Prints the list of accounts', async (taskArguments, hre) => {
   const accounts = await hre.ethers.getSigners();
