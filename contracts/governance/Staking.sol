@@ -12,7 +12,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  * @author Railgun Contributors
  * @notice Governance contract for railgun, handles staking, voting power, and snapshotting
  * @dev Snapshots cannot be taken during interval 0
- * wait till interval 1 before utilising snapshots
+ * wait till interval 1 before utilizing snapshots
  */
 contract Staking {
   using SafeERC20 for IERC20;
@@ -28,7 +28,7 @@ contract Staking {
   // solhint-disable-next-line var-name-mixedcase
   uint256 public immutable DEPLOY_TIME = block.timestamp;
 
-  // New stake screated
+  // New stake created
   event Stake(address indexed account, uint256 indexed stakeID, uint256 amount);
 
   // Stake unlocked (coins removed from voting pool, 30 day delay before claiming is allowed)
@@ -206,7 +206,7 @@ contract Staking {
   }
 
   /**
-   * @notice Checks if accoutn and globals snapshots need updating and updates
+   * @notice Checks if account and globals snapshots need updating and updates
    * @param _account - Account to take snapshot for
    */
   function snapshot(address _account) internal {
@@ -248,8 +248,6 @@ contract Staking {
   function delegate(uint256 _stakeID, address _to) public {
     StakeStruct storage _stake = stakes[msg.sender][_stakeID];
 
-    require(_stake.staketime != 0, "Staking: Stake doesn't exist");
-
     require(_stake.locktime == 0, "Staking: Stake unlocked");
 
     require(_to != address(0), "Staking: Can't delegate to 0 address");
@@ -290,12 +288,10 @@ contract Staking {
     view
     returns (GlobalsSnapshot memory)
   {
-    require(_interval <= currentInterval(), "Staking: Interval out of bounds");
-
     // Index of element
     uint256 index;
 
-    // High/low for binary serach to find index
+    // High/low for binary search to find index
     // https://en.wikipedia.org/wiki/Binary_search_algorithm
     uint256 low = 0;
     uint256 high = globalsSnapshots.length;
@@ -365,15 +361,13 @@ contract Staking {
     view
     returns (AccountSnapshot memory)
   {
-    require(_interval <= currentInterval(), "Staking: Interval out of bounds");
-
     // Get account snapshots array
     AccountSnapshot[] storage snapshots = accountSnapshots[_account];
 
     // Index of element
     uint256 index;
 
-    // High/low for binary serach to find index
+    // High/low for binary search to find index
     // https://en.wikipedia.org/wiki/Binary_search_algorithm
     uint256 low = 0;
     uint256 high = snapshots.length;
@@ -476,8 +470,6 @@ contract Staking {
    */
 
   function unlock(uint256 _stakeID) public {
-    require(stakes[msg.sender][_stakeID].staketime != 0, "Staking: Stake doesn't exist");
-
     require(stakes[msg.sender][_stakeID].locktime == 0, "Staking: Stake already unlocked");
 
     // Check if snapshot needs to be taken

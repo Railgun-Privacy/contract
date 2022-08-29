@@ -65,11 +65,14 @@ task('test', 'Runs test suite')
     await runSuper();
   });
 
-task('coverage', 'Generates a code coverage report for tests',
+task(
+  'coverage',
+  'Generates a code coverage report for tests',
   async (taskArguments, hre, runSuper) => {
     process.env.LONG_TESTS = 'complete';
     await runSuper();
-  });
+  },
+);
 
 task('accounts', 'Prints the list of accounts', async (taskArguments, hre) => {
   const accounts = await hre.ethers.getSigners();

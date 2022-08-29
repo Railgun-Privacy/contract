@@ -23,17 +23,44 @@ describe('Governance/Staking', () => {
     };
   }
 
-  it('Should count intervals properly', async () => {
+  it('Should count intervals and take snapshots', async () => {
     const { staking } = await loadFixture(deploy);
 
     const snapshotInterval = Number(await staking.SNAPSHOT_INTERVAL());
 
+    const snapshots = [];
+
+    // Should throw if time requested is before contract deployment
+    await expect(
+      staking.intervalAtTime(Number(await staking.DEPLOY_TIME()) - 1),
+    ).to.be.rejectedWith('Staking: Requested time is before contract was deployed');
+
     for (let i = 0; i < 10; i += 1) {
+      // Take snapshot every third interval, interval 0 will never have a snapshot
+      if (i - (1 % 3) === 0 && i !== 0) {
+        await staking.snapshotStub((await ethers.getSigners())[0].address);
+        snapshots.push(i);
+      }
+
       // Check we are in correct interval
       expect(await staking.currentInterval()).to.equal(i);
 
+      // Check snapshot length is correct
+      expect(await staking.globalsSnapshotLength()).to.equal(snapshots.length);
+      expect(await staking.accountSnapshotLength((await ethers.getSigners())[0].address)).to.equal(
+        snapshots.length,
+      );
+
       // Increase time to next interval
       await time.increase(snapshotInterval);
+    }
+
+    // Check snapshots were taken
+    for (let i = 0; i < snapshots.length; i += 1) {
+      expect((await staking.globalsSnapshot(i)).interval).to.equal(snapshots[i]);
+      expect(
+        (await staking.accountSnapshot((await ethers.getSigners())[0].address, i)).interval,
+      ).to.equal(snapshots[i]);
     }
   });
 
@@ -97,12 +124,41 @@ describe('Governance/Staking', () => {
         expect(globalsSnapshot.interval).to.equal(expectedInterval);
       }
     }
+
+    // Should throw error if snapshot being retrieved is beyond the interval we're currently on
+    await expect(
+      staking.globalsSnapshotAt(Number(await staking.currentInterval()) + 1, 0),
+    ).to.be.rejectedWith('Staking: Interval out of bounds');
+    await expect(
+      staking.accountSnapshotAt(
+        (
+          await ethers.getSigners()
+        )[0].address,
+        Number(await staking.currentInterval()) + 1,
+        0,
+      ),
+    ).to.be.rejectedWith('Staking: Interval out of bounds');
+    await expect(
+      staking.globalsSnapshotAt(Number(await staking.currentInterval()) + 1, 0),
+    ).to.be.rejectedWith('Staking: Interval out of bounds');
+    await expect(
+      staking.accountSnapshotAt(
+        (
+          await ethers.getSigners()
+        )[0].address,
+        Number(await staking.currentInterval()) + 1,
+        0,
+      ),
+    ).to.be.rejectedWith('Staking: Interval out of bounds');
   });
 
   it('Should go through stake lifecycle', async () => {
     const { staking } = await loadFixture(deploy);
 
     const stakeLocktime = Number(await staking.STAKE_LOCKTIME());
+
+    // Can't stake 0 amount
+    await expect(staking.stake(0)).to.be.revertedWith('Staking: Amount not set');
 
     // Stake 100
     await expect(staking.stake(100))
@@ -113,6 +169,9 @@ describe('Governance/Staking', () => {
     expect(stake.amount).to.equal(100);
     expect(stake.locktime).to.equal(0);
     expect(stake.claimedTime).to.equal(0);
+
+    // Stake array length should increase
+    expect(await staking.stakesLength((await ethers.getSigners())[0].address)).to.equal(1);
 
     // Should not allow claiming before unlock
     await expect(staking.claim(0)).to.be.revertedWith('Staking: Stake not unlocked');
@@ -154,6 +213,11 @@ describe('Governance/Staking', () => {
     // Increase time to next interval
     await time.increase(snapshotInterval);
 
+    // Can't delegate to account 0
+    await expect(staking.delegate(0n, ethers.constants.AddressZero)).to.be.rejectedWith(
+      "Staking: Can't delegate to 0 address",
+    );
+
     // Delegate to account 1
     await expect(staking.delegate(0n, (await ethers.getSigners())[1].address))
       .to.emit(staking, 'Delegate')
@@ -170,6 +234,9 @@ describe('Governance/Staking', () => {
         0,
         100,
       );
+
+    // Multiple calls shouldn't cause errors
+    await staking.delegate(0n, (await ethers.getSigners())[1].address);
 
     // Check snapshots correctly stored values at beginning of period
     let snapshotAccount = await staking.accountSnapshotAt(
@@ -192,22 +259,10 @@ describe('Governance/Staking', () => {
     await time.increase(snapshotInterval);
 
     // Check snapshots have updated to new values
-    snapshotAccount = await staking.accountSnapshotAt(
-      (
-        await ethers.getSigners()
-      )[0].address,
-      2,
-      0,
-    );
+    snapshotAccount = await staking.accountSnapshotAt((await ethers.getSigners())[0].address, 2, 0);
     expect(snapshotAccount.votingPower).to.equal(0);
 
-    snapshotAccount = await staking.accountSnapshotAt(
-      (
-        await ethers.getSigners()
-      )[1].address,
-      2,
-      0,
-    );
+    snapshotAccount = await staking.accountSnapshotAt((await ethers.getSigners())[1].address, 2, 0);
     expect(snapshotAccount.votingPower).to.equal(100);
 
     // Undelegate
@@ -231,52 +286,28 @@ describe('Governance/Staking', () => {
     await time.increase(snapshotInterval);
 
     // Check snapshots have updated to new values
-    snapshotAccount = await staking.accountSnapshotAt(
-      (
-        await ethers.getSigners()
-      )[0].address,
-      3,
-      0,
-    );
+    snapshotAccount = await staking.accountSnapshotAt((await ethers.getSigners())[0].address, 3, 0);
     expect(snapshotAccount.votingPower).to.equal(100);
 
-    snapshotAccount = await staking.accountSnapshotAt(
-      (
-        await ethers.getSigners()
-      )[1].address,
-      3,
-      0,
-    );
+    snapshotAccount = await staking.accountSnapshotAt((await ethers.getSigners())[1].address, 3, 0);
     expect(snapshotAccount.votingPower).to.equal(0);
 
     // Unlock stake
     await staking.unlock(0);
 
     // Don't allow delegating after stake has been unlocked
-    expect(
-      staking.delegate(0, (await ethers.getSigners())[1].address),
-    ).to.be.revertedWith('Staking: Stake unlocked');
+    expect(staking.delegate(0, (await ethers.getSigners())[1].address)).to.be.revertedWith(
+      'Staking: Stake unlocked',
+    );
 
     // Increase time to next interval
     await time.increase(snapshotInterval);
 
     // Check snapshots have updated to new values
-    snapshotAccount = await staking.accountSnapshotAt(
-      (
-        await ethers.getSigners()
-      )[0].address,
-      4,
-      0,
-    );
+    snapshotAccount = await staking.accountSnapshotAt((await ethers.getSigners())[0].address, 4, 0);
     expect(snapshotAccount.votingPower).to.equal(0);
 
-    snapshotAccount = await staking.accountSnapshotAt(
-      (
-        await ethers.getSigners()
-      )[1].address,
-      4,
-      0,
-    );
+    snapshotAccount = await staking.accountSnapshotAt((await ethers.getSigners())[1].address, 4, 0);
     expect(snapshotAccount.votingPower).to.equal(0);
 
     snapshotGlobal = await staking.globalsSnapshotAt(4, 0);
