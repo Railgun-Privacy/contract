@@ -97,7 +97,7 @@ describe('Token/Vesting', () => {
       value: 100,
     });
 
-    await expect(clone.transferETH(target.address, 100)).to.be.rejectedWith('Failed to send Ether');
+    await expect(clone.transferETH(target.address, 100)).to.be.revertedWith('Failed to send Ether');
 
     await expect(
       clone.transferETH((await ethers.getSigners())[1].address, 100),
@@ -106,7 +106,7 @@ describe('Token/Vesting', () => {
     // Should be able to call contracts
     await expect(
       clone.callContract(target.address, target.interface.encodeFunctionData('willRevert'), 0),
-    ).to.be.rejectedWith('VestLock: failure on external contract call');
+    ).to.be.revertedWith('VestLock: failure on external contract call');
 
     await expect(
       clone.callContract(target.address, target.interface.encodeFunctionData('greeting'), 0),
@@ -141,16 +141,16 @@ describe('Token/Vesting', () => {
     // Release time not reached, should fail
     await expect(
       clone.transferERC20(testERC20.address, (await ethers.getSigners())[0].address, 1000),
-    ).to.be.rejectedWith("VestLock: Vesting hasn't matured yet");
+    ).to.be.revertedWith("VestLock: Vesting hasn't matured yet");
 
     // Non admin shouldn't be able to override locktime
-    await expect(clone2.overrideLock(0)).to.be.rejectedWith('VestLock: Caller not admin');
+    await expect(clone2.overrideLock(0)).to.be.revertedWith('VestLock: Caller not admin');
 
     // Override locktime
     await clone.overrideLock(0);
 
     // Locktime can only be made earlier, not later
-    await expect(clone.overrideLock(1)).to.be.rejectedWith(
+    await expect(clone.overrideLock(1)).to.be.revertedWith(
       'VestLock: new lock time must be less than old lock time',
     );
 

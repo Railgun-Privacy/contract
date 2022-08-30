@@ -27,11 +27,13 @@ describe('Token/RailDaoMintable', function () {
       .withArgs(ethers.constants.AddressZero, (await ethers.getSigners())[0].address, 10);
 
     // Minting 90 extra coins would result in supply of 110, should fail
-    await expect(rail.governanceMint((await ethers.getSigners())[0].address, 90))
-      .to.be.rejectedWith('RailTokenDAOMintable: Can\'t mint more than hard cap');
+    await expect(
+      rail.governanceMint((await ethers.getSigners())[0].address, 90),
+    ).to.be.revertedWith("RailTokenDAOMintable: Can't mint more than hard cap");
 
     // Calling mint from an address that's not the owner should fail
-    await expect(rail2.governanceMint((await ethers.getSigners())[0].address, 10))
-      .to.be.rejectedWith('Ownable: caller is not the owner');
+    await expect(
+      rail2.governanceMint((await ethers.getSigners())[0].address, 10),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
   });
 });

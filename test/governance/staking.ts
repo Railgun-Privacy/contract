@@ -40,7 +40,7 @@ describe('Governance/Staking', () => {
     // Should throw if time requested is before contract deployment
     await expect(
       staking.intervalAtTime(Number(await staking.DEPLOY_TIME()) - 1),
-    ).to.be.rejectedWith('Staking: Requested time is before contract was deployed');
+    ).to.be.revertedWith('Staking: Requested time is before contract was deployed');
 
     for (let i = 0; i < 10; i += 1) {
       // Take snapshot every third interval, interval 0 will never have a snapshot
@@ -135,7 +135,7 @@ describe('Governance/Staking', () => {
     // Should throw error if snapshot being retrieved is beyond the interval we're currently on
     await expect(
       staking.globalsSnapshotAt(Number(await staking.currentInterval()) + 1, 0),
-    ).to.be.rejectedWith('Staking: Interval out of bounds');
+    ).to.be.revertedWith('Staking: Interval out of bounds');
     await expect(
       staking.accountSnapshotAt(
         (
@@ -144,10 +144,10 @@ describe('Governance/Staking', () => {
         Number(await staking.currentInterval()) + 1,
         0,
       ),
-    ).to.be.rejectedWith('Staking: Interval out of bounds');
+    ).to.be.revertedWith('Staking: Interval out of bounds');
     await expect(
       staking.globalsSnapshotAt(Number(await staking.currentInterval()) + 1, 0),
-    ).to.be.rejectedWith('Staking: Interval out of bounds');
+    ).to.be.revertedWith('Staking: Interval out of bounds');
     await expect(
       staking.accountSnapshotAt(
         (
@@ -156,7 +156,7 @@ describe('Governance/Staking', () => {
         Number(await staking.currentInterval()) + 1,
         0,
       ),
-    ).to.be.rejectedWith('Staking: Interval out of bounds');
+    ).to.be.revertedWith('Staking: Interval out of bounds');
   });
 
   it('Should go through stake lifecycle', async () => {
@@ -221,7 +221,7 @@ describe('Governance/Staking', () => {
     await time.increase(snapshotInterval);
 
     // Can't delegate to account 0
-    await expect(staking.delegate(0n, ethers.constants.AddressZero)).to.be.rejectedWith(
+    await expect(staking.delegate(0n, ethers.constants.AddressZero)).to.be.revertedWith(
       "Staking: Can't delegate to 0 address",
     );
 
@@ -242,8 +242,11 @@ describe('Governance/Staking', () => {
         100,
       );
 
-    // Multiple calls shouldn't cause errors
-    await staking.delegate(0n, (await ethers.getSigners())[1].address);
+    // Multiple calls should noop
+    await expect(staking.delegate(0n, (await ethers.getSigners())[1].address)).to.not.emit(
+      staking,
+      'Delegate',
+    );
 
     // Check snapshots correctly stored values at beginning of period
     let snapshotAccount = await staking.accountSnapshotAt(

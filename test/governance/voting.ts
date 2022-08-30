@@ -165,7 +165,7 @@ describe('Governance/Voting', () => {
     );
 
     // Trying to execute should fail
-    await expect(voting.executeProposal(0)).to.be.rejectedWith(
+    await expect(voting.executeProposal(0)).to.be.revertedWith(
       "Voting: Vote hasn't been called for this proposal",
     );
 
@@ -417,7 +417,7 @@ describe('Governance/Voting', () => {
     await time.increase(executionStartOffset - votingStartOffset);
 
     // Execute proposal and expect error
-    await expect(voting.executeProposal(0)).to.be.rejected;
+    await expect(voting.executeProposal(0)).to.be.reverted;
   });
 
   it('Should only be able to sponsor once per week', async () => {
@@ -447,14 +447,14 @@ describe('Governance/Voting', () => {
     // Sponsor second proposal should fail
     await expect(
       voting.sponsorProposal(1, proposalSponsorThreshold, users[0].address, 0),
-    ).to.be.rejectedWith('Voting: Can only sponsor one proposal per week');
+    ).to.be.revertedWith('Voting: Can only sponsor one proposal per week');
 
     // Increase time to sponsor lockout time end
     await time.increase(sponsorLockoutTime);
 
     // Sponsor second proposal should pass now
-    await expect(voting.sponsorProposal(1, proposalSponsorThreshold, users[0].address, 0)).to
-      .be.fulfilled;
+    await expect(voting.sponsorProposal(1, proposalSponsorThreshold, users[0].address, 0)).to.be
+      .fulfilled;
   });
 
   it('Should only allow voting key to call', async () => {
@@ -475,7 +475,7 @@ describe('Governance/Voting', () => {
     // Sponsor without permission should fail
     await expect(
       voting2.sponsorProposal(0, proposalSponsorThreshold, users[0].address, 0n),
-    ).to.be.rejectedWith('Voting: Caller not authorized');
+    ).to.be.revertedWith('Voting: Caller not authorized');
 
     // Set voting key
     await expect(voting.setVotingKey(users[1].address))
@@ -483,7 +483,7 @@ describe('Governance/Voting', () => {
       .withArgs(users[0].address, users[1].address);
 
     // Sponsor with permission should pass
-    await expect(voting2.sponsorProposal(0, proposalSponsorThreshold, users[0].address, 0)).to
-      .be.fulfilled;
+    await expect(voting2.sponsorProposal(0, proposalSponsorThreshold, users[0].address, 0)).to.be
+      .fulfilled;
   });
 });

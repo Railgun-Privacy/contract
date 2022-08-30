@@ -72,15 +72,17 @@ describe('Governance/Delegator', () => {
         targetAlpha.interface.getSighash('a'),
       );
 
-    // Calling multiple times shouldn't have impact
-    await delegatorAdmin.setPermission(
-      (
-        await ethers.getSigners()
-      )[0].address,
-      targetAlpha.address,
-      targetAlpha.interface.getSighash('a'),
-      true,
-    );
+    // Calling multiple times should noop
+    await expect(
+      delegatorAdmin.setPermission(
+        (
+          await ethers.getSigners()
+        )[0].address,
+        targetAlpha.address,
+        targetAlpha.interface.getSighash('a'),
+        true,
+      ),
+    ).to.not.emit(delegatorAdmin, 'GrantPermission');
 
     // Permission should now be true
     expect(
@@ -282,8 +284,7 @@ describe('Governance/Delegator', () => {
       ),
     ).to.be.fulfilled;
 
-    await expect(delegator.callContract(delegator.address, '0x00000000', 0)).to.be
-      .fulfilled;
+    await expect(delegator.callContract(delegator.address, '0x00000000', 0)).to.be.fulfilled;
 
     await expect(
       delegator.callContract(
