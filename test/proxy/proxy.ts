@@ -12,7 +12,7 @@ describe('Proxy/Proxy', () => {
     const proxy = await Proxy.deploy((await ethers.getSigners())[1].address);
 
     // Get admin interface by connecting to signer 1
-    const proxyAdmin = proxy.connect((await ethers.getSigners())[1]);
+    const proxy2 = proxy.connect((await ethers.getSigners())[1]);
 
     // Deploy targets
     const targetA = await TargetA.deploy();
@@ -23,7 +23,7 @@ describe('Proxy/Proxy', () => {
 
     return {
       proxy,
-      proxyAdmin,
+      proxy2,
       target,
       targetA,
       targetB,
@@ -31,16 +31,16 @@ describe('Proxy/Proxy', () => {
   }
 
   it('Should upgrade and unpause', async () => {
-    const { proxyAdmin, target, targetA } = await loadFixture(deploy);
+    const { proxy2, target, targetA } = await loadFixture(deploy);
 
     // Deployment should begin paused
     await expect(target.identify()).to.be.revertedWith('Proxy: Contract is paused');
 
     // Unpause
-    await expect(proxyAdmin.unpause()).to.emit(proxyAdmin, 'ProxyUnpause');
+    await expect(proxy2.unpause()).to.emit(proxy2, 'ProxyUnpause');
 
     // Multiple calls should noop
-    await expect(proxyAdmin.unpause()).to.not.emit(proxyAdmin, 'ProxyUnpause');
+    await expect(proxy2.unpause()).to.not.emit(proxy2, 'ProxyUnpause');
 
     // Should throw if implementation contract doesn't exist
     await expect(target.identify()).to.be.revertedWith("Proxy: Implementation doesn't exist");
@@ -49,12 +49,12 @@ describe('Proxy/Proxy', () => {
     ).to.be.revertedWith("Proxy: Implementation doesn't exist");
 
     // Upgrade
-    await expect(proxyAdmin.upgrade(targetA.address))
-      .to.emit(proxyAdmin, 'ProxyUpgrade')
+    await expect(proxy2.upgrade(targetA.address))
+      .to.emit(proxy2, 'ProxyUpgrade')
       .withArgs(ethers.constants.AddressZero, targetA.address);
 
     // Multiple calls should noop
-    await expect(proxyAdmin.upgrade(targetA.address)).to.not.emit(proxyAdmin, 'ProxyUpgrade');
+    await expect(proxy2.upgrade(targetA.address)).to.not.emit(proxy2, 'ProxyUpgrade');
 
     // Target functions should go through after unpause
     expect(await target.identify()).to.equal('A');
@@ -68,35 +68,35 @@ describe('Proxy/Proxy', () => {
     expect(await target.unpause()).to.equal('Implementation');
 
     // Pause
-    await expect(proxyAdmin.pause()).to.emit(proxyAdmin, 'ProxyPause');
+    await expect(proxy2.pause()).to.emit(proxy2, 'ProxyPause');
 
     // Multiple calls should noop
-    await expect(proxyAdmin.pause()).to.not.emit(proxyAdmin, 'ProxyPause');
+    await expect(proxy2.pause()).to.not.emit(proxy2, 'ProxyPause');
 
     // Implementation functions should be inaccessible
     await expect(target.identify()).to.be.revertedWith('Proxy: Contract is paused');
   });
 
   it('Should transfer ownership', async () => {
-    const { proxy, proxyAdmin } = await loadFixture(deploy);
+    const { proxy, proxy2 } = await loadFixture(deploy);
 
     // Non-owner shouldn't be able to access functions
     await expect(proxy.unpause()).to.be.revertedWith('Proxy: Contract is paused');
-    await expect(proxyAdmin.unpause()).to.be.fulfilled;
-    await expect(proxyAdmin.pause()).to.be.fulfilled;
+    await expect(proxy2.unpause()).to.be.fulfilled;
+    await expect(proxy2.pause()).to.be.fulfilled;
 
     // Transfer ownership to 0 address should be prevented
-    await expect(proxyAdmin.transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
+    await expect(proxy2.transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
       'Proxy: Preventing potential accidental burn',
     );
 
     // Transfer ownership
-    await expect(proxyAdmin.transferOwnership((await ethers.getSigners())[0].address))
-      .to.emit(proxyAdmin, 'ProxyOwnershipTransfer')
+    await expect(proxy2.transferOwnership((await ethers.getSigners())[0].address))
+      .to.emit(proxy2, 'ProxyOwnershipTransfer')
       .withArgs((await ethers.getSigners())[1].address, (await ethers.getSigners())[0].address);
 
     // Non-owner shouldn't be able to access functions
-    await expect(proxyAdmin.unpause()).to.be.revertedWith('Proxy: Contract is paused');
+    await expect(proxy2.unpause()).to.be.revertedWith('Proxy: Contract is paused');
     await expect(proxy.unpause()).to.be.fulfilled;
     await expect(proxy.pause()).to.be.fulfilled;
   });

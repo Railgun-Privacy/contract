@@ -29,7 +29,6 @@ contract ProxyAdmin is Ownable {
     external
     onlyOwner
   {
-    require(_newOwner != address(0), "ProxyAdmin: Preventing potential accidental burn");
     _proxy.transferOwnership(_newOwner);
   }
 
