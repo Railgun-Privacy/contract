@@ -12,9 +12,6 @@ describe('Treasury/Treasury', () => {
     // Initialize treasury with signer 0 as admin
     await treasury.initializeTreasury((await ethers.getSigners())[0].address);
 
-    // Connect to signer 1
-    const treasury1 = treasury.connect((await ethers.getSigners())[1]);
-
     // Deploy ERC20
     const erc20 = await ERC20.deploy();
 
@@ -27,7 +24,7 @@ describe('Treasury/Treasury', () => {
     // Give ETH to treasury
     await setBalance(treasury.address, 10000);
 
-    return { treasury, treasury1, erc20 };
+    return { treasury, erc20 };
   }
 
   it('Should transfer ETH', async () => {
