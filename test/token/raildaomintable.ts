@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 
 describe('Token/RailDaoMintable', function () {
-  it('Should mint coins from governor', async function () {
+  it('Should mint coins', async function () {
     const Rail = await ethers.getContractFactory('RailTokenDAOMintable');
 
     // Deploy with initial supply of 10 and hard cap of 100

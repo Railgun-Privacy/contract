@@ -60,27 +60,22 @@ describe('Treasury/IntervalPayout', () => {
 
     for (let i = 0; i < totalPayouts; i += 1) {
       // Check that payout is ready
-      // eslint-disable-next-line no-await-in-loop
       expect(await intervalPayouts.ready()).to.equal(true);
 
       // Process payout
-      // eslint-disable-next-line no-await-in-loop
       await expect(intervalPayouts.payout()).to.changeEtherBalances(
         [treasury.address, (await ethers.getSigners())[1].address],
         [-amount, amount],
       );
 
       // Check that it correctly prevents payouts until next interval
-      // eslint-disable-next-line no-await-in-loop
       expect(await intervalPayouts.ready()).to.equal(false);
 
-      // eslint-disable-next-line no-await-in-loop
       await expect(intervalPayouts.payout()).to.be.revertedWith(
         'IntervalPayouts: Payout not ready',
       );
 
       // Fast forward time to next interval
-      // eslint-disable-next-line no-await-in-loop
       await time.increase(intervalTime);
     }
 
@@ -92,7 +87,6 @@ describe('Treasury/IntervalPayout', () => {
       );
 
       // Fast forward time to next interval
-      // eslint-disable-next-line no-await-in-loop
       await time.increase(intervalTime);
     }
   });
