@@ -7,13 +7,13 @@ contract ProxyTargetStubA {
     return "A";
   }
 
-  // solhint-disable-next-line no-unused-vars
   function transferOwnership(address _newOwner) external pure returns (string memory) {
+    require(_newOwner == _newOwner, "Silence unused vars warning");
     return "Implementation";
   }
 
-  // solhint-disable-next-line no-unused-vars
   function upgrade(address _newImplementation) external pure returns (string memory) {
+    require(_newImplementation == _newImplementation, "Silence unused vars warning");
     return "Implementation";
   }
 
@@ -33,13 +33,13 @@ contract ProxyTargetStubB {
     return "B";
   }
 
-  // solhint-disable-next-line no-unused-vars
   function transferOwnership(address _newOwner) external pure returns (string memory) {
+    require(_newOwner == _newOwner, "Silence unused vars warning");
     return "Implementation";
   }
 
-  // solhint-disable-next-line no-unused-vars
   function upgrade(address _newImplementation) external pure returns (string memory) {
+    require(_newImplementation == _newImplementation, "Silence unused vars warning");
     return "Implementation";
   }
 

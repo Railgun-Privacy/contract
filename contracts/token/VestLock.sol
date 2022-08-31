@@ -112,7 +112,7 @@ contract VestLock is Initializable, OwnableUpgradeable {
    * @param _amount - Amount of ETH to transfer
    */
   function transferETH(address payable _to, uint256 _amount) external locked onlyOwner {
-    //solhint-disable-next-line avoid-low-level-calls
+    // solhint-disable-next-line avoid-low-level-calls
     (bool sent, ) = _to.call{ value: _amount }("");
     require(sent, "Failed to send Ether");
   }

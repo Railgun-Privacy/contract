@@ -40,7 +40,7 @@ contract Treasury is Initializable, AccessControlUpgradeable {
    */
   function transferETH(address payable _to, uint256 _amount) external onlyRole(TRANSFER_ROLE) {
     require(_to != address(0), "Treasury: Preventing accidental burn");
-    //solhint-disable-next-line avoid-low-level-calls
+    // solhint-disable-next-line avoid-low-level-calls
     (bool sent, ) = _to.call{ value: _amount }("");
     require(sent, "Failed to send Ether");
   }

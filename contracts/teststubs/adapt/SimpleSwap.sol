@@ -4,8 +4,11 @@ pragma abicoder v2;
 
 // OpenZeppelin v4
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SimpleSwap {
+  using SafeERC20 for IERC20;
+
   uint256 private constant BASIS_POINTS = 10000; // Number of basis points that equal 100%
 
   function swap(
@@ -14,7 +17,7 @@ contract SimpleSwap {
     uint256 _amount,
     uint256 _rateBP
   ) external {
-    _from.transferFrom(msg.sender, address(this), _amount);
-    _to.transfer(msg.sender, (_amount * _rateBP) / BASIS_POINTS);
+    _from.safeTransferFrom(msg.sender, address(this), _amount);
+    _to.safeTransfer(msg.sender, (_amount * _rateBP) / BASIS_POINTS);
   }
 }
