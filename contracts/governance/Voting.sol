@@ -46,6 +46,9 @@ contract Voting {
   // Proposal executed
   event VoteKeySet(address indexed account, address votingKey);
 
+  // Errors
+  error ExecutionFailed(uint256 index, bytes data);
+
   // Function call
   struct Call {
     address callContract;
@@ -449,13 +452,7 @@ contract Voting {
       );
 
       // If an action fails to execute, catch and bubble up reason with revert
-      if (!successful) {
-        bytes memory revertData = abi.encode(i, returnData);
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-          revert(add(32, revertData), mload(revertData))
-        }
-      }
+      if (!successful) revert ExecutionFailed(i, returnData);
     }
 
     // Emit event
