@@ -3,6 +3,11 @@ import { expect } from 'chai';
 import { loadFixture, setBalance } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Treasury/Treasury', () => {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     const Treasury = await ethers.getContractFactory('Treasury');
     const ERC20 = await ethers.getContractFactory('TestERC20');

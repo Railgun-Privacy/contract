@@ -5,6 +5,11 @@ import { loadFixture, time, takeSnapshot } from '@nomicfoundation/hardhat-networ
 const proposalDocument = 'QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D';
 
 describe('Governance/Voting', () => {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     // Get users
     const users = await ethers.getSigners();

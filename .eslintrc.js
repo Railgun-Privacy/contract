@@ -5,8 +5,8 @@ module.exports = {
     mocha: true,
     node: true,
   },
-  plugins: ['@typescript-eslint'],
-  extends: ['airbnb-typescript/base'],
+  plugins: ['@typescript-eslint', 'jsdoc', 'eslint-plugin-tsdoc'],
+  extends: ['airbnb-typescript/base', 'plugin:jsdoc/recommended'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 12,
@@ -21,6 +21,32 @@ module.exports = {
     'no-console': 'off',
     'no-process-exit': 'off',
     'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': ['error'],
+    '@typescript-eslint/no-unused-vars': 'error',
+    'jsdoc/require-property-description': 'warn',
+    'jsdoc/require-description': 'warn',
+    'jsdoc/require-returns': [
+      'warn',
+      {
+        forceRequireReturn: true,
+        forceReturnsWithAsync: true,
+      },
+    ],
+    'jsdoc/require-param-type': 'off',
+    'jsdoc/require-returns-type': 'off',
+    'jsdoc/require-jsdoc': [
+      'warn',
+      {
+        publicOnly: false,
+        exemptEmptyFunctions: true,
+        require: {
+          FunctionDeclaration: true,
+          FunctionExpression: true,
+          MethodDefinition: true,
+          ClassExpression: false,
+          ClassDeclaration: false,
+        },
+      },
+    ],
+    'tsdoc/syntax': 'warn',
   },
 };

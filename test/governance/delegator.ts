@@ -3,6 +3,11 @@ import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Governance/Delegator', () => {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     const Delegator = await ethers.getContractFactory('Delegator');
     const TargetAlpha = await ethers.getContractFactory('GovernanceTargetAlphaStub');

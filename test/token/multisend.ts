@@ -3,6 +3,11 @@ import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Token/Multisend', function () {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     const Multisend = await ethers.getContractFactory('Multisend');

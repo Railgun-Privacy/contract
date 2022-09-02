@@ -3,6 +3,11 @@ import { expect } from 'chai';
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Governance/Staking', () => {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     const Rail = await ethers.getContractFactory('RailTokenFixedSupply');
     const Staking = await ethers.getContractFactory('StakingStub');

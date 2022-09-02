@@ -3,6 +3,11 @@ import { expect } from 'chai';
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Treasury/GovernorRewards', () => {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     // Get signers list
     const signers = await ethers.getSigners();

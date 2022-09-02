@@ -4,8 +4,8 @@
   "description": "Railgun Contract",
   "license": "UNLICENSED",
   "scripts": {
-    "lint": "solhint 'contracts/**/*.sol' && prettier --check './**' && eslint .",
-    "lint:fix": "npx prettier --write './**' && npx solhint --fix 'contracts/**/*.sol'",
+    "lint": "solhint 'contracts/**/*.sol'; prettier --check './**'; eslint .",
+    "lint:fix": "npx prettier --write './**'; npx solhint --fix 'contracts/**/*.sol'",
     "clean": "hardhat clean",
     "compile": "npm run clean && npm run lint && hardhat compile",
     "test": "hardhat test",
@@ -14,19 +14,24 @@
     "analyze": "npm run clean && npm run lint && ./slither.sh"
   },
   "devDependencies": {
+    "@noble/ed25519": "^1.7.0",
+    "@noble/hashes": "^1.1.2",
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
-    "@nomiclabs/hardhat-solhint": "^2.0.1",
     "@typescript-eslint/eslint-plugin": "^5.34.0",
     "@typescript-eslint/parser": "^5.34.0",
+    "bigint-buffer": "^1.1.5",
     "circomlibjs": "^0.1.7",
     "eslint": "^8.22.0",
     "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-plugin-jsdoc": "^39.3.6",
+    "eslint-plugin-tsdoc": "^0.2.16",
     "hardhat": "^2.10.2",
     "hardhat-local-networks-config-plugin": "^0.0.6",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.24",
     "solhint": "^3.3.7",
-    "solhint-plugin-prettier": "^0.0.5"
+    "solhint-plugin-prettier": "^0.0.5",
+    "xchacha20-js": "^0.3.1"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",

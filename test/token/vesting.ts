@@ -3,6 +3,11 @@ import { expect } from 'chai';
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Token/Vesting', () => {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     const Distributor = await ethers.getContractFactory('Distributor');

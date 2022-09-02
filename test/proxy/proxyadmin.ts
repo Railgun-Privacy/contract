@@ -3,6 +3,11 @@ import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Proxy/ProxyAdmin', () => {
+  /**
+   * Deploy fixtures
+   *
+   * @returns fixtures
+   */
   async function deploy() {
     const Proxy = await ethers.getContractFactory('PausableUpgradableProxy');
     const ProxyAdmin = await ethers.getContractFactory('ProxyAdmin');
