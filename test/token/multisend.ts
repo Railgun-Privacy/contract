@@ -35,7 +35,7 @@ describe('Token/Multisend', function () {
       to: (await ethers.getSigners())[1].address,
       amount: 100,
     };
-    const sendTokens = new Array(200).fill(transfer);
+    const sendTokens = new Array(200).fill(transfer) as typeof transfer[];
 
     // Sum total transferred
     const sum = sendTokens.map((tx) => tx.amount).reduce((left, right) => left + right);

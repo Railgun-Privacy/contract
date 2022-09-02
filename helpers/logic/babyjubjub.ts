@@ -18,7 +18,7 @@ function genRandomPrivateKey(): Buffer {
  * @param privateKey - babyjubjub private key
  * @returns public key
  */
-function privateKeyToPublicKey(privateKey: Buffer): Array<Buffer> {
+function privateKeyToPublicKey(privateKey: Buffer): Buffer[] {
   return eddsa
     .prv2pub(Buffer.from(ethers.BigNumber.from(privateKey).toHexString().slice(2), 'hex'))
     .map((el) => toBufferBE(el, 32));

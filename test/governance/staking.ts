@@ -311,7 +311,7 @@ describe('Governance/Staking', () => {
     await staking.unlock(0);
 
     // Don't allow delegating after stake has been unlocked
-    expect(staking.delegate(0, (await ethers.getSigners())[1].address)).to.be.revertedWith(
+    await expect(staking.delegate(0, (await ethers.getSigners())[1].address)).to.be.revertedWith(
       'Staking: Stake unlocked',
     );
 

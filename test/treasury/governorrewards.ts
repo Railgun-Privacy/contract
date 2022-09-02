@@ -37,10 +37,10 @@ describe('Treasury/GovernorRewards', () => {
     }));
 
     // Send staking tokens to each signer and allow staking
-    for (let i = 0; i < users.length; i += 1) {
-      await rail.transfer(users[i].signer.address, 100000);
+    for (const user of users) {
+      await rail.transfer(user.signer.address, 100000);
 
-      await users[i].rail.approve(staking.address, 2n ** 256n - 1n);
+      await user.rail.approve(staking.address, 2n ** 256n - 1n);
     }
 
     // Initialize contracts
@@ -403,7 +403,7 @@ describe('Treasury/GovernorRewards', () => {
     await governorRewards.prefetchGlobalSnapshots(
       0,
       9,
-      new Array(10).fill(0),
+      new Array(10).fill(0) as number[],
       distributionTokens.map((token) => token.address),
     );
 
@@ -414,7 +414,7 @@ describe('Treasury/GovernorRewards', () => {
         users[0].signer.address,
         0,
         9,
-        new Array(10).fill(0),
+        new Array(10).fill(0) as number[],
         false,
       )
     ).map((val) => val.toBigInt());
@@ -425,7 +425,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0),
+        new Array(10).fill(0) as number[],
         false,
       )
     ).map((val) => val.toBigInt());
@@ -459,7 +459,7 @@ describe('Treasury/GovernorRewards', () => {
     await time.increase(distributionInterval * 10);
 
     // Prefetch data
-    await governorRewards.prefetchGlobalSnapshots(0, 9, new Array(10).fill(0), []);
+    await governorRewards.prefetchGlobalSnapshots(0, 9, new Array(10).fill(0) as number[], []);
 
     // Should not be able to claim if not earmarked
     await expect(
@@ -468,7 +468,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0),
+        new Array(10).fill(0) as number[],
       ),
     ).to.be.revertedWith('GovernorRewards: Tried to claim beyond last earmarked interval');
 
@@ -492,7 +492,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0),
+        new Array(10).fill(0) as number[],
       ),
     )
       .to.emit(governorRewards, 'Claim')
@@ -504,7 +504,7 @@ describe('Treasury/GovernorRewards', () => {
         users[2].signer.address,
         0,
         9,
-        new Array(10).fill(0),
+        new Array(10).fill(0) as number[],
       ),
     )
       .to.emit(governorRewards, 'Claim')
@@ -538,7 +538,7 @@ describe('Treasury/GovernorRewards', () => {
           users[1].signer.address,
           0,
           9,
-          new Array(10).fill(0),
+          new Array(10).fill(0) as number[],
           true,
         )
       )[0],
@@ -552,7 +552,7 @@ describe('Treasury/GovernorRewards', () => {
           users[1].signer.address,
           0,
           9,
-          new Array(10).fill(0),
+          new Array(10).fill(0) as number[],
           false,
         )
       )[0],
@@ -565,7 +565,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0),
+        new Array(10).fill(0) as number[],
       ),
     ).to.changeTokenBalances(
       distributionTokens[0],

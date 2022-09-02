@@ -31,7 +31,7 @@ describe('Governance/Voting', () => {
     const target2 = await Target2.deploy('hello');
 
     // Transfer ownership of delegator to voting
-    delegator.transferOwnership(voting.address);
+    await delegator.transferOwnership(voting.address);
 
     // Get total balance
     let balance = (await testERC20.balanceOf((await ethers.getSigners())[0].address)).toBigInt();

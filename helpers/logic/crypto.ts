@@ -63,7 +63,7 @@ async function decryptXChaCha20(key: Buffer, bundle: Buffer): Promise<Buffer> {
  * @param key - key to encrypt with
  * @returns encrypted bundle
  */
-async function encryptAESGCM(plaintext: Buffer[], key: Buffer): Promise<Buffer[]> {
+function encryptAESGCM(plaintext: Buffer[], key: Buffer): Buffer[] {
   const iv = crypto.randomBytes(16);
 
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv, {
@@ -85,7 +85,7 @@ async function encryptAESGCM(plaintext: Buffer[], key: Buffer): Promise<Buffer[]
  * @param key - key to decrypt with
  * @returns plaintext
  */
-async function decryptAESGCM(ciphertext: Buffer[], key: Buffer): Promise<Buffer[]> {
+function decryptAESGCM(ciphertext: Buffer[], key: Buffer): Buffer[] {
   const iv = ciphertext[0].subarray(0, 16);
   const tag = ciphertext[0].subarray(16, 32);
   const encryptedData = ciphertext.slice(1);
@@ -128,11 +128,7 @@ function adjustRandom(random: Buffer): Buffer {
  * @param receiverPubKey - public key of receiver
  * @returns ephemeral keys
  */
-async function ephemeralKeysGen(
-  random: Buffer,
-  senderPrivKey: Buffer,
-  receiverPubKey: Buffer,
-): Promise<Buffer[]> {
+function ephemeralKeysGen(random: Buffer, senderPrivKey: Buffer, receiverPubKey: Buffer): Buffer[] {
   const r = adjustRandom(random);
   const S = curve25519.Point.fromHex(senderPrivKey);
   const R = curve25519.Point.fromHex(receiverPubKey);
@@ -141,10 +137,4 @@ async function ephemeralKeysGen(
   return [Buffer.from(rS), Buffer.from(rR)];
 }
 
-module.exports = {
-  encryptXChaCha20,
-  decryptXChaCha20,
-  encryptAESGCM,
-  decryptAESGCM,
-  ephemeralKeysGen,
-};
+export { encryptXChaCha20, decryptXChaCha20, encryptAESGCM, decryptAESGCM, ephemeralKeysGen };

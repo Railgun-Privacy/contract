@@ -6,7 +6,13 @@ module.exports = {
     node: true,
   },
   plugins: ['@typescript-eslint', 'jsdoc', 'eslint-plugin-tsdoc'],
-  extends: ['airbnb-typescript/base', 'plugin:jsdoc/recommended'],
+  extends: [
+    'airbnb-typescript/base',
+    'plugin:jsdoc/recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended-requiring-type-checking',
+    'plugin:@typescript-eslint/strict',
+  ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 12,
