@@ -1,5 +1,10 @@
 import { HardhatUserConfig, task } from 'hardhat/config';
-import '@nomicfoundation/hardhat-toolbox';
+import '@nomicfoundation/hardhat-chai-matchers';
+import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-etherscan';
+import '@typechain/hardhat';
+import 'hardhat-gas-reporter';
+import 'solidity-coverage';
 import 'hardhat-local-networks-config-plugin';
 import { time } from '@nomicfoundation/hardhat-network-helpers';
 

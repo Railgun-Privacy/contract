@@ -1,8 +1,22 @@
-# Node
+# NPM
 node_modules
 package-lock.json
+.npm
+
+# Yarn
 yarn.lock
-.vscode
+.yarn
+.yarnrc.yml
+.pnp.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
 # Hardhat files
 artifacts
