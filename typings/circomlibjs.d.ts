@@ -4,11 +4,12 @@ declare module 'circomlibjs' {
     S: bigint;
   }
 
-  namespace eddsa {
-    export function verifyPoseidon(msg: bigint, sig: Signature, A: bigint[]): boolean;
-    export function signPoseidon(prv: Uint8Array, msg: bigint): Signature;
-    export function prv2pub(prv: Buffer): [bigint, bigint];
+  declare interface EdDSA {
+    verifyPoseidon(msg: bigint, sig: Signature, A: bigint[]): boolean;
+    signPoseidon(prv: Uint8Array, msg: bigint): Signature;
+    prv2pub(prv: Buffer): [bigint, bigint];
   }
+  export function buildEddsa(): Promise<EdDSA>;
 
   declare type FromMontgomery = (Uint8Array) => Uint8Array;
   declare interface PoseidonFunction {
