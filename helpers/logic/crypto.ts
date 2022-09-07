@@ -3,9 +3,7 @@ import { toBigIntBE, toBigIntLE, toBufferBE } from '@trufflesuite/bigint-buffer'
 import curve25519 from '@noble/ed25519';
 import { blake3 } from '@noble/hashes/blake3';
 import { XChaCha20 } from 'xchacha20-js';
-import { buildPoseidonOpt } from 'circomlibjs';
-
-const poseidonPromise = buildPoseidonOpt();
+import { buildEddsa, buildPoseidonOpt } from 'circomlibjs';
 
 /* @todo FOR V2 SWITCH TO XCHACHA20 */
 
@@ -140,6 +138,8 @@ function ephemeralKeysGen(random: Buffer, senderPrivKey: Buffer, receiverPubKey:
   return [Buffer.from(rS), Buffer.from(rR)];
 }
 
+const poseidonPromise = buildPoseidonOpt();
+
 /**
  * Poseidon Hash wrapper to output bigint representations
  *
@@ -151,6 +151,39 @@ async function poseidon(inputs: bigint[]): Promise<bigint> {
   return toBigIntLE(Buffer.from(poseidonBuild.F.fromMontgomery(poseidonBuild(inputs))));
 }
 
+const eddsaPromise = buildEddsa();
+
+const eddsa = {
+  /**
+   * Generates random eddsa-babyjubjub privateKey
+   *
+   * @returns private key
+   */
+  genRandomPrivateKey(): Buffer {
+    return crypto.randomBytes(32);
+  },
+
+  /**
+   * Convert eddsa-babyjubjub private key to public key
+   *
+   * @param privateKey - babyjubjub private key
+   * @returns public key
+   */
+  async prv2pub(privateKey: Buffer): Promise<Buffer[]> {
+    const eddsaBuild = await eddsaPromise;
+    return eddsaBuild.prv2pub(privateKey).map((el) => toBufferBE(el, 32));
+  },
+
+  /**
+   * Generates a random babyJubJub point
+   *
+   * @returns random point
+   */
+  async genRandomPoint(): Promise<Buffer> {
+    return toBufferBE(await poseidon([BigInt(`0x${crypto.randomBytes(32).toString('hex')}`)]), 32);
+  },
+};
+
 export {
   encryptXChaCha20,
   decryptXChaCha20,
@@ -158,4 +191,5 @@ export {
   decryptAESGCM,
   ephemeralKeysGen,
   poseidon,
+  eddsa,
 };
