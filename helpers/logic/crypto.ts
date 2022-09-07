@@ -1,8 +1,11 @@
 import crypto from 'crypto';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBigIntLE, toBufferBE } from '@trufflesuite/bigint-buffer';
 import curve25519 from '@noble/ed25519';
 import { blake3 } from '@noble/hashes/blake3';
 import { XChaCha20 } from 'xchacha20-js';
+import { buildPoseidonOpt } from 'circomlibjs';
+
+const poseidonPromise = buildPoseidonOpt();
 
 /* @todo FOR V2 SWITCH TO XCHACHA20 */
 
@@ -137,4 +140,22 @@ function ephemeralKeysGen(random: Buffer, senderPrivKey: Buffer, receiverPubKey:
   return [Buffer.from(rS), Buffer.from(rR)];
 }
 
-export { encryptXChaCha20, decryptXChaCha20, encryptAESGCM, decryptAESGCM, ephemeralKeysGen };
+/**
+ * Poseidon Hash wrapper to output bigint representations
+ *
+ * @param inputs - inputs to hash
+ * @returns hash
+ */
+async function poseidon(inputs: bigint[]): Promise<bigint> {
+  const poseidonBuild = await poseidonPromise;
+  return toBigIntLE(Buffer.from(poseidonBuild.F.fromMontgomery(poseidonBuild(inputs))));
+}
+
+export {
+  encryptXChaCha20,
+  decryptXChaCha20,
+  encryptAESGCM,
+  decryptAESGCM,
+  ephemeralKeysGen,
+  poseidon,
+};

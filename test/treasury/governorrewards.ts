@@ -25,7 +25,11 @@ describe('Treasury/GovernorRewards', () => {
     const governorRewards = await GovernorRewards.deploy();
 
     // Deploy a bunch of tokens to use as distribution tokens
-    const distributionTokens = await Promise.all(new Array(12).fill(1).map(() => ERC20.deploy()));
+    const distributionTokens = await Promise.all(
+      Array(12)
+        .fill(1)
+        .map(() => ERC20.deploy()),
+    );
 
     // Setup contract connections for each signer
     const users = signers.map((signer) => ({
@@ -403,7 +407,7 @@ describe('Treasury/GovernorRewards', () => {
     await governorRewards.prefetchGlobalSnapshots(
       0,
       9,
-      new Array(10).fill(0) as number[],
+      Array(10).fill(0) as number[],
       distributionTokens.map((token) => token.address),
     );
 
@@ -414,7 +418,7 @@ describe('Treasury/GovernorRewards', () => {
         users[0].signer.address,
         0,
         9,
-        new Array(10).fill(0) as number[],
+        Array(10).fill(0) as number[],
         false,
       )
     ).map((val) => val.toBigInt());
@@ -425,7 +429,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0) as number[],
+        Array(10).fill(0) as number[],
         false,
       )
     ).map((val) => val.toBigInt());
@@ -459,7 +463,7 @@ describe('Treasury/GovernorRewards', () => {
     await time.increase(distributionInterval * 10);
 
     // Prefetch data
-    await governorRewards.prefetchGlobalSnapshots(0, 9, new Array(10).fill(0) as number[], []);
+    await governorRewards.prefetchGlobalSnapshots(0, 9, Array(10).fill(0) as number[], []);
 
     // Should not be able to claim if not earmarked
     await expect(
@@ -468,7 +472,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0) as number[],
+        Array(10).fill(0) as number[],
       ),
     ).to.be.revertedWith('GovernorRewards: Tried to claim beyond last earmarked interval');
 
@@ -492,7 +496,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0) as number[],
+        Array(10).fill(0) as number[],
       ),
     )
       .to.emit(governorRewards, 'Claim')
@@ -504,7 +508,7 @@ describe('Treasury/GovernorRewards', () => {
         users[2].signer.address,
         0,
         9,
-        new Array(10).fill(0) as number[],
+        Array(10).fill(0) as number[],
       ),
     )
       .to.emit(governorRewards, 'Claim')
@@ -538,7 +542,7 @@ describe('Treasury/GovernorRewards', () => {
           users[1].signer.address,
           0,
           9,
-          new Array(10).fill(0) as number[],
+          Array(10).fill(0) as number[],
           true,
         )
       )[0],
@@ -552,7 +556,7 @@ describe('Treasury/GovernorRewards', () => {
           users[1].signer.address,
           0,
           9,
-          new Array(10).fill(0) as number[],
+          Array(10).fill(0) as number[],
           false,
         )
       )[0],
@@ -565,7 +569,7 @@ describe('Treasury/GovernorRewards', () => {
         users[1].signer.address,
         0,
         9,
-        new Array(10).fill(0) as number[],
+        Array(10).fill(0) as number[],
       ),
     ).to.changeTokenBalances(
       distributionTokens[0],

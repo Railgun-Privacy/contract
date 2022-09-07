@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { ethers } from 'hardhat';
-import { eddsa, poseidon } from 'circomlibjs';
-import { toBufferBE } from 'bigint-buffer';
+import { eddsa } from 'circomlibjs';
+import { toBufferBE } from '@trufflesuite/bigint-buffer';
+import { poseidon } from './crypto';
 
 /**
  * Generates random eddsa-babyjubjub privateKey
@@ -29,8 +30,8 @@ function privateKeyToPublicKey(privateKey: Buffer): Buffer[] {
  *
  * @returns random point
  */
-function genRandomPoint(): Buffer {
-  return toBufferBE(poseidon([BigInt(`0x${crypto.randomBytes(32).toString('hex')}`)]), 32);
+async function genRandomPoint(): Promise<Buffer> {
+  return toBufferBE(await poseidon([BigInt(`0x${crypto.randomBytes(32).toString('hex')}`)]), 32);
 }
 
 export { genRandomPrivateKey, privateKeyToPublicKey, genRandomPoint };
