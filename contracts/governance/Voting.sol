@@ -58,6 +58,8 @@ contract Voting {
 
   // Governance proposals
   struct ProposalStruct {
+    // Execution status
+    bool executed;
     // Proposal Data
     address proposer;
     string proposalDocument; // IPFS hash
@@ -68,8 +70,6 @@ contract Voting {
     // Sponsorship info
     uint256 sponsorship;
     mapping(address => uint256) sponsors;
-    // Execution status
-    bool executed;
     // Vote data
     // Amount of voting power used for accounts, used for fractional voting from contracts
     mapping(address => uint256) voted;
@@ -440,7 +440,7 @@ contract Voting {
     // Mark proposal as executed
     proposal.executed = true;
 
-    Call[] storage actions = proposal.actions;
+    Call[] memory actions = proposal.actions;
 
     // Loop over actions and execute
     for (uint256 i = 0; i < actions.length; i++) {
@@ -452,7 +452,9 @@ contract Voting {
       );
 
       // If an action fails to execute, catch and bubble up reason with revert
-      if (!successful) revert ExecutionFailed(i, returnData);
+      if (!successful) {
+        revert ExecutionFailed(i, returnData);
+      }
     }
 
     // Emit event
