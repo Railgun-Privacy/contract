@@ -50,8 +50,8 @@ class MerkleTree {
    * @param right - right value to hash
    * @returns hash
    */
-  static async hashLeftRight(left: Uint8Array, right: Uint8Array): Promise<Uint8Array> {
-    return bigIntToArray(await poseidon([toBigIntBE(left), toBigIntBE(right)]), 32);
+  static hashLeftRight(left: Uint8Array, right: Uint8Array): Promise<Uint8Array> {
+    return poseidon([left, right]);
   }
 
   /**

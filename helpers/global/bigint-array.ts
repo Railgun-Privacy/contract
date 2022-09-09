@@ -1,3 +1,10 @@
+/**
+ * Left pads byte array to length
+ *
+ * @param byteArray - byte array to pad
+ * @param length - length of new array
+ * @returns padded array
+ */
 function arrayToByteLength(byteArray: Uint8Array, length: number) {
   // Check the length of array requested is large enough to accommodate the original array
   if (byteArray.length > length) throw new Error('BigInt byte size is larger than length');
