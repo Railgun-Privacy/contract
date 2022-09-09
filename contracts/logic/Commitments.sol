@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 // Based on code from MACI (https://github.com/appliedzkp/maci/blob/7f36a915244a6e8f98bacfe255f8bd44193e7919/contracts/sol/IncrementalMerkleTree.sol)
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 pragma abicoder v2;
 
 // OpenZeppelin v4
