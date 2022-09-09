@@ -23,7 +23,6 @@
     "@nomicfoundation/hardhat-network-helpers": "^1.0.5",
     "@nomiclabs/hardhat-ethers": "^2.1.1",
     "@nomiclabs/hardhat-etherscan": "^3.1.0",
-    "@trufflesuite/bigint-buffer": "^1.1.10",
     "@typechain/ethers-v5": "^10.1.0",
     "@typechain/hardhat": "^6.1.2",
     "@types/chai": "^4.3.3",
@@ -49,8 +48,7 @@
     "solidity-coverage": "^0.7.21",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.0",
-    "typescript": "^4.8.2",
-    "xchacha20-js": "^0.3.1"
+    "typescript": "^4.8.2"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",

@@ -1,13 +1,13 @@
 import { ethers } from 'hardhat';
-import { toBigIntBE, toBufferBE } from '@trufflesuite/bigint-buffer';
-import { SNARK_SCALAR_FIELD } from './constants';
-import { poseidon } from './crypto';
+import { bigIntToArray } from '../global/bigint-array';
+import { SNARK_SCALAR_FIELD } from '../global/constants';
+import { poseidon } from '../global/crypto';
 
 export interface MerkleProof {
-  element: Buffer;
-  elements: Buffer[];
-  indices: Buffer;
-  root: Buffer;
+  element: Uint8Array;
+  elements: Uint8Array[];
+  indices: Uint8Array;
+  root: Uint8Array;
 }
 
 class MerkleTree {
@@ -15,9 +15,9 @@ class MerkleTree {
 
   depth: number;
 
-  zeros: Buffer[];
+  zeros: Uint8Array[];
 
-  tree: Buffer[][];
+  tree: Uint8Array[][];
 
   /**
    * Merkle Tree
@@ -27,7 +27,7 @@ class MerkleTree {
    * @param zeros - zero values for each level of merkle tree
    * @param tree - starting tree
    */
-  constructor(treeNumber: number, depth: number, zeros: Buffer[], tree: Buffer[][]) {
+  constructor(treeNumber: number, depth: number, zeros: Uint8Array[], tree: Uint8Array[][]) {
     this.treeNumber = treeNumber;
     this.depth = depth;
     this.zeros = zeros;
@@ -39,7 +39,7 @@ class MerkleTree {
    *
    * @returns root
    */
-  get root(): Buffer {
+  get root(): Uint8Array {
     return this.tree[this.depth][0];
   }
 
@@ -50,8 +50,8 @@ class MerkleTree {
    * @param right - right value to hash
    * @returns hash
    */
-  static async hashLeftRight(left: Buffer, right: Buffer): Promise<Buffer> {
-    return toBufferBE(await poseidon([toBigIntBE(left), toBigIntBE(right)]), 32);
+  static async hashLeftRight(left: Uint8Array, right: Uint8Array): Promise<Uint8Array> {
+    return bigIntToArray(await poseidon([toBigIntBE(left), toBigIntBE(right)]), 32);
   }
 
   /**
@@ -59,9 +59,9 @@ class MerkleTree {
    *
    * @returns zero value
    */
-  static get zeroValue(): Buffer {
+  static get zeroValue(): Uint8Array {
     const railgunHash = BigInt(ethers.utils.keccak256(Buffer.from('Railgun', 'utf8')));
-    return toBufferBE(railgunHash % SNARK_SCALAR_FIELD, 32);
+    return bigIntToArray(railgunHash % SNARK_SCALAR_FIELD, 32);
   }
 
   /**
@@ -70,9 +70,9 @@ class MerkleTree {
    * @param depth - depth of tree
    * @returns zero values for each level
    */
-  static async getZeroValueLevels(depth: number): Promise<Buffer[]> {
+  static async getZeroValueLevels(depth: number): Promise<Uint8Array[]> {
     // Initialize empty array for levels
-    const levels: Buffer[] = [];
+    const levels: Uint8Array[] = [];
 
     // First level should be the leaf zero value
     levels.push(this.zeroValue);
@@ -94,8 +94,8 @@ class MerkleTree {
    * @returns tree
    */
   static async createTree(treeNumber = 0, depth = 16): Promise<MerkleTree> {
-    const zeros: Buffer[] = await MerkleTree.getZeroValueLevels(depth);
-    const tree: Buffer[][] = Array(depth)
+    const zeros: Uint8Array[] = await MerkleTree.getZeroValueLevels(depth);
+    const tree: Uint8Array[][] = Array(depth)
       .fill(0)
       .map(() => []);
     tree[depth] = [await MerkleTree.hashLeftRight(zeros[depth - 1], zeros[depth - 1])];
