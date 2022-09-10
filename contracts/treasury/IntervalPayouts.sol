@@ -84,6 +84,9 @@ contract IntervalPayouts {
   function payout() external {
     require(ready(), "IntervalPayouts: Payout not ready");
 
+    // Increment next interval counter
+    nextInterval += 1;
+
     if (token == address(0)) {
       // If token is address 0, treat as ETH
       treasury.transferETH(beneficiary, amount);
@@ -91,8 +94,5 @@ contract IntervalPayouts {
       // Pay out ERC20
       treasury.transferERC20(IERC20(token), beneficiary, amount);
     }
-
-    // Increment next interval counter
-    nextInterval += 1;
   }
 }

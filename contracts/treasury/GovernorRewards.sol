@@ -302,11 +302,11 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
         }
       }
 
-      // Transfer tokens
-      treasury.transferERC20(_token, address(this), totalDistributionAmounts);
-
       // Store last earmarked interval for token
       nextEarmarkInterval[_token] = _calcToInterval + 1;
+
+      // Transfer tokens
+      treasury.transferERC20(_token, address(this), totalDistributionAmounts);
     }
   }
 
