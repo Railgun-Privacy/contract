@@ -1,7 +1,7 @@
 import crypto from 'crypto';
-import curve25519 from '@noble/ed25519';
+import * as ed25519 from '@noble/ed25519';
 import { buildEddsa, buildPoseidonOpt } from 'circomlibjs';
-import { arrayToBigInt, bigIntToArray } from './bigint-array';
+import { arrayToBigInt, bigIntToArray, arrayToByteLength } from './bigint-array';
 
 /**
  * Encrypt plaintext with AES-GCM-256
@@ -44,8 +44,7 @@ function decryptAESGCM(ciphertext: Uint8Array[], key: Uint8Array): Uint8Array[] 
   decipher.setAuthTag(tag);
 
   // Loop through ciphertext and decrypt then return
-  const data = encryptedData.slice().map((block) => decipher.update(block));
-  decipher.final();
+  const data = encryptedData.slice().map((block) => new Uint8Array(decipher.update(block)));
 
   return data;
 }
@@ -61,7 +60,7 @@ function adjustRandom(random: Uint8Array): Uint8Array {
   randomHash[0] &= 248;
   randomHash[31] &= 127;
   randomHash[31] |= 64;
-  return bigIntToArray(arrayToBigInt(randomHash) % curve25519.CURVE.n, 32);
+  return bigIntToArray(arrayToBigInt(randomHash) % ed25519.CURVE.n, 32);
 }
 
 /**
@@ -72,10 +71,14 @@ function adjustRandom(random: Uint8Array): Uint8Array {
  * @param receiverPubKey - public key of receiver
  * @returns ephemeral keys
  */
-function ephemeralKeysGen(random: Uint8Array, senderPrivKey: Uint8Array, receiverPubKey: Uint8Array): Uint8Array[] {
+function ephemeralKeysGen(
+  random: Uint8Array,
+  senderPrivKey: Uint8Array,
+  receiverPubKey: Uint8Array,
+): Uint8Array[] {
   const r = adjustRandom(random);
-  const S = curve25519.Point.fromHex(senderPrivKey);
-  const R = curve25519.Point.fromHex(receiverPubKey);
+  const S = ed25519.Point.fromHex(senderPrivKey);
+  const R = ed25519.Point.fromHex(receiverPubKey);
   const rS = S.multiply(arrayToBigInt(r)).toRawBytes();
   const rR = R.multiply(arrayToBigInt(r)).toRawBytes();
   return [rS, rR];
@@ -91,14 +94,11 @@ const poseidonPromise = buildPoseidonOpt();
  */
 async function poseidon(inputs: Uint8Array[]): Promise<Uint8Array> {
   const poseidonBuild = await poseidonPromise;
-  const buf = Buffer.alloc(32);
-  Buffer.from(
-    poseidonBuild.F.fromMontgomery(
-      poseidonBuild(inputs.map((input) => poseidonBuild.F.toMontgomery(input.reverse()))),
-    ),
-  ).copy(buf);
+  const result = poseidonBuild.F.fromMontgomery(
+    poseidonBuild(inputs.map((input) => poseidonBuild.F.toMontgomery(input.reverse()))),
+  );
 
-  return buf.reverse();
+  return arrayToByteLength(result, 32).reverse();
 }
 
 const eddsaPromise = buildEddsa();
@@ -110,7 +110,7 @@ const eddsa = {
    * @returns private key
    */
   genRandomPrivateKey(): Uint8Array {
-    return crypto.randomBytes(32);
+    return new Uint8Array(crypto.randomBytes(32));
   },
 
   /**
@@ -130,14 +130,8 @@ const eddsa = {
    * @returns random point
    */
   genRandomPoint(): Promise<Uint8Array> {
-    return poseidon([crypto.randomBytes(32)]);
+    return poseidon([eddsa.genRandomPrivateKey()]);
   },
 };
 
-export {
-  encryptAESGCM,
-  decryptAESGCM,
-  ephemeralKeysGen,
-  poseidon,
-  eddsa,
-};
+export { encryptAESGCM, decryptAESGCM, ephemeralKeysGen, poseidon, eddsa };
