@@ -7,7 +7,11 @@ then
     exit
 fi
 
-slither --exclude-dependencies .
+rm report.md
 
-slither-check-upgradeability . RailgunLogic
-# Move original contract to legacy folder and add --new-contract-name RailgunLogicV2 when writing proxy upgrade
+slither --exclude-dependencies --checklist . > report.md
+
+# Move original contract to legacy folder and add eg --new-contract-name RailgunLogic when writing proxy upgrade
+slither-check-upgradeability --proxy-name PausableUpgradableProxy . RailgunLogic
+slither-check-upgradeability --proxy-name PausableUpgradableProxy . GovernorRewards
+slither-check-upgradeability --proxy-name PausableUpgradableProxy . Treasury

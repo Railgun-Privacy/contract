@@ -23,6 +23,7 @@ artifacts
 cache
 coverage
 coverage.json
+report.md
 typechain
 typechain-types
 
