@@ -2,15 +2,15 @@ import { toBufferBE, toBigIntBE } from '@trufflesuite/bigint-buffer';
 import { poseidon, eddsa } from '../global/crypto';
 
 class Note {
-  spendingKey: Buffer;
+  spendingKey: Uint8Array;
 
-  viewingKey: Buffer;
+  viewingKey: Uint8Array;
 
   value: bigint;
 
-  random: Buffer;
+  random: Uint8Array;
 
-  token: Buffer;
+  token: Uint8Array;
 
   /**
    * Create Note object
@@ -21,7 +21,7 @@ class Note {
    * @param random - note random field
    * @param token - note token
    */
-  constructor(spendingKey: Buffer, viewingKey: Buffer, value: bigint, random: Buffer, token: Buffer) {
+  constructor(spendingKey: Uint8Array, viewingKey: Uint8Array, value: bigint, random: Uint8Array, token: Uint8Array) {
     this.spendingKey = spendingKey;
     this.viewingKey = viewingKey;
     this.value = value;
@@ -34,7 +34,7 @@ class Note {
    *
    * @returns nullifying key
    */
-  nullifyingKey(): Promise<Buffer> {
+  nullifyingKey(): Promise<Uint8Array> {
     return poseidon([this.viewingKey]);
   }
 

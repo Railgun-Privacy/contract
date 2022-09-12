@@ -11,13 +11,13 @@ import { arrayToBigInt, bigIntToArray, arrayToByteLength } from './bigint-array'
  * @returns encrypted bundle
  */
 function encryptAESGCM(plaintext: Uint8Array[], key: Uint8Array): Uint8Array[] {
-  const iv = crypto.randomBytes(16);
+  const iv = new Uint8Array(crypto.randomBytes(16));
 
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv, {
     authTagLength: 16,
   });
 
-  const data = plaintext.map((block) => cipher.update(block));
+  const data = plaintext.map((block) => cipher.update(block)).map((block) => new Uint8Array(block));
   cipher.final();
 
   const tag = cipher.getAuthTag();
@@ -45,6 +45,7 @@ function decryptAESGCM(ciphertext: Uint8Array[], key: Uint8Array): Uint8Array[] 
 
   // Loop through ciphertext and decrypt then return
   const data = encryptedData.slice().map((block) => new Uint8Array(decipher.update(block)));
+  decipher.final();
 
   return data;
 }
@@ -56,7 +57,7 @@ function decryptAESGCM(ciphertext: Uint8Array[], key: Uint8Array): Uint8Array[] 
  * @returns adjusted random
  */
 function adjustRandom(random: Uint8Array): Uint8Array {
-  const randomHash = crypto.createHash('sha256').update(random).digest();
+  const randomHash = new Uint8Array(crypto.createHash('sha256').update(random).digest());
   randomHash[0] &= 248;
   randomHash[31] &= 127;
   randomHash[31] |= 64;
