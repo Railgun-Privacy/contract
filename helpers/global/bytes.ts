@@ -57,4 +57,52 @@ function bigIntToArray(bn: bigint, length: number): Uint8Array {
   return arrayToByteLength(byteArray, length);
 }
 
-export { arrayToByteLength, arrayToBigInt, bigIntToArray };
+/**
+ * Convert byte array to hex string
+ *
+ * @param array - byte array
+ * @param prefix - prefix with 0x
+ * @returns hex string
+ */
+function arrayToHexString(array: Uint8Array, prefix: boolean) {
+  // Create empty hex string
+  let hexString = '';
+
+  // Loop through each byte of array
+  array.forEach((byte) => {
+    // Convert integer representation to base 16
+    let hexByte = byte.toString(16);
+
+    // Ensure 2 chars
+    hexByte = hexByte.length === 1 ? '0' + hexByte : hexByte;
+
+    // Append to hexString
+    hexString += hexByte;
+  });
+
+  // Prefix if needed
+  return prefix ? `0x${hexString}` : hexString;
+}
+
+/**
+ * Convert hex string to byte array
+ *
+ * @param hexString - hex string
+ * @returns byte array
+ */
+function hexStringToArray(hexString: string) {
+  // Strip leading 0x if present
+  const hexStringFormatted = hexString.startsWith('0x') ? hexString.slice(2) : hexString;
+
+  // Create empty array
+  const array = new Uint8Array(hexStringFormatted.length / 2);
+
+  // Fetch matching byte index from hex string and parse to integer
+  array.map(
+    (element, index) => (array[index] = parseInt(hexStringFormatted.substring(index * 2, 2), 16)),
+  );
+
+  return array;
+}
+
+export { arrayToByteLength, arrayToBigInt, bigIntToArray, arrayToHexString, hexStringToArray };

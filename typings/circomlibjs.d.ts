@@ -1,18 +1,22 @@
 declare module 'circomlibjs' {
-  export interface Signature {
-    R8: [bigint, bigint];
+  declare type FromMontgomery = (Uint8Array) => Uint8Array;
+  declare type ToMongomery = (Uint8Array) => Uint8Array;
+
+  export interface CircomlibSignature {
+    R8: [Uint8Array, Uint8Array];
     S: bigint;
   }
-
   declare interface EdDSA {
-    verifyPoseidon(msg: bigint, sig: Signature, A: bigint[]): boolean;
-    signPoseidon(prv: Uint8Array, msg: bigint): Signature;
+    verifyPoseidon(msg: Uint8Array, sig: CircomlibSignature, A: Uint8Array[]): boolean;
+    signPoseidon(prv: Uint8Array, msg: Uint8Array): CircomlibSignature;
     prv2pub(prv: Uint8Array): [bigint, bigint];
+    F: {
+      fromMontgomery: FromMontgomery;
+      toMontgomery: ToMongomery;
+    };
   }
   export function buildEddsa(): Promise<EdDSA>;
 
-  declare type FromMontgomery = (Uint8Array) => Uint8Array;
-  declare type ToMongomery = (Uint8Array) => Uint8Array;
   declare interface PoseidonFunction {
     (inputs: Uint8Array[]): Uint8Array;
     F: {

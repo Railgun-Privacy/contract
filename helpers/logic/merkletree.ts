@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import { bigIntToArray } from '../global/bigint-array';
+import { bigIntToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { poseidon } from '../global/crypto';
 
