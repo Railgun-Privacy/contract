@@ -1,16 +1,23 @@
 import { TokenType, TokenData } from './types';
-import { bigIntToArray } from '../global/bytes';
+import { bigIntToArray, hexStringToArray, arrayToByteLength } from '../global/bytes';
 import { poseidon, eddsa } from '../global/crypto';
 
 /**
  * Gets token ID from token data
  *
- * @param tokenData - token data to validate
- * @returns validity
+ * @param tokenData - token data to get ID from
+ * @returns token ID
  */
-function getTokenID(tokenData: TokenData): Uint8Array {
+async function getTokenID(tokenData: TokenData): Promise<Uint8Array> {
   switch (tokenData.type) {
-
+    case TokenType.ERC20:
+      return arrayToByteLength(hexStringToArray(tokenData.address), 32);
+    case TokenType.ERC721:
+    case TokenType.ERC1155:
+      return poseidon([
+        arrayToByteLength(hexStringToArray(tokenData.address), 32),
+        bigIntToArray(tokenData.subID, 32),
+      ]);
   }
 }
 
