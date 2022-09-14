@@ -140,6 +140,13 @@ const eddsa = {
     return poseidon([eddsa.genRandomPrivateKey()]);
   },
 
+  /**
+   * Creates eddsa-babyjubjub signature with poseidon hash
+   *
+   * @param key - private key
+   * @param message - message to sign
+   * @returns signature
+   */
   async signPoseidon(key: Uint8Array, message: Uint8Array) {
     const eddsaBuild = await eddsaPromise;
 
