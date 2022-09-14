@@ -117,7 +117,7 @@ class Note {
    *
    * @returns token ID
    */
-  getTokenID(): Uint8Array {
+  getTokenID(): Promise<Uint8Array> {
     return getTokenID(this.tokenData);
   }
 
@@ -129,7 +129,7 @@ class Note {
   async getHash(): Promise<Uint8Array> {
     return poseidon([
       await this.getNotePublicKey(),
-      this.getTokenID(),
+      await this.getTokenID(),
       bigIntToArray(this.value, 32),
     ]);
   }
@@ -206,7 +206,7 @@ class WithdrawNote {
    *
    * @returns token ID
    */
-  getTokenID(): Uint8Array {
+  getTokenID(): Promise<Uint8Array> {
     return getTokenID(this.tokenData);
   }
 
@@ -215,8 +215,8 @@ class WithdrawNote {
    *
    * @returns hash
    */
-  getHash(): Promise<Uint8Array> {
-    return poseidon([this.withdrawAddress, this.getTokenID(), bigIntToArray(this.value, 32)]);
+  async getHash(): Promise<Uint8Array> {
+    return poseidon([this.withdrawAddress, await this.getTokenID(), bigIntToArray(this.value, 32)]);
   }
 }
 
