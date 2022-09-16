@@ -101,8 +101,10 @@ const poseidonPromise = buildPoseidonOpt();
  */
 async function poseidon(inputs: Uint8Array[]): Promise<Uint8Array> {
   const poseidonBuild = await poseidonPromise;
+
+  // Convert inputs to LE montgomery representation then convert back to standard at end
   const result = poseidonBuild.F.fromMontgomery(
-    poseidonBuild(inputs.map((input) => poseidonBuild.F.toMontgomery(input.reverse()))),
+    poseidonBuild(inputs.map((input) => poseidonBuild.F.toMontgomery(new Uint8Array(input).reverse()))),
   );
 
   return arrayToByteLength(result, 32).reverse();
@@ -128,7 +130,13 @@ const eddsa = {
    */
   async prv2pub(privateKey: Uint8Array): Promise<Uint8Array[]> {
     const eddsaBuild = await eddsaPromise;
-    return eddsaBuild.prv2pub(privateKey);
+
+    // Derive key
+    const key = eddsaBuild
+      .prv2pub(privateKey)
+      .map((element) => eddsaBuild.F.fromMontgomery(element).reverse());
+
+    return key;
   },
 
   /**
@@ -156,8 +164,6 @@ const eddsa = {
 
     // Get BE montgomery representation
     const montgomery = eddsaBuild.F.toMontgomery(bigIntToArray(messageLE, 32).reverse());
-
-    console.log(montgomery);
 
     const sig = eddsaBuild.signPoseidon(key, montgomery);
 

@@ -99,7 +99,8 @@ function hexStringToArray(hexString: string) {
 
   // Fetch matching byte index from hex string and parse to integer
   array.map(
-    (element, index) => (array[index] = parseInt(hexStringFormatted.substring(index * 2, 2), 16)),
+    (element, index) =>
+      (array[index] = parseInt(hexStringFormatted.substring(index * 2, index * 2 + 2), 16)),
   );
 
   return array;
