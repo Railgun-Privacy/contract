@@ -128,7 +128,7 @@ const eddsa = {
    */
   async prv2pub(privateKey: Uint8Array): Promise<Uint8Array[]> {
     const eddsaBuild = await eddsaPromise;
-    return eddsaBuild.prv2pub(privateKey).map((el) => bigIntToArray(el, 32));
+    return eddsaBuild.prv2pub(privateKey);
   },
 
   /**
@@ -150,7 +150,16 @@ const eddsa = {
   async signPoseidon(key: Uint8Array, message: Uint8Array) {
     const eddsaBuild = await eddsaPromise;
 
-    const sig = eddsaBuild.signPoseidon(key, message);
+    // Convert to bigint little endian representation (construct new array to avoid side effects)
+    // and mod point p to ensure within field
+    const messageLE = arrayToBigInt(new Uint8Array(message).reverse()) % eddsaBuild.F.p;
+
+    // Get BE montgomery representation
+    const montgomery = eddsaBuild.F.toMontgomery(bigIntToArray(messageLE, 32).reverse());
+
+    console.log(montgomery);
+
+    const sig = eddsaBuild.signPoseidon(key, montgomery);
 
     return sig;
   },

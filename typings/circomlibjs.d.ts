@@ -9,10 +9,11 @@ declare module 'circomlibjs' {
   declare interface EdDSA {
     verifyPoseidon(msg: Uint8Array, sig: CircomlibSignature, A: Uint8Array[]): boolean;
     signPoseidon(prv: Uint8Array, msg: Uint8Array): CircomlibSignature;
-    prv2pub(prv: Uint8Array): [bigint, bigint];
+    prv2pub(prv: Uint8Array): [Uint8Array, Uint8Array];
     F: {
       fromMontgomery: FromMontgomery;
       toMontgomery: ToMongomery;
+      p: bigint;
     };
   }
   export function buildEddsa(): Promise<EdDSA>;
