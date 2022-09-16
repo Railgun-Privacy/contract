@@ -29,7 +29,7 @@ async function getTokenID(tokenData: TokenData): Promise<Uint8Array> {
  */
 function validateTokenData(tokenData: TokenData): boolean {
   if (!Object.values(TokenType).includes(tokenData.type)) return false;
-  if (/^0x[a-fA-F0-9]{40}$/.test(tokenData.address)) return false;
+  if (!/^0x[a-fA-F0-9]{40}$/.test(tokenData.address)) return false;
   if (0n > tokenData.subID || tokenData.subID >= 2n ** 256n) return false;
 
   return true;
@@ -109,7 +109,7 @@ class Note {
    * @returns note public key
    */
   async getNotePublicKey(): Promise<Uint8Array> {
-    return poseidon([await this.getMasterPublicKey(), this.random]);
+    return poseidon([await this.getMasterPublicKey(), arrayToByteLength(this.random, 32)]);
   }
 
   /**
