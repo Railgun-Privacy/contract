@@ -168,7 +168,7 @@ class Note {
 }
 
 class WithdrawNote {
-  withdrawAddress: Uint8Array;
+  withdrawAddress: string;
 
   value: bigint;
 
@@ -181,9 +181,9 @@ class WithdrawNote {
    * @param value - note value
    * @param tokenData - note token data
    */
-  constructor(withdrawAddress: Uint8Array, value: bigint, tokenData: TokenData) {
+  constructor(withdrawAddress: string, value: bigint, tokenData: TokenData) {
     // Validate bounds
-    if (withdrawAddress.length !== 32) throw Error('Invalid spending key length');
+    if (!/^0x[a-fA-F0-9]{40}$/.test(withdrawAddress)) throw Error('Invalid withdraw address');
     if (value >= 2n ** 128n) throw Error('Value too high');
     if (!validateTokenData(tokenData)) throw Error('Invalid token data');
 
@@ -198,7 +198,7 @@ class WithdrawNote {
    * @returns npk
    */
   getNotePublicKey() {
-    return this.withdrawAddress;
+    return arrayToByteLength(hexStringToArray(this.withdrawAddress), 32);
   }
 
   /**
@@ -216,7 +216,11 @@ class WithdrawNote {
    * @returns hash
    */
   async getHash(): Promise<Uint8Array> {
-    return poseidon([this.withdrawAddress, await this.getTokenID(), bigIntToArray(this.value, 32)]);
+    return poseidon([
+      this.getNotePublicKey(),
+      await this.getTokenID(),
+      bigIntToArray(this.value, 32),
+    ]);
   }
 }
 

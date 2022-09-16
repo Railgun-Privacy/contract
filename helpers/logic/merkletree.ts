@@ -102,6 +102,40 @@ class MerkleTree {
 
     return new MerkleTree(treeNumber, depth, zeros, tree);
   }
+
+  /**
+   * Rebuilds tree
+   * 
+   * @returns complete
+   */
+  async rebuildSparseTree() {
+    for (let level = 0; level < this.depth; level += 1) {
+      this.tree[level + 1] = [];
+
+      for (let pos = 0; pos < this.tree[level].length; pos += 2) {
+        this.tree[level + 1].push(
+          await MerkleTree.hashLeftRight(
+            this.tree[level][pos],
+            this.tree[level][pos + 1] ?? this.zeros[level],
+          ),
+        );
+      }
+    }
+  }
+
+  /**
+   * Inserts leaves into tree
+   *
+   * @param leaves - array of leaves to add
+   * @returns complete
+   */
+  async insertLeaves(leaves: Uint8Array[]) {
+    // Add leaves to tree
+    this.tree[0].push(...leaves);
+
+    // Rebuild tree
+    await this.rebuildSparseTree();
+  }
 }
 
 export { MerkleTree };
