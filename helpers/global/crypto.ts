@@ -104,7 +104,9 @@ async function poseidon(inputs: Uint8Array[]): Promise<Uint8Array> {
 
   // Convert inputs to LE montgomery representation then convert back to standard at end
   const result = poseidonBuild.F.fromMontgomery(
-    poseidonBuild(inputs.map((input) => poseidonBuild.F.toMontgomery(new Uint8Array(input).reverse()))),
+    poseidonBuild(
+      inputs.map((input) => poseidonBuild.F.toMontgomery(new Uint8Array(input).reverse())),
+    ),
   );
 
   return arrayToByteLength(result, 32).reverse();

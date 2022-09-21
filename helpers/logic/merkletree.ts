@@ -105,7 +105,7 @@ class MerkleTree {
 
   /**
    * Rebuilds tree
-   * 
+   *
    * @returns complete
    */
   async rebuildSparseTree() {

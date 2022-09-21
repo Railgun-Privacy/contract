@@ -2,30 +2,29 @@ import artifacts from 'railgun-artifacts-node';
 import type { Artifact, VKey } from 'railgun-artifacts-node';
 
 export interface SolidityVkey {
-  artifactsIPFSHash: string,
+  artifactsIPFSHash: string;
   alpha1: {
-    x: bigint,
-    y: bigint,
-  },
+    x: bigint;
+    y: bigint;
+  };
   beta2: {
-    x: bigint[],
-    y: bigint[],
-  },
+    x: bigint[];
+    y: bigint[];
+  };
   gamma2: {
-    x: bigint[],
-    y: bigint[],
-  },
+    x: bigint[];
+    y: bigint[];
+  };
   delta2: {
-    x: bigint[],
-    y: bigint[],
-  },
-  ic: ({ x: bigint, y: bigint })[],
+    x: bigint[];
+    y: bigint[];
+  };
+  ic: { x: bigint; y: bigint }[];
 }
 
 export interface FormattedArtifact extends Artifact {
-  solidityVkey: SolidityVkey; 
+  solidityVkey: SolidityVkey;
 }
-
 
 /**
  * Formats vkey for solidity input
@@ -91,19 +90,21 @@ function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
  * @returns nullifier -\> commitments -\> keys
  */
 function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
-  // Map each existing artifact to 
-  return artifacts.map((nullifierList) => nullifierList?.map((artifact): FormattedArtifact | undefined => {
-    if (!artifact) {
-      return undefined;
-    }
+  // Map each existing artifact to
+  return artifacts.map((nullifierList) =>
+    nullifierList?.map((artifact): FormattedArtifact | undefined => {
+      if (!artifact) {
+        return undefined;
+      }
 
-    const artifactFormatted = {
-      ...artifact,
-      solidityVkey: formatVKey(artifact.vkey),
-    };
+      const artifactFormatted = {
+        ...artifact,
+        solidityVkey: formatVKey(artifact.vkey),
+      };
 
-    return artifactFormatted;
-  }));
+      return artifactFormatted;
+    }),
+  );
 }
 
 /**
@@ -112,20 +113,17 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
  * @returns artifact configs
  */
 function availableArtifacts() {
-  const artifactsList: { nullifiers: number, commitments: number }[] = [];
-  
-  artifacts.forEach((nullifierList, nullifiers) => nullifierList?.forEach((artifact, commitments)=> {
-    if (artifact) {
-      artifactsList.push({ nullifiers, commitments });
-    }
-  }));
+  const artifactsList: { nullifiers: number; commitments: number }[] = [];
+
+  artifacts.forEach((nullifierList, nullifiers) =>
+    nullifierList?.forEach((artifact, commitments) => {
+      if (artifact) {
+        artifactsList.push({ nullifiers, commitments });
+      }
+    }),
+  );
 
   return artifactsList;
 }
 
-export {
-  formatVKey,
-  getKeys,
-  allArtifacts,
-  availableArtifacts,
-};
+export { formatVKey, getKeys, allArtifacts, availableArtifacts };
