@@ -44,6 +44,7 @@
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.24",
     "railgun-artifacts-node": "https://npm.railgun.org/railgun-artifacts-node-0.1.0.tgz",
+    "snarkjs": "^0.5.0",
     "solhint": "^3.3.7",
     "solhint-plugin-prettier": "^0.0.5",
     "solidity-coverage": "^0.8.2",

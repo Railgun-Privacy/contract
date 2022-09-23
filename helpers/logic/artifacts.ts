@@ -1,29 +1,43 @@
 import artifacts from 'railgun-artifacts-node';
 import type { Artifact, VKey } from 'railgun-artifacts-node';
+import { Verifier } from '../../typechain-types';
 
-export interface SolidityVkey {
+export interface SolidityG1Point {
+  x: bigint;
+  y: bigint;
+}
+
+export interface SolidityG2Point {
+  x: [bigint, bigint];
+  y: [bigint, bigint];
+}
+
+export interface SolidityVKey {
   artifactsIPFSHash: string;
   alpha1: {
     x: bigint;
     y: bigint;
   };
   beta2: {
-    x: bigint[];
-    y: bigint[];
+    x: [bigint, bigint];
+    y: [bigint, bigint];
   };
   gamma2: {
-    x: bigint[];
-    y: bigint[];
+    x: [bigint, bigint];
+    y: [bigint, bigint];
   };
   delta2: {
-    x: bigint[];
-    y: bigint[];
+    y: [bigint, bigint];
+    x: [bigint, bigint];
   };
   ic: { x: bigint; y: bigint }[];
 }
 
+export type EventVKeyMatcher = (i: unknown) => boolean;
+
 export interface FormattedArtifact extends Artifact {
-  solidityVkey: SolidityVkey;
+  solidityVKey: SolidityVKey;
+  eventVKeyMatcher: EventVKeyMatcher;
 }
 
 /**
@@ -32,7 +46,7 @@ export interface FormattedArtifact extends Artifact {
  * @param vkey - verification key to format
  * @returns formatted vkey
  */
-function formatVKey(vkey: VKey): SolidityVkey {
+function formatVKey(vkey: VKey): SolidityVKey {
   // Parse points to X,Y coordinate bigints and return
   return {
     artifactsIPFSHash: '',
@@ -60,6 +74,94 @@ function formatVKey(vkey: VKey): SolidityVkey {
 }
 
 /**
+ * Check G1 points match
+ *
+ * @param point1 - point 1
+ * @param point2 - point 2
+ * @returns points match
+ */
+function matchG1Point(point1: Record<string, unknown>, point2: SolidityG1Point) {
+  // Check coordinates match, not strict equals so that similar number types can be matched
+  if (point1.x != point2.x) return false;
+  if (point1.y != point2.y) return false;
+
+  return true;
+}
+
+/**
+ * Check G1 points match
+ *
+ * @param point1 - point 1
+ * @param point2 - point 2
+ * @returns points match
+ */
+function matchG2Point(point1: Record<string, unknown>, point2: SolidityG2Point) {
+  // Check coordinate arrays exist
+  if (!Array.isArray(point1.x)) return false;
+  if (!Array.isArray(point1.y)) return false;
+
+  // Check coordinates match, not strict equals so that similar number types can be matched
+  if (point1.x[0] != point2.x[0]) return false;
+  if (point1.x[1] != point2.x[1]) return false;
+  if (point1.y[0] != point2.y[0]) return false;
+  if (point1.y[1] != point2.y[1]) return false;
+
+  return true;
+}
+
+/**
+ * Formats vkey for solidity event checking
+ *
+ * @param vkey - verification key to format
+ * @returns formatted vkey
+ */
+function formatVKeyMatcher(vkey: VKey): EventVKeyMatcher {
+  const vkeySolidity = formatVKey(vkey);
+
+  return (i: unknown): boolean => {
+    // Check type
+    if (!i) return false;
+    if (typeof i !== 'object') return false;
+
+    // Cast to record
+    const iCast = i as Record<string, unknown>;
+
+    // Check artifactsIPFSHash
+    if (iCast.artifactsIPFSHash !== vkeySolidity.artifactsIPFSHash) return false;
+
+    // Check alpha point
+    if (!iCast.alpha1) return false;
+    if (typeof iCast.alpha1 !== 'object') return false;
+    if (!matchG1Point(iCast.alpha1 as Record<string, unknown>, vkeySolidity.alpha1)) return false;
+
+    // Check beta point
+    if (!iCast.beta2) return false;
+    if (typeof iCast.beta2 !== 'object') return false;
+    if (!matchG2Point(iCast.beta2 as Record<string, unknown>, vkeySolidity.beta2)) return false;
+
+    // Check beta point
+    if (!iCast.gamma2) return false;
+    if (typeof iCast.gamma2 !== 'object') return false;
+    if (!matchG2Point(iCast.gamma2 as Record<string, unknown>, vkeySolidity.gamma2)) return false;
+
+    // Check beta point
+    if (!iCast.delta2) return false;
+    if (typeof iCast.delta2 !== 'object') return false;
+    if (!matchG2Point(iCast.delta2 as Record<string, unknown>, vkeySolidity.delta2)) return false;
+
+    // Check IC
+    if (!Array.isArray(iCast.ic)) return false;
+    if (iCast.ic.length !== vkeySolidity.ic.length) return false;
+    for (let index = 0; index < iCast.ic.length; index += 1) {
+      if (!matchG1Point(iCast.ic[index] as Record<string, unknown>, vkeySolidity.ic[index]))
+        return false;
+    }
+
+    return true;
+  };
+}
+
+/**
  * Fetches artifact with formatted verification key
  *
  * @param nullifiers - nullifier count
@@ -78,7 +180,8 @@ function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
   // Get format solidity vkey
   const artifactFormatted: FormattedArtifact = {
     ...artifact,
-    solidityVkey: formatVKey(artifact.vkey),
+    solidityVKey: formatVKey(artifact.vkey),
+    eventVKeyMatcher: formatVKeyMatcher(artifact.vkey),
   };
 
   return artifactFormatted;
@@ -90,7 +193,7 @@ function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
  * @returns nullifier -\> commitments -\> keys
  */
 function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
-  // Map each existing artifact to
+  // Map each existing artifact to formatted artifact
   return artifacts.map((nullifierList) =>
     nullifierList?.map((artifact): FormattedArtifact | undefined => {
       if (!artifact) {
@@ -99,7 +202,8 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
 
       const artifactFormatted = {
         ...artifact,
-        solidityVkey: formatVKey(artifact.vkey),
+        solidityVKey: formatVKey(artifact.vkey),
+        eventVKeyMatcher: formatVKeyMatcher(artifact.vkey),
       };
 
       return artifactFormatted;
@@ -126,4 +230,28 @@ function availableArtifacts() {
   return artifactsList;
 }
 
-export { formatVKey, getKeys, allArtifacts, availableArtifacts };
+/**
+ * Loads all available artifacts into verifier contract
+ *
+ * @param verifierContract - verifier Contract
+ * @returns complete
+ */
+async function loadAllArtifacts(verifierContract: Verifier) {
+  for (const artifactConfig of availableArtifacts()) {
+    const artifact = getKeys(artifactConfig.nullifiers, artifactConfig.commitments);
+    await verifierContract.setVerificationKey(
+      artifactConfig.nullifiers,
+      artifactConfig.commitments,
+      artifact.solidityVKey,
+    );
+  }
+}
+
+export {
+  formatVKey,
+  formatVKeyMatcher,
+  getKeys,
+  allArtifacts,
+  availableArtifacts,
+  loadAllArtifacts,
+};

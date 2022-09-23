@@ -1,12 +1,12 @@
 import { ethers } from 'hardhat';
-import { bigIntToArray } from '../global/bytes';
+import { arrayToBigInt, bigIntToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
-import { poseidon } from '../global/crypto';
+import { hash } from '../global/crypto';
 
 export interface MerkleProof {
   element: Uint8Array;
   elements: Uint8Array[];
-  indices: Uint8Array;
+  indices: number;
   root: Uint8Array;
 }
 
@@ -51,7 +51,7 @@ class MerkleTree {
    * @returns hash
    */
   static hashLeftRight(left: Uint8Array, right: Uint8Array): Promise<Uint8Array> {
-    return poseidon([left, right]);
+    return hash.poseidon([left, right]);
   }
 
   /**
@@ -135,6 +135,76 @@ class MerkleTree {
 
     // Rebuild tree
     await this.rebuildSparseTree();
+  }
+
+  /**
+   * Gets Merkle Proof for element
+   *
+   * @param element - element to get proof for
+   * @returns proof
+   */
+  generateProof(element: Uint8Array): MerkleProof {
+    // Initialize of proof elements
+    const elements = [];
+
+    // Get initial index
+    const initialIndex = this.tree[0].map(arrayToBigInt).indexOf(arrayToBigInt(element));
+    let index = initialIndex;
+
+    if (index === -1) {
+      throw new Error(`Couldn't find ${arrayToBigInt(element)} in the MerkleTree`);
+    }
+
+    // Loop through each level
+    for (let level = 0; level < this.depth; level += 1) {
+      if (index % 2 === 0) {
+        // If index is even get element on right
+        elements.push(this.tree[level][index + 1] ?? this.zeros[level]);
+      } else {
+        // If index is odd get element on left
+        elements.push(this.tree[level][index - 1]);
+      }
+
+      // Get index for next level
+      index = Math.floor(index / 2);
+    }
+
+    return {
+      element,
+      elements,
+      indices: initialIndex,
+      root: this.root,
+    };
+  }
+
+  /**
+   * Validates merkle proof
+   *
+   * @param proof - proof to validate
+   * @returns isValid
+   */
+  static async validateProof(proof: MerkleProof): Promise<boolean> {
+    // Parse indices into binary string
+    const indicies = proof.indices
+      .toString(2)
+      .padStart(proof.elements.length, '0')
+      .split('')
+      .reverse();
+
+    // Initial currentHash value is the element we're proving membership for
+    let currentHash = proof.element;
+
+    // Loop though each proof level and hash together
+    for (let i = 0; i < proof.elements.length; i += 1) {
+      if (indicies[i] === '0') {
+        currentHash = await MerkleTree.hashLeftRight(currentHash, proof.elements[i]);
+      } else if (indicies[i] === '1') {
+        currentHash = await MerkleTree.hashLeftRight(proof.elements[i], currentHash);
+      }
+    }
+
+    // Return true if result is equal to merkle root
+    return currentHash === proof.root;
   }
 }
 

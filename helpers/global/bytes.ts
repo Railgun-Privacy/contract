@@ -38,7 +38,7 @@ function arrayToBigInt(array: Uint8Array): bigint {
  * Convert bigint to byte array
  *
  * @param bn - bigint
- * @param length - length of resulting byte array
+ * @param length - length of resulting byte array, 0 to return byte length of integer
  * @returns byte array
  */
 function bigIntToArray(bn: bigint, length: number): Uint8Array {

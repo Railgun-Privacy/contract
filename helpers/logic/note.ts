@@ -1,6 +1,23 @@
-import { TokenType, TokenData } from './types';
 import { bigIntToArray, hexStringToArray, arrayToByteLength } from '../global/bytes';
-import { poseidon, eddsa } from '../global/crypto';
+import { hash, eddsa } from '../global/crypto';
+
+export enum TokenType {
+  'ERC20' = 0,
+  'ERC721' = 1,
+  'ERC1155' = 2,
+}
+
+export interface TokenData {
+  tokenType: TokenType;
+  tokenAddress: string;
+  tokenSubID: bigint;
+}
+
+export interface CommitmentCiphertext {
+  ciphertext: [Uint8Array, Uint8Array, Uint8Array, Uint8Array];
+  ephemeralKeys: [Uint8Array, Uint8Array];
+  memo: Uint8Array[];
+}
 
 /**
  * Gets token ID from token data
@@ -9,14 +26,14 @@ import { poseidon, eddsa } from '../global/crypto';
  * @returns token ID
  */
 async function getTokenID(tokenData: TokenData): Promise<Uint8Array> {
-  switch (tokenData.type) {
+  switch (tokenData.tokenType) {
     case TokenType.ERC20:
-      return arrayToByteLength(hexStringToArray(tokenData.address), 32);
+      return arrayToByteLength(hexStringToArray(tokenData.tokenAddress), 32);
     case TokenType.ERC721:
     case TokenType.ERC1155:
-      return poseidon([
-        arrayToByteLength(hexStringToArray(tokenData.address), 32),
-        bigIntToArray(tokenData.subID, 32),
+      return hash.poseidon([
+        arrayToByteLength(hexStringToArray(tokenData.tokenAddress), 32),
+        bigIntToArray(tokenData.tokenSubID, 32),
       ]);
   }
 }
@@ -28,9 +45,9 @@ async function getTokenID(tokenData: TokenData): Promise<Uint8Array> {
  * @returns validity
  */
 function validateTokenData(tokenData: TokenData): boolean {
-  if (!Object.values(TokenType).includes(tokenData.type)) return false;
-  if (!/^0x[a-fA-F0-9]{40}$/.test(tokenData.address)) return false;
-  if (0n > tokenData.subID || tokenData.subID >= 2n ** 256n) return false;
+  if (!Object.values(TokenType).includes(tokenData.tokenType)) return false;
+  if (!/^0x[a-fA-F0-9]{40}$/.test(tokenData.tokenAddress)) return false;
+  if (0n > tokenData.tokenSubID || tokenData.tokenSubID >= 2n ** 256n) return false;
 
   return true;
 }
@@ -82,7 +99,7 @@ class Note {
    * @returns nullifying key
    */
   getNullifyingKey(): Promise<Uint8Array> {
-    return poseidon([this.viewingKey]);
+    return hash.poseidon([this.viewingKey]);
   }
 
   /**
@@ -90,7 +107,7 @@ class Note {
    *
    * @returns spending public key
    */
-  getSpendingPublicKey(): Promise<Uint8Array[]> {
+  getSpendingPublicKey(): Promise<[Uint8Array, Uint8Array]> {
     return eddsa.prv2pub(this.spendingKey);
   }
 
@@ -100,7 +117,7 @@ class Note {
    * @returns master public key
    */
   async getMasterPublicKey(): Promise<Uint8Array> {
-    return poseidon([...(await this.getSpendingPublicKey()), await this.getNullifyingKey()]);
+    return hash.poseidon([...(await this.getSpendingPublicKey()), await this.getNullifyingKey()]);
   }
 
   /**
@@ -109,7 +126,7 @@ class Note {
    * @returns note public key
    */
   async getNotePublicKey(): Promise<Uint8Array> {
-    return poseidon([await this.getMasterPublicKey(), arrayToByteLength(this.random, 32)]);
+    return hash.poseidon([await this.getMasterPublicKey(), arrayToByteLength(this.random, 32)]);
   }
 
   /**
@@ -127,7 +144,7 @@ class Note {
    * @returns hash
    */
   async getHash(): Promise<Uint8Array> {
-    return poseidon([
+    return hash.poseidon([
       await this.getNotePublicKey(),
       await this.getTokenID(),
       bigIntToArray(this.value, 32),
@@ -141,7 +158,7 @@ class Note {
    * @returns nullifier
    */
   async getNullifier(leafIndex: number): Promise<Uint8Array> {
-    return poseidon([await this.getNullifyingKey(), bigIntToArray(BigInt(leafIndex), 32)]);
+    return hash.poseidon([await this.getNullifyingKey(), bigIntToArray(BigInt(leafIndex), 32)]);
   }
 
   /**
@@ -158,12 +175,17 @@ class Note {
     boundParamsHash: Uint8Array,
     nullifiers: Uint8Array[],
     commitmentsOut: Uint8Array[],
-  ) {
-    const hash = await poseidon([merkleRoot, boundParamsHash, ...nullifiers, ...commitmentsOut]);
+  ): Promise<[Uint8Array, Uint8Array, Uint8Array]> {
+    const sighash = await hash.poseidon([
+      merkleRoot,
+      boundParamsHash,
+      ...nullifiers,
+      ...commitmentsOut,
+    ]);
 
     const key = this.spendingKey;
 
-    return eddsa.signPoseidon(key, hash);
+    return eddsa.signPoseidon(key, sighash);
   }
 }
 
@@ -216,7 +238,7 @@ class WithdrawNote {
    * @returns hash
    */
   async getHash(): Promise<Uint8Array> {
-    return poseidon([
+    return hash.poseidon([
       this.getNotePublicKey(),
       await this.getTokenID(),
       bigIntToArray(this.value, 32),

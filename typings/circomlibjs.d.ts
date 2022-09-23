@@ -16,7 +16,7 @@ declare module 'circomlibjs' {
       p: bigint;
     };
   }
-  export function buildEddsa(): Promise<EdDSA>;
+  declare function buildEddsa(): Promise<EdDSA>;
 
   declare interface PoseidonFunction {
     (inputs: Uint8Array[]): Uint8Array;
@@ -25,8 +25,8 @@ declare module 'circomlibjs' {
       toMontgomery: ToMongomery;
     };
   }
-  export function buildPoseidon(): Promise<PoseidonFunction>;
-  export function buildPoseidonOpt(): Promise<PoseidonFunction>;
+  declare function buildPoseidon(): Promise<PoseidonFunction>;
+  declare function buildPoseidonOpt(): Promise<PoseidonFunction>;
 
   namespace poseidonContract {
     export function createCode(size: number): string;

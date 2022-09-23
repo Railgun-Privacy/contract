@@ -27,6 +27,7 @@ module.exports = {
     'no-console': 'off',
     'no-process-exit': 'off',
     'no-unused-vars': 'off',
+    '@typescript-eslint/indent': 'off',
     '@typescript-eslint/no-unused-vars': 'error',
     'jsdoc/require-property-description': 'warn',
     'jsdoc/require-description': 'warn',
