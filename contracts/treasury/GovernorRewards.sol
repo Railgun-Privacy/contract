@@ -2,8 +2,6 @@
 pragma solidity ^0.8.7;
 pragma abicoder v2;
 
-import "hardhat/console.sol";
-
 // OpenZeppelin v4
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";

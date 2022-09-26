@@ -1,4 +1,4 @@
-# Railgun Contracts
+# RAILGUN Contracts
 
 ## Getting started
 

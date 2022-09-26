@@ -8,7 +8,7 @@ module.exports = {
     'teststubs/logic/CommitmentsStub.sol',
     'teststubs/logic/RailgunLogicStub.sol',
     'teststubs/logic/SnarkStub.sol',
-    'teststubs/logic/TokenBlacklistStub.sol',
+    'teststubs/logic/TokenBlocklistStub.sol',
     'teststubs/logic/VerifierStub.sol',
     'teststubs/proxy/ProxyTarget.sol',
   ],

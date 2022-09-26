@@ -13,7 +13,7 @@ import { SNARK_SCALAR_FIELD, TokenType, WithdrawType, TokenData, CommitmentCiphe
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
-import { TokenBlacklist } from "./TokenBlacklist.sol";
+import { TokenBlocklist } from "./TokenBlocklist.sol";
 import { PoseidonT4 } from "./Poseidon.sol";
 
 /**
@@ -24,7 +24,7 @@ import { PoseidonT4 } from "./Poseidon.sol";
  * This contract is written to be run behind a ERC1967-like proxy. Upon deployment of proxy the _data parameter should
  * call the initializeRailgunLogic function.
  */
-contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlacklist, Verifier {
+contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlocklist, Verifier {
   using SafeERC20 for IERC20;
 
   // NOTE: The order of instantiation MUST stay the same across upgrades
@@ -237,10 +237,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Check deposit amount is not 0
       require(note.value > 0, "RailgunLogic: Cannot deposit 0 tokens");
 
-      // Check if token is on the blacklist
+      // Check if token is on the blocklist
       require(
-        !TokenBlacklist.tokenBlacklist[note.token.tokenAddress],
-        "RailgunLogic: Token is blacklisted"
+        !TokenBlocklist.tokenBlocklist[note.token.tokenAddress],
+        "RailgunLogic: Token is blocklisted"
       );
 
       // Check ypubkey is in snark scalar field

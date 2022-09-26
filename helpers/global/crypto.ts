@@ -189,12 +189,8 @@ const eddsa = {
   ): Promise<[Uint8Array, Uint8Array, Uint8Array]> {
     const eddsaBuild = await eddsaPromise;
 
-    // Convert to bigint little endian representation (construct new array to avoid side effects)
-    // and mod point p to ensure within field
-    const messageLE = arrayToBigInt(new Uint8Array(message).reverse()) % eddsaBuild.F.p;
-
-    // Get BE montgomery representation
-    const montgomery = eddsaBuild.F.toMontgomery(bigIntToArray(messageLE, 32).reverse());
+    // Get montgomery representation
+    const montgomery = eddsaBuild.F.toMontgomery(new Uint8Array(message).reverse());
 
     // Sign
     const sig = eddsaBuild.signPoseidon(key, montgomery);

@@ -5,14 +5,14 @@ pragma abicoder v2;
 //OpenZeppelin v4
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { TokenBlacklist } from "../../logic/TokenBlacklist.sol";
+import { TokenBlocklist } from "../../logic/TokenBlocklist.sol";
 
-contract TokenBlacklistStub is TokenBlacklist {
+contract TokenBlocklistStub is TokenBlocklist {
   constructor() {
-    initializeTokenBlacklistStub();
+    initializeTokenBlocklistStub();
   }
 
-  function initializeTokenBlacklistStub() internal initializer {
+  function initializeTokenBlocklistStub() internal initializer {
     OwnableUpgradeable.__Ownable_init();
   }
 }
