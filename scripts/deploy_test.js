@@ -44,7 +44,10 @@ async function main() {
   const voting = await Voting.deploy(staking.address, delegator.address);
 
   // Deploy treasury
-  const treasury = await Treasury.deploy(delegator.address);
+  const treasury = await Treasury.deploy();
+
+  // Initialize treasury
+  await treasury.initializeTreasury(delegator.address);
 
   // Deploy ProxyAdmin
   const proxyAdmin = await ProxyAdmin.deploy(delegator.address);

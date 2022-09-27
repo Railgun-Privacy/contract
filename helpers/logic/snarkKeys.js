@@ -71,11 +71,17 @@ function getKeys(nullifiers, commitments) {
  * @returns {Array<Array<object>>} nullifier -> commitments -> keys
  */
 function allArtifacts() {
-  return artifacts.map((x) => x.map((y) => {
-    // eslint-disable-next-line no-param-reassign
-    y.solidityVkey = formatVKey(y.vkey);
-    return y;
-  }));
+  return artifacts.map((x) => {
+    if (x) {
+      x.map((y) => {
+        if (y) {
+          // eslint-disable-next-line no-param-reassign
+          y.solidityVkey = formatVKey(y.vkey);
+        }
+        return y;
+      });
+    }
+  });
 }
 
 /**
@@ -114,9 +120,13 @@ async function loadAllArtifacts(verifierContract) {
 function artifactConfigs() {
   const artifactsList = [];
   allArtifacts().forEach((x, nullifiers) => {
-    x.forEach((y, commitments) => {
-      artifactsList.push({ nullifiers, commitments });
-    });
+    if (x) {
+      x.forEach((y, commitments) => {
+        if (y) {
+          artifactsList.push({ nullifiers, commitments });
+        }
+      });
+    }
   });
   return artifactsList;
 }
