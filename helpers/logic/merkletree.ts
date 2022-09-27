@@ -1,5 +1,4 @@
-import { ethers } from 'hardhat';
-import { arrayToBigInt, bigIntToArray } from '../global/bytes';
+import { arrayToBigInt, bigIntToArray, arrayToByteLength } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { hash } from '../global/crypto';
 
@@ -44,6 +43,15 @@ class MerkleTree {
   }
 
   /**
+   * Gets tree length
+   *
+   * @returns length
+   */
+   get length(): number {
+    return this.tree[0].length;
+  }
+
+  /**
    * Hashes 2 merkle nodes
    *
    * @param left - left value to hash
@@ -51,7 +59,7 @@ class MerkleTree {
    * @returns hash
    */
   static hashLeftRight(left: Uint8Array, right: Uint8Array): Promise<Uint8Array> {
-    return hash.poseidon([left, right]);
+    return hash.poseidon([arrayToByteLength(left, 32), arrayToByteLength(right, 32)]);
   }
 
   /**
@@ -60,7 +68,9 @@ class MerkleTree {
    * @returns zero value
    */
   static get zeroValue(): Uint8Array {
-    const railgunHash = BigInt(ethers.utils.keccak256(Buffer.from('Railgun', 'utf8')));
+    const railgunHash = arrayToBigInt(
+      hash.keccak256(new Uint8Array(Buffer.from('Railgun', 'utf8'))),
+    );
     return bigIntToArray(railgunHash % SNARK_SCALAR_FIELD, 32);
   }
 
