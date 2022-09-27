@@ -16,4 +16,8 @@ contract CommitmentsStub is Commitments {
   function insertLeavesStub(uint256[] memory _leafHashes) external {
     Commitments.insertLeaves(_leafHashes);
   }
+
+  function setNextLeafIndex(uint256 _index) external {
+    Commitments.nextLeafIndex = _index;
+  }
 }
