@@ -31,11 +31,10 @@ describe('Logic/Commitments', () => {
     };
   }
 
-  it('Should calculate zero values', async () => {
+  it('Shouldn\'t initialize twice', async () => {
     const { commitments, merkletree } = await loadFixture(deploy);
 
-    // Zero value should be the same
-    expect(await commitments.ZERO_VALUE()).to.equal(arrayToBigInt(MerkleTree.zeroValue));
+    await expect(commitments.doubleInit()).to.be.revertedWith('Initializable: contract is not initializing');
 
     // Each value in the zero values array should be the same
     await Promise.all(
@@ -43,6 +42,20 @@ describe('Logic/Commitments', () => {
         expect(await commitments.zeros(level)).to.equal(arrayToBigInt(zeroValue));
       }),
     );
+  });
+
+  it('Should calculate zero values', async () => {
+    const { commitments, merkletree } = await loadFixture(deploy);
+
+    // Each value in the zero values array should be the same
+    await Promise.all(
+      merkletree.zeros.map(async (zeroValue, level) => {
+        expect(await commitments.zeros(level)).to.equal(arrayToBigInt(zeroValue));
+      }),
+    );
+
+    // Zero value should be the same
+    expect(await commitments.ZERO_VALUE()).to.equal(arrayToBigInt(MerkleTree.zeroValue));
   });
 
   it('Should calculate empty root', async () => {
@@ -112,8 +125,14 @@ describe('Logic/Commitments', () => {
     // Check tree number is 0
     expect(await commitments.treeNumber()).to.equal(0);
 
-    // Set next leaf index to filled tree
-    await commitments.setNextLeafIndex(2 ** 16);
+    // Set next leaf index to filled one less than filled tree
+    await commitments.setNextLeafIndex(2 ** 16 - 2);
+
+    // Insert leaf hash
+    await commitments.insertLeavesStub([1]);
+
+    // Check tree number is 1
+    expect(await commitments.treeNumber()).to.equal(0);
 
     // Insert leaf hash
     await commitments.insertLeavesStub([1]);

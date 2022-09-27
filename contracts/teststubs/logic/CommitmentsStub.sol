@@ -9,6 +9,10 @@ contract CommitmentsStub is Commitments {
     initializeCommitmentsStub();
   }
 
+  function doubleInit() external {
+    Commitments.initializeCommitments();
+  }
+
   function initializeCommitmentsStub() internal initializer {
     Commitments.initializeCommitments();
   }
