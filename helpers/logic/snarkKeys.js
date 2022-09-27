@@ -81,6 +81,7 @@ function allArtifacts() {
         return y;
       });
     }
+    return x;
   });
 }
 
@@ -91,14 +92,9 @@ function allArtifacts() {
  */
 async function loadAllArtifacts(verifierContract) {
   const artifactsList = allArtifacts();
-
-  let nullifiers = 1;
-
-  for (nullifiers; nullifiers < artifactsList.length; nullifiers += 1) {
-    let commitments = 1;
-
+  for (let nullifiers = 1; nullifiers < artifactsList.length; nullifiers += 1) {
     if (artifactsList[nullifiers]) {
-      for (commitments; commitments < artifactsList[nullifiers].length; commitments += 1) {
+      for (let commitments = 1; commitments < artifactsList[nullifiers].length; commitments += 1) {
         if (artifactsList[nullifiers][commitments]) {
           // eslint-disable-next-line no-await-in-loop
           await verifierContract.setVerificationKey(
