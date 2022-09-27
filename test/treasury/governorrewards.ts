@@ -93,6 +93,36 @@ describe('Treasury/GovernorRewards', () => {
     };
   }
 
+  it('Shouldn\'t initialize twice', async () => {
+    const { governorRewards, treasury, staking, users } = await loadFixture(deploy);
+
+    await expect(
+      governorRewards.initializeGovernorRewards(
+        users[0].signer.address,
+        staking.address,
+        treasury.address,
+        0,
+        [],
+      ),
+    ).to.be.revertedWith('Initializable: contract is already initialized');
+  });
+
+  it('Admin functions should only be callable by governance', async () => {
+    const { users } = await loadFixture(deploy);
+
+    await expect(users[1].governorRewards.addTokens([])).to.be.revertedWith(
+      'Ownable: caller is not the owner',
+    );
+
+    await expect(users[1].governorRewards.removeTokens([])).to.be.revertedWith(
+      'Ownable: caller is not the owner',
+    );
+
+    await expect(users[1].governorRewards.setIntervalBP(1)).to.be.revertedWith(
+      'Ownable: caller is not the owner',
+    );
+  });
+
   it('Should calculate interval numbers', async () => {
     const { stakingInterval, stakingDistributionIntervalMultiplier, governorRewards } =
       await loadFixture(deploy);
