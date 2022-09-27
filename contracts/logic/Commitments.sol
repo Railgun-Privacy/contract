@@ -33,7 +33,7 @@ contract Commitments is Initializable {
   uint256 public constant ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD;
 
   // Next leaf index (number of inserted leaves in the current tree)
-  uint256 internal nextLeafIndex;
+  uint256 public nextLeafIndex;
 
   // The Merkle root
   uint256 public merkleRoot;

@@ -102,7 +102,33 @@ describe('Logic/Commitments', () => {
       expect(await commitments.merkleRoot()).to.equal(arrayToBigInt(merkletree.root));
 
       // Check tree length matches
-      // expect(await commitments.nextLeafIndex()).to.equal(merkletree.length);
+      expect(await commitments.nextLeafIndex()).to.equal(merkletree.length);
     }
+  });
+
+  it('Should roll over to new tree', async function () {
+    const { commitments } = await loadFixture(deploy);
+
+    const steps = 500;
+
+    // Check tree number is 0
+    expect(await commitments.treeNumber()).to.equal(0);
+
+    console.log('\n      FILLING TREE\n');
+
+    // Push leaves to tree
+    await commitments.insertLeavesStub((new Array(steps)).fill(1) as number[]);
+
+    // Loop and add leaves to tree until tree is filled
+    for (let i = 0; i <= 2 ** 16; i += steps) {
+      console.log(`      Filled ${i}/${2 ** 16}`);
+
+      // Push leaves to tree
+      await commitments.insertLeavesStub((new Array(steps)).fill(1) as number[]);
+    }
+    console.log('\n      TREE FILLED\n');
+
+    // Check tree number is 1
+    expect(await commitments.treeNumber()).to.equal(1);
   });
 });
