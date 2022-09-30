@@ -81,7 +81,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint120 _withdrawFee,
     uint256 _nftFee,
     address _owner
-  ) external initializer {
+  ) public initializer {
     // Call initializers
     OwnableUpgradeable.__Ownable_init();
     Commitments.initializeCommitments();

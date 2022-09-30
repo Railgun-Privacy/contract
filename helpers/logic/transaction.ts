@@ -323,7 +323,7 @@ async function dummyTransact(
  * @param overrideOutput - redirect output to address
  * @returns transaction
  */
- async function transact(
+async function transact(
   merkletree: MerkleTree,
   withdraw: WithdrawType,
   adaptContract: string,
@@ -360,10 +360,7 @@ async function dummyTransact(
     commitmentCiphertext,
   );
 
-  const proof = await prove(
-    artifact,
-    inputs,
-  );
+  const proof = await prove(artifact, inputs);
 
   const publicInputs = await formatPublicInputs(
     proof,
@@ -380,4 +377,39 @@ async function dummyTransact(
   return publicInputs;
 }
 
-export { hashBoundParams, formatPublicInputs, formatCircuitInputs, dummyTransact, transact };
+/**
+ * Get base and fee amount
+ *
+ * @param amount - Amount to calculate for
+ * @param isInclusive - Whether the amount passed in is inclusive of the fee
+ * @param feeBP - Fee basis points
+ * @returns base, fee
+ */
+function getFee(
+  amount: bigint,
+  isInclusive: boolean,
+  feeBP: bigint,
+): { base: bigint; fee: bigint } {
+  const BASIS_POINTS = 10000n;
+  let base;
+  let fee;
+
+  if (isInclusive) {
+    base = amount - (amount * feeBP) / BASIS_POINTS;
+    fee = amount - base;
+  } else {
+    base = amount;
+    fee = (BASIS_POINTS * base) / (BASIS_POINTS - feeBP) - base;
+  }
+
+  return { base, fee };
+}
+
+export {
+  hashBoundParams,
+  formatPublicInputs,
+  formatCircuitInputs,
+  dummyTransact,
+  transact,
+  getFee,
+};
