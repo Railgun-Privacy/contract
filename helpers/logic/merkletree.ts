@@ -47,7 +47,7 @@ class MerkleTree {
    *
    * @returns length
    */
-   get length(): number {
+  get length(): number {
     return this.tree[0].length;
   }
 

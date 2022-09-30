@@ -31,16 +31,11 @@ describe('Logic/Commitments', () => {
     };
   }
 
-  it('Shouldn\'t initialize twice', async () => {
-    const { commitments, merkletree } = await loadFixture(deploy);
+  it("Shouldn't initialize twice", async () => {
+    const { commitments } = await loadFixture(deploy);
 
-    await expect(commitments.doubleInit()).to.be.revertedWith('Initializable: contract is not initializing');
-
-    // Each value in the zero values array should be the same
-    await Promise.all(
-      merkletree.zeros.map(async (zeroValue, level) => {
-        expect(await commitments.zeros(level)).to.equal(arrayToBigInt(zeroValue));
-      }),
+    await expect(commitments.doubleInit()).to.be.revertedWith(
+      'Initializable: contract is not initializing',
     );
   });
 
@@ -68,10 +63,8 @@ describe('Logic/Commitments', () => {
   it('Should hash left/right pairs', async () => {
     let loops = 1;
 
-    if (process.env.LONG_TESTS === 'extra') {
+    if (process.env.LONG_TESTS === 'yes') {
       loops = 10;
-    } else if (process.env.LONG_TESTS === 'complete') {
-      loops = 100;
     }
 
     const { commitments } = await loadFixture(deploy);
@@ -92,10 +85,7 @@ describe('Logic/Commitments', () => {
   it('Should incrementally insert elements', async function () {
     let loops = 2;
 
-    if (process.env.LONG_TESTS === 'extra') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 5;
-    } else if (process.env.LONG_TESTS === 'complete') {
+    if (process.env.LONG_TESTS === 'yes') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 10;
     }

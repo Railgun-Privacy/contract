@@ -70,16 +70,15 @@ task(
 );
 
 task('test', 'Runs test suite')
-  .addOptionalParam('longtests', 'extra = longer tests enabled; complete = full test suite enabled')
+  .addOptionalParam(
+    'longtests',
+    'no = execute shorter tests; no = full test suite enabled (default: yes)',
+  )
   .setAction(async (taskArguments: { longtests: string }, hre, runSuper) => {
-    if (
-      taskArguments.longtests === 'none' ||
-      taskArguments.longtests === 'extra' ||
-      taskArguments.longtests === 'complete'
-    ) {
+    if (taskArguments.longtests === 'no' || taskArguments.longtests === 'yes') {
       process.env.LONG_TESTS = taskArguments.longtests;
-    } else {
-      process.env.LONG_TESTS = 'complete';
+    } else if (process.env.LONG_TESTS !== 'no') {
+      process.env.LONG_TESTS = 'yes';
     }
     await runSuper();
   });

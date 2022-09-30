@@ -39,12 +39,9 @@ describe('Treasury/IntervalPayout', () => {
     const amount = 100;
     const intervalTime = 10000;
 
-    if (process.env.LONG_TESTS === 'extra') {
+    if (process.env.LONG_TESTS === 'yes') {
       this.timeout(5 * 60 * 60 * 1000);
       totalPayouts = 10;
-    } else if (process.env.LONG_TESTS === 'complete') {
-      this.timeout(5 * 60 * 60 * 1000);
-      totalPayouts = 100;
     }
 
     // Deploy and setup interval payout contract

@@ -71,12 +71,9 @@ describe('Logic/Verifier', () => {
 
     let loops = 2;
 
-    if (process.env.LONG_TESTS === 'extra') {
+    if (process.env.LONG_TESTS === 'yes') {
       this.timeout(5 * 60 * 60 * 1000);
       loops = 10;
-    } else if (process.env.LONG_TESTS === 'complete') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 50;
     }
 
     for (let i = 0; i < loops; i += 1) {
@@ -160,7 +157,7 @@ describe('Logic/Verifier', () => {
 
   it('Should verify proofs', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (!process.env.LONG_TESTS) {
+    if (process.env.LONG_TESTS === 'no') {
       this.skip();
     }
 
@@ -220,7 +217,7 @@ describe('Logic/Verifier', () => {
 
   it("Should throw error if circuit artifacts don't exist", async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (!process.env.LONG_TESTS) {
+    if (process.env.LONG_TESTS === 'no') {
       this.skip();
     }
 

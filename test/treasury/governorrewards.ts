@@ -93,7 +93,7 @@ describe('Treasury/GovernorRewards', () => {
     };
   }
 
-  it('Shouldn\'t initialize twice', async () => {
+  it("Shouldn't initialize twice", async () => {
     const { governorRewards, treasury, staking, users } = await loadFixture(deploy);
 
     await expect(
@@ -151,12 +151,9 @@ describe('Treasury/GovernorRewards', () => {
   it('Should retrieve snapshot sequence', async function () {
     let intervals = 50;
 
-    if (process.env.LONG_TESTS === 'extra') {
+    if (process.env.LONG_TESTS === 'yes') {
       this.timeout(5 * 60 * 60 * 1000);
       intervals = 100;
-    } else if (process.env.LONG_TESTS === 'complete') {
-      this.timeout(5 * 60 * 60 * 1000);
-      intervals = 1000;
     }
 
     const {
@@ -248,12 +245,9 @@ describe('Treasury/GovernorRewards', () => {
   it('Should precalculate global snapshots', async function () {
     let intervals = 50;
 
-    if (process.env.LONG_TESTS === 'extra') {
+    if (process.env.LONG_TESTS === 'yes') {
       this.timeout(5 * 60 * 60 * 1000);
       intervals = 100;
-    } else if (process.env.LONG_TESTS === 'complete') {
-      this.timeout(5 * 60 * 60 * 1000);
-      intervals = 1000;
     }
 
     const { stakingInterval, stakingDistributionIntervalMultiplier, staking, governorRewards } =
