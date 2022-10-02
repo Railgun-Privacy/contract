@@ -1,11 +1,13 @@
 import { ethers } from 'hardhat';
+import { BigNumber } from 'ethers';
 import { ProofBundle, prove, SolidityProof } from './prover';
-import { CommitmentCiphertext, Note, TokenData, WithdrawNote } from './note';
+import { CommitmentCiphertext, CommitmentPreimage, Note, TokenData, WithdrawNote } from './note';
 import { eddsa, hash } from '../global/crypto';
 import { hexStringToArray, arrayToBigInt, bigIntToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { MerkleTree } from './merkletree';
 import { getKeys } from './artifacts';
+import { CommitmentPreimageStructOutput } from '../../typechain-types/contracts/logic/RailgunLogic';
 
 export enum WithdrawType {
   NONE = 0,
@@ -94,6 +96,54 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
 
   // Mod by SNARK_SCALAR_FIELD and return
   return bigIntToArray(BigInt(prehash) % SNARK_SCALAR_FIELD, 32);
+}
+
+/**
+ * Creates a chai matcher for encrypted random
+ *
+ * @param encryptedRandoms - encrypted randoms to match
+ * @returns matcher
+ */
+ function encryptedRandomMatcher(encryptedRandoms: Uint8Array[][]) {
+  // Return constructed matcher function
+  return (contractEncryptedRandoms: BigNumber[][]): boolean => {
+    // Loop through each encrypted random and check if they match
+    const randomMatched = contractEncryptedRandoms.map((random, randomIndex): boolean => {
+      // Loop through each element in the encrypted random and check if they match
+      const elementsMatched = random.map((element, elementIndex) => {
+        return arrayToBigInt(encryptedRandoms[randomIndex][elementIndex]) === element.toBigInt();
+      });
+
+      // Return false if any elements returned false
+      return !elementsMatched.includes(false);
+    });
+
+    // Return false if any randoms returned false
+    return !randomMatched.includes(false);
+  };
+}
+
+/**
+ * Creates a chai matcher for commitment preimages
+ *
+ * @param commitmentPreimages - commitment preimage to match
+ * @returns matcher
+ */
+ function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
+  return (contractPreimages: CommitmentPreimageStructOutput[]): boolean => {
+    // Loop through each preimage and check if they match
+    const preimagesMatched = contractPreimages.map((preimage, index): boolean => {
+      if (preimage.npk.toBigInt() !== arrayToBigInt(commitmentPreimages[index].npk)) return false;
+      if (preimage.token.tokenType !== commitmentPreimages[index].token.tokenType) return false;
+      if (preimage.token.tokenAddress !== commitmentPreimages[index].token.tokenAddress) return false;
+      if (preimage.token.tokenSubID.toBigInt() !== commitmentPreimages[index].token.tokenSubID) return false;
+      if (preimage.value.toBigInt() !== commitmentPreimages[index].value) return false;
+      return true;
+    });
+
+    // Return false if any preimage matches returned false
+    return !preimagesMatched.includes(false);
+  };
 }
 
 /**
@@ -407,6 +457,8 @@ function getFee(
 
 export {
   hashBoundParams,
+  encryptedRandomMatcher,
+  commitmentPreimageMatcher,
   formatPublicInputs,
   formatCircuitInputs,
   dummyTransact,

@@ -1,5 +1,5 @@
 import { bigIntToArray, hexStringToArray, arrayToByteLength } from '../global/bytes';
-import { hash, eddsa } from '../global/crypto';
+import { hash, eddsa, aes } from '../global/crypto';
 
 export enum TokenType {
   'ERC20' = 0,
@@ -17,6 +17,12 @@ export interface CommitmentCiphertext {
   ciphertext: [Uint8Array, Uint8Array, Uint8Array, Uint8Array];
   ephemeralKeys: [Uint8Array, Uint8Array];
   memo: Uint8Array[];
+}
+
+export interface CommitmentPreimage {
+  npk: Uint8Array;
+  token: TokenData;
+  value: bigint;
 }
 
 /**
@@ -64,7 +70,7 @@ class Note {
   tokenData: TokenData;
 
   /**
-   * Create Note object
+   * Railgun Note
    *
    * @param spendingKey - spending private key
    * @param viewingKey - viewing key
@@ -187,6 +193,41 @@ class Note {
 
     return eddsa.signPoseidon(key, sighash);
   }
+
+  /**
+   * Encrypts random value
+   *
+   * @returns Encrypted random value
+   */
+  get encryptedRandom(): [Uint8Array, Uint8Array] {
+    return aes.gcm.encrypt(
+      [this.random],
+      this.viewingKey,
+    ) as [Uint8Array, Uint8Array];
+  }
+
+  /**
+   * Gets commitment preimage
+   *
+   * @returns Commitment preimage
+   */
+   async getCommitmentPreimage(): Promise<CommitmentPreimage> {
+    return {
+      npk: await this.getNotePublicKey(),
+      token: this.tokenData,
+      value: this.value,
+    };
+  }
+
+  /**
+   * Tries to decrypt note with given keys, returns false if can't decrypt
+   *
+   * @param encrypted - encrypted note values
+   * @returns note or flase
+   */
+  decrypt(encrypted): false | Note {
+    
+  }
 }
 
 class WithdrawNote {
@@ -197,7 +238,7 @@ class WithdrawNote {
   tokenData: TokenData;
 
   /**
-   * Create Note object
+   * Railgun Withdraw
    *
    * @param withdrawAddress - address to withdraw to
    * @param value - note value
@@ -243,6 +284,19 @@ class WithdrawNote {
       await this.getTokenID(),
       bigIntToArray(this.value, 32),
     ]);
+  }
+
+  /**
+   * Gets commitment preimage
+   *
+   * @returns Commitment preimage
+   */
+  getCommitmentPreimage(): CommitmentPreimage {
+    return {
+      npk: this.getNotePublicKey(),
+      token: this.tokenData,
+      value: this.value,
+    };
   }
 }
 

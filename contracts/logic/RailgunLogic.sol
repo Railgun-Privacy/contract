@@ -127,7 +127,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint120 _withdrawFee,
     uint256 _nftFee
   ) public onlyOwner {
-    if (_depositFee != depositFee || _withdrawFee != withdrawFee || nftFee != _nftFee) {
+    if (_depositFee != depositFee || _withdrawFee != withdrawFee || _nftFee != nftFee) {
       require(_depositFee <= BASIS_POINTS, "RailgunLogic: Deposit Fee exceeds 100%");
       require(_withdrawFee <= BASIS_POINTS, "RailgunLogic: Withdraw Fee exceeds 100%");
 
@@ -176,17 +176,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Gets token field value from tokenData
    * @param _tokenData - tokenData to calculate token field from
-   * @return token field
+   * @return tokenField - token field
    */
-  function getTokenField(TokenData memory _tokenData) public pure returns (uint256) {
+  function getTokenField(TokenData memory _tokenData) public pure returns (uint256 tokenField) {
     if (_tokenData.tokenType == TokenType.ERC20) {
-      return uint256(uint160(_tokenData.tokenAddress));
+      tokenField = uint256(uint160(_tokenData.tokenAddress));
     } else if (_tokenData.tokenType == TokenType.ERC721) {
       revert("RailgunLogic: ERC721 not yet supported");
     } else if (_tokenData.tokenType == TokenType.ERC1155) {
       revert("RailgunLogic: ERC1155 not yet supported");
-    } else {
-      revert("RailgunLogic: Unknown token type");
     }
   }
 
@@ -280,9 +278,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       } else if (note.token.tokenType == TokenType.ERC1155) {
         // ERC1155 token
         revert("RailgunLogic: ERC1155 not yet supported");
-      } else {
-        // Invalid token type, revert
-        revert("RailgunLogic: Unknown token type");
       }
     }
 
@@ -439,9 +434,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         } else if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC1155) {
           // ERC1155 token
           revert("RailgunLogic: ERC1155 not yet supported");
-        } else {
-          // Invalid token type, revert
-          revert("RailgunLogic: Unknown token type");
         }
 
         // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)

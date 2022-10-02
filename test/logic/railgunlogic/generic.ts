@@ -79,6 +79,50 @@ describe('Logic/RailgunLogic/Generic', () => {
     ).to.be.revertedWith('Initializable: contract is already initialized');
   });
 
+  it('Should change fee', async () => {
+    const { railgunLogic, railgunLogicAdmin } = await loadFixture(deploy);
+
+    // Check initial fees
+    expect(await railgunLogicAdmin.depositFee()).to.equal(25n);
+    expect(await railgunLogicAdmin.withdrawFee()).to.equal(25n);
+    expect(await railgunLogicAdmin.nftFee()).to.equal(25n);
+
+    // Change fee
+    await expect(railgunLogicAdmin.changeFee(1n, 25n, 25n))
+      .to.emit(railgunLogicAdmin, 'FeeChange')
+      .withArgs(1n, 25n, 25n);
+    await expect(railgunLogicAdmin.changeFee(1n, 2n, 25n))
+      .to.emit(railgunLogicAdmin, 'FeeChange')
+      .withArgs(1n, 2n, 25n);
+    await expect(railgunLogicAdmin.changeFee(1n, 2n, 3n))
+      .to.emit(railgunLogicAdmin, 'FeeChange')
+      .withArgs(1n, 2n, 3n);
+
+    // Noop calls shouldn't emit event
+    await expect(railgunLogicAdmin.changeFee(1n, 2n, 3n)).to.not.emit(
+      railgunLogicAdmin,
+      'FeeChange',
+    );
+
+    // Check changed fees
+    expect(await railgunLogicAdmin.depositFee()).to.equal(1n);
+    expect(await railgunLogicAdmin.withdrawFee()).to.equal(2n);
+    expect(await railgunLogicAdmin.nftFee()).to.equal(3n);
+
+    // Make sure only governance can change fees
+    await expect(railgunLogic.changeFee(4n, 5n, 6n)).to.be.revertedWith(
+      'Ownable: caller is not the owner',
+    );
+
+    // Fees shouldn't be able to be set to more than 100%
+    await expect(railgunLogicAdmin.changeFee(10001n, 5n, 6n)).to.be.revertedWith(
+      'RailgunLogic: Deposit Fee exceeds 100%',
+    );
+    await expect(railgunLogicAdmin.changeFee(3n, 10001n, 6n)).to.be.revertedWith(
+      'RailgunLogic: Withdraw Fee exceeds 100%',
+    );
+  });
+
   it('Should change treasury', async () => {
     const { railgunLogic, railgunLogicAdmin, primaryAccount, treasuryAccount } = await loadFixture(
       deploy,
@@ -86,9 +130,20 @@ describe('Logic/RailgunLogic/Generic', () => {
 
     // Check treasury changes
     expect(await railgunLogicAdmin.treasury()).to.equal(treasuryAccount.address);
-    await railgunLogicAdmin.changeTreasury(ethers.constants.AddressZero);
+    await expect(railgunLogicAdmin.changeTreasury(ethers.constants.AddressZero))
+      .to.emit(railgunLogicAdmin, 'TreasuryChange')
+      .withArgs(ethers.constants.AddressZero);
     expect(await railgunLogicAdmin.treasury()).to.equal(ethers.constants.AddressZero);
-    await railgunLogicAdmin.changeTreasury(primaryAccount.address);
+    await expect(railgunLogicAdmin.changeTreasury(primaryAccount.address))
+      .to.emit(railgunLogicAdmin, 'TreasuryChange')
+      .withArgs(primaryAccount.address);
+
+    // Noop calls shouldn't emit event
+    await expect(railgunLogicAdmin.changeTreasury(primaryAccount.address)).to.not.emit(
+      railgunLogicAdmin,
+      'TreasuryChange',
+    );
+
     expect(await railgunLogicAdmin.treasury()).to.equal(primaryAccount.address);
 
     // Make sure only governance can change treasury
@@ -129,7 +184,7 @@ describe('Logic/RailgunLogic/Generic', () => {
 
     const loops = 3n;
 
-    // Loop through and hash
+    // Loop through and hash for ERC20
     for (let i = 0n; i < loops; i += 1n) {
       const tokenData = {
         tokenType: 0,
@@ -143,11 +198,21 @@ describe('Logic/RailgunLogic/Generic', () => {
       // Check token field matches address field
       expect(await railgunLogic.getTokenField(tokenData)).to.equal(tokenData.tokenAddress);
     }
+
+    // Unknown token type
+    const tokenData = {
+      tokenType: 3,
+      tokenAddress: `${arrayToHexString(hash.keccak256(new Uint8Array([1])), true).slice(0, 42)}`,
+      tokenSubID: 1n,
+    };
+
+    // Unknown token types should error
+    await expect(railgunLogic.getTokenField(tokenData)).to.be.reverted;
   });
 
   it('Should hash note preimages', async function () {
     const { railgunLogic } = await loadFixture(deploy);
-  
+
     let loops = 1n;
 
     if (process.env.LONG_TESTS === 'yes') {
@@ -160,30 +225,26 @@ describe('Logic/RailgunLogic/Generic', () => {
       // Generate random spending key, viewing key, and token address
       const spendingKey = eddsa.genRandomPrivateKey();
       const viewingKey = eddsa.genRandomPrivateKey();
-      const tokenAddress = arrayToHexString(hash.keccak256(bigIntToArray(i * loops, 32)), true).slice(
-        0,
-        42,
-      );
+      const tokenAddress = arrayToHexString(
+        hash.keccak256(bigIntToArray(i * loops, 32)),
+        true,
+      ).slice(0, 42);
 
       // Create note
-      const note = new Note(
-        spendingKey,
-        viewingKey,
-        i,
-        bigIntToArray(i, 16),
-        {
-          tokenType: 0,
-          tokenAddress,
-          tokenSubID: 0n,
-        },
-      );
+      const note = new Note(spendingKey, viewingKey, i, bigIntToArray(i, 16), {
+        tokenType: 0,
+        tokenAddress,
+        tokenSubID: 0n,
+      });
 
       // Hash commitment and check
-      expect(await railgunLogic.hashCommitment({
-        npk: await note.getNotePublicKey(),
-        token: note.tokenData,
-        value: note.value,
-      })).to.equal(arrayToBigInt(await note.getHash()));
+      expect(
+        await railgunLogic.hashCommitment({
+          npk: await note.getNotePublicKey(),
+          token: note.tokenData,
+          value: note.value,
+        }),
+      ).to.equal(arrayToBigInt(await note.getHash()));
     }
   });
 });
