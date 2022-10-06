@@ -1,6 +1,10 @@
+import { TransactionResponse } from '@ethersproject/providers';
+import { RailgunLogic } from '../../typechain-types';
+import { GeneratedCommitmentBatchEventObject } from '../../typechain-types/contracts/logic/RailgunLogic';
 import { arrayToBigInt, bigIntToArray, arrayToByteLength } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { hash } from '../global/crypto';
+import { getTokenID } from './note';
 
 export interface MerkleProof {
   element: Uint8Array;
@@ -17,6 +21,8 @@ class MerkleTree {
   zeros: Uint8Array[];
 
   tree: Uint8Array[][];
+
+  nullifiers: Uint8Array[] = [];
 
   /**
    * Merkle Tree
@@ -137,11 +143,12 @@ class MerkleTree {
    * Inserts leaves into tree
    *
    * @param leaves - array of leaves to add
+   * @param startPosition - position to start inserting leaves from
    * @returns complete
    */
-  async insertLeaves(leaves: Uint8Array[]) {
+  async insertLeaves(leaves: Uint8Array[], startPosition: number) {
     // Add leaves to tree
-    this.tree[0].push(...leaves);
+    leaves.forEach((leaf, index) => (this.tree[0][startPosition + index] = leaf));
 
     // Rebuild tree
     await this.rebuildSparseTree();
@@ -215,6 +222,55 @@ class MerkleTree {
 
     // Return true if result is equal to merkle root
     return currentHash === proof.root;
+  }
+
+  /**
+   * Scans transaction for commitments and nullifiers
+   *
+   * @param transaction - transaction to scan
+   * @param contract - contract to parse events from
+   * @returns complete
+   */
+  async scanTX(transaction: TransactionResponse, contract: RailgunLogic) {
+    // Wait for transaction receipt
+    const transactionReceipt = await transaction.wait();
+
+    // Loop through each log and parse
+    await Promise.all(
+      // eslint-disable-next-line @typescript-eslint/require-await
+      transactionReceipt.logs.map(async (log) => {
+        // Check if log is log of contract
+        if (log.address === contract.address) {
+          // Parse log
+          const parsedLog = contract.interface.parseLog(log);
+
+          // Check log type
+          if (parsedLog.name === 'GeneratedCommitmentBatch') {
+            // Type cast to GeneratedCommitmentBatchEventObject
+            const args = parsedLog.args as unknown as GeneratedCommitmentBatchEventObject;
+
+            // Get start position
+            const startPosition = args.startPosition.toNumber();
+
+            // Get leaves
+            const leaves = await Promise.all(args.commitments.map(async (commitment) =>
+              hash.poseidon([
+                bigIntToArray(commitment.npk.toBigInt(), 32),
+                await getTokenID({
+                  tokenType: commitment.token.tokenType,
+                  tokenAddress: commitment.token.tokenAddress,
+                  tokenSubID: commitment.token.tokenSubID.toBigInt(),
+                }),
+                bigIntToArray(commitment.value.toBigInt(), 32),
+              ]),
+            ));
+
+            // Insert leaves
+            await this.insertLeaves(leaves, startPosition);
+          }
+        }
+      }),
+    );
   }
 }
 

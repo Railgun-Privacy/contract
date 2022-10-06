@@ -7,7 +7,7 @@ import {
 } from '@nomicfoundation/hardhat-network-helpers';
 
 import { getFee } from '../../../helpers/logic/transaction';
-import { hash, eddsa } from '../../../helpers/global/crypto';
+import { hash, edBabyJubJub } from '../../../helpers/global/crypto';
 import { bigIntToArray, arrayToHexString, arrayToBigInt } from '../../../helpers/global/bytes';
 import { Note } from '../../../helpers/logic/note';
 
@@ -223,8 +223,8 @@ describe('Logic/RailgunLogic/Generic', () => {
     // Lpp[ through multiple test vectors
     for (let i = 0n; i < loops; i += 1n) {
       // Generate random spending key, viewing key, and token address
-      const spendingKey = eddsa.genRandomPrivateKey();
-      const viewingKey = eddsa.genRandomPrivateKey();
+      const spendingKey = edBabyJubJub.genRandomPrivateKey();
+      const viewingKey = edBabyJubJub.genRandomPrivateKey();
       const tokenAddress = arrayToHexString(
         hash.keccak256(bigIntToArray(i * loops, 32)),
         true,

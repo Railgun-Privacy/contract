@@ -140,7 +140,7 @@ const ed25519 = {
 
 const eddsaPromise = buildEddsa();
 
-const eddsa = {
+const edBabyJubJub = {
   /**
    * Generates random eddsa-babyjubjub privateKey
    *
@@ -202,4 +202,4 @@ const eddsa = {
   },
 };
 
-export { aes, ed25519, hash, eddsa };
+export { hash, aes, ed25519, edBabyJubJub };

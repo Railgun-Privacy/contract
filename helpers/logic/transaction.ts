@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { ProofBundle, prove, SolidityProof } from './prover';
 import { CommitmentCiphertext, CommitmentPreimage, Note, TokenData, WithdrawNote } from './note';
-import { eddsa, hash } from '../global/crypto';
+import { edBabyJubJub, hash } from '../global/crypto';
 import { hexStringToArray, arrayToBigInt, bigIntToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { MerkleTree } from './merkletree';
@@ -332,17 +332,17 @@ async function dummyTransact(
   const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
 
   const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
-    ciphertext: new Array(4).fill(1).map(() => eddsa.genRandomPrivateKey()) as [
+    ciphertext: new Array(4).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
       Uint8Array,
       Uint8Array,
       Uint8Array,
       Uint8Array,
     ],
-    ephemeralKeys: new Array(2).fill(1).map(() => eddsa.genRandomPrivateKey()) as [
+    ephemeralKeys: new Array(2).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
       Uint8Array,
       Uint8Array,
     ],
-    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(() => eddsa.genRandomPrivateKey()),
+    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()),
   }));
 
   const publicInputs = formatPublicInputs(
@@ -387,17 +387,17 @@ async function transact(
   const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
 
   const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
-    ciphertext: new Array(4).fill(1).map(() => eddsa.genRandomPrivateKey()) as [
+    ciphertext: new Array(4).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
       Uint8Array,
       Uint8Array,
       Uint8Array,
       Uint8Array,
     ],
-    ephemeralKeys: new Array(2).fill(1).map(() => eddsa.genRandomPrivateKey()) as [
+    ephemeralKeys: new Array(2).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
       Uint8Array,
       Uint8Array,
     ],
-    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(() => eddsa.genRandomPrivateKey()),
+    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()),
   }));
 
   const inputs = await formatCircuitInputs(

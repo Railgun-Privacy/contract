@@ -6,8 +6,8 @@ import {
   impersonateAccount,
 } from '@nomicfoundation/hardhat-network-helpers';
 
-import { eddsa } from '../../../helpers/global/crypto';
-import { arrayToBigInt, bigIntToArray } from '../../../helpers/global/bytes';
+import { edBabyJubJub } from '../../../helpers/global/crypto';
+import { bigIntToArray } from '../../../helpers/global/bytes';
 
 import { MerkleTree } from '../../../helpers/logic/merkletree';
 import { Wallet } from '../../../helpers/logic/wallet';
@@ -83,8 +83,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
     const loops = 5;
 
     // Create random keys
-    const viewingKey = eddsa.genRandomPrivateKey();
-    const spendingKey = eddsa.genRandomPrivateKey();
+    const viewingKey = edBabyJubJub.genRandomPrivateKey();
+    const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
     // Create merkle tree and wallet
     const merkletree = await MerkleTree.createTree();
@@ -157,8 +157,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
     const { railgunLogic, railgunLogicAdmin, testERC20 } = await loadFixture(deploy);
 
     // Create random keys
-    const viewingKey = eddsa.genRandomPrivateKey();
-    const spendingKey = eddsa.genRandomPrivateKey();
+    const viewingKey = edBabyJubJub.genRandomPrivateKey();
+    const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
     // Generate note
     const note = new Note(spendingKey, viewingKey, 100n, bigIntToArray(1n, 16), {
@@ -180,8 +180,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
     const { railgunLogic, testERC20 } = await loadFixture(deploy);
 
     // Create random keys
-    const viewingKey = eddsa.genRandomPrivateKey();
-    const spendingKey = eddsa.genRandomPrivateKey();
+    const viewingKey = edBabyJubJub.genRandomPrivateKey();
+    const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
     // Generate note
     const note = new Note(spendingKey, viewingKey, 100n, bigIntToArray(1n, 16), {

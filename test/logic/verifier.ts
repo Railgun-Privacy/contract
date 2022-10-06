@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-import { hash, eddsa } from '../../helpers/global/crypto';
+import { hash, edBabyJubJub } from '../../helpers/global/crypto';
 import { availableArtifacts, getKeys, loadAllArtifacts } from '../../helpers/logic/artifacts';
 import { TokenType, CommitmentCiphertext, Note } from '../../helpers/logic/note';
 import { MerkleTree } from '../../helpers/logic/merkletree';
@@ -105,8 +105,8 @@ describe('Logic/Verifier', () => {
     // Loop through each circuit artifact
     for (const artifactConfig of availableArtifacts()) {
       // Get placeholder values
-      const spendingKey = eddsa.genRandomPrivateKey();
-      const viewingKey = eddsa.genRandomPrivateKey();
+      const spendingKey = edBabyJubJub.genRandomPrivateKey();
+      const viewingKey = edBabyJubJub.genRandomPrivateKey();
       const random = bigIntToArray(1n, 16);
 
       // Get total amount
@@ -134,7 +134,7 @@ describe('Logic/Verifier', () => {
 
       // Create tree and add notes
       const merkletree = await MerkleTree.createTree();
-      await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())));
+      await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), merkletree.length);
 
       // Get dummy proof
       const tx = await dummyTransact(
@@ -168,8 +168,8 @@ describe('Logic/Verifier', () => {
     // Loop through each circuit artifact
     for (const artifactConfig of availableArtifacts()) {
       // Get placeholder values
-      const spendingKey = eddsa.genRandomPrivateKey();
-      const viewingKey = eddsa.genRandomPrivateKey();
+      const spendingKey = edBabyJubJub.genRandomPrivateKey();
+      const viewingKey = edBabyJubJub.genRandomPrivateKey();
       const random = bigIntToArray(1n, 16);
 
       // Get total amount
@@ -197,7 +197,7 @@ describe('Logic/Verifier', () => {
 
       // Create tree and add notes
       const merkletree = await MerkleTree.createTree();
-      await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())));
+      await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), merkletree.length);
 
       // Get proof
       const tx = await transact(
@@ -228,8 +228,8 @@ describe('Logic/Verifier', () => {
     for (let nullifiers = 1; nullifiers < limit; nullifiers += 1) {
       for (let commitments = 1; commitments < limit; commitments += 1) {
         // Get placeholder values
-        const spendingKey = eddsa.genRandomPrivateKey();
-        const viewingKey = eddsa.genRandomPrivateKey();
+        const spendingKey = edBabyJubJub.genRandomPrivateKey();
+        const viewingKey = edBabyJubJub.genRandomPrivateKey();
         const random = bigIntToArray(1n, 16);
 
         // Get total amount
@@ -257,7 +257,7 @@ describe('Logic/Verifier', () => {
 
         // Create tree and add notes
         const merkletree = await MerkleTree.createTree();
-        await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())));
+        await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), merkletree.length);
 
         // Get dummy proof
         const tx = await dummyTransact(

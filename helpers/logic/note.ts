@@ -1,5 +1,5 @@
 import { bigIntToArray, hexStringToArray, arrayToByteLength } from '../global/bytes';
-import { hash, eddsa, aes } from '../global/crypto';
+import { hash, edBabyJubJub, aes } from '../global/crypto';
 
 export enum TokenType {
   'ERC20' = 0,
@@ -114,7 +114,7 @@ class Note {
    * @returns spending public key
    */
   getSpendingPublicKey(): Promise<[Uint8Array, Uint8Array]> {
-    return eddsa.prv2pub(this.spendingKey);
+    return edBabyJubJub.prv2pub(this.spendingKey);
   }
 
   /**
@@ -191,7 +191,7 @@ class Note {
 
     const key = this.spendingKey;
 
-    return eddsa.signPoseidon(key, sighash);
+    return edBabyJubJub.signPoseidon(key, sighash);
   }
 
   /**
@@ -217,16 +217,6 @@ class Note {
       token: this.tokenData,
       value: this.value,
     };
-  }
-
-  /**
-   * Tries to decrypt note with given keys, returns false if can't decrypt
-   *
-   * @param encrypted - encrypted note values
-   * @returns note or flase
-   */
-  decrypt(encrypted): false | Note {
-    
   }
 }
 
@@ -300,4 +290,4 @@ class WithdrawNote {
   }
 }
 
-export { validateTokenData, Note, WithdrawNote };
+export { getTokenID, validateTokenData, Note, WithdrawNote };

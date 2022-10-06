@@ -99,7 +99,7 @@ describe('Logic/Commitments', () => {
 
       // Update with insert list on local and contract
       await commitments.insertLeavesStub(insertList.map(arrayToBigInt));
-      await merkletree.insertLeaves(insertList);
+      await merkletree.insertLeaves(insertList, merkletree.length);
 
       // Check roots match
       expect(await commitments.merkleRoot()).to.equal(arrayToBigInt(merkletree.root));
