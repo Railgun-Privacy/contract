@@ -237,7 +237,6 @@ class MerkleTree {
 
     // Loop through each log and parse
     await Promise.all(
-      // eslint-disable-next-line @typescript-eslint/require-await
       transactionReceipt.logs.map(async (log) => {
         // Check if log is log of contract
         if (log.address === contract.address) {
