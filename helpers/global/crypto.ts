@@ -126,12 +126,12 @@ const ed25519 = {
     /**
      * Converts seed to curve scalar
      *
-     * @param random - random value
-     * @returns adjusted random
+     * @param seed - seed to convert
+     * @returns scalar
      */
-    seedToScalar(random: Uint8Array): Uint8Array {
+    seedToScalar(seed: Uint8Array): Uint8Array {
       // TODO: switch to 512 bit hash length as per FIPS-186
-      const randomHash = hash.sha256(random);
+      const seedHash = hash.sha256(seed);
 
       // Prune buffer to X25519 LE encoded integer
       // This is not needed but is left for backwards compatibility with
@@ -139,9 +139,9 @@ const ed25519 = {
       // As this reduces entropy it is not ideal, but we consider it
       // acceptable for now
       // TODO: implement corrected algorithm in next note format update
-      randomHash[0] &= 248;
-      randomHash[31] &= 127;
-      randomHash[31] |= 64;
+      seedHash[0] &= 248;
+      seedHash[31] &= 127;
+      seedHash[31] |= 64;
 
       // Return mod n to fit to curve
       // This should be (arrayToBigInt(randomHash) % nobleED25519.CURVE.n - 1n) + 1n
@@ -150,7 +150,7 @@ const ed25519 = {
       // We rely on sha256 preimage resistance to prevent a malicious actor
       // from being able to trigger this failure condition
       // TODO: implement corrected algorithm in next note format update
-      return bigIntToArray(arrayToBigInt(randomHash) % nobleED25519.CURVE.n, 32);
+      return bigIntToArray(arrayToBigInt(seedHash) % nobleED25519.CURVE.n, 32);
     },
 
     /**
