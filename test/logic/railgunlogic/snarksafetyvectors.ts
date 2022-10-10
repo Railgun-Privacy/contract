@@ -52,9 +52,13 @@ describe('Logic/RailgunLogic/SnarkSafetyVector', () => {
     await expect(railgunLogic.treasury()).to.be.fulfilled;
     await expect(railgunLogic.checkSafetyVectors()).to.be.reverted;
     await expect(railgunLogic.treasury()).to.be.fulfilled;
-    await expect(railgunLogic.addVector(BigInt(primaryAccount.address))).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(railgunLogic.addVector(BigInt(primaryAccount.address))).to.be.revertedWith(
+      'Ownable: caller is not the owner',
+    );
     await railgunLogicAdmin.addVector(BigInt(primaryAccount.address));
-    await expect(railgunLogic.removeVector(BigInt(primaryAccount.address))).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(railgunLogic.removeVector(BigInt(primaryAccount.address))).to.be.revertedWith(
+      'Ownable: caller is not the owner',
+    );
     await railgunLogicAdmin.removeVector(BigInt(primaryAccount.address));
     await expect(railgunLogic.checkSafetyVectors()).to.be.reverted;
     await railgunLogicAdmin.addVector(BigInt(primaryAccount.address));

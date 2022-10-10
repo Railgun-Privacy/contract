@@ -61,7 +61,7 @@ contract TokenBlocklist is OwnableUpgradeable {
         // Set token address in blocklisted map to false (default value)
         delete tokenBlocklist[_tokens[i]];
 
-        // Emit event for building index of blocklisted tokens offchain
+        // Emit event for building index of blocklisted tokens off chain
         emit RemoveFromBlocklist(_tokens[i]);
       }
     }

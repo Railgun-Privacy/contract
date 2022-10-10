@@ -27,6 +27,7 @@ typechain
 typechain-types
 
 # Other
+.cspell
 .eslintignore
 .gitignore
 .prettierignore

@@ -51,8 +51,8 @@ contract GovernanceTargetNumberStub {
 contract GovernanceTargetConstructorArgumentStub {
   string public greeting;
 
-  constructor(string memory _greeing) {
-    greeting = _greeing;
+  constructor(string memory _greeting) {
+    greeting = _greeting;
   }
 
   function willRevert() external pure returns (bool success) {
@@ -68,8 +68,8 @@ contract GovernanceTargetConstructorArgumentStub {
 contract GovernanceStateChangeTargetStub {
   string public greeting;
 
-  constructor(string memory _greeing) {
-    greeting = _greeing;
+  constructor(string memory _greeting) {
+    greeting = _greeting;
   }
 
   function changeGreeting(string calldata _newGreeting) external {

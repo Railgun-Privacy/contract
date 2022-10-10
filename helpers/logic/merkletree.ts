@@ -1,6 +1,10 @@
 import { TransactionResponse } from '@ethersproject/providers';
 import { RailgunLogic } from '../../typechain-types';
-import { GeneratedCommitmentBatchEventObject } from '../../typechain-types/contracts/logic/RailgunLogic';
+import {
+  CommitmentBatchEventObject,
+  GeneratedCommitmentBatchEventObject,
+  NullifiersEventObject,
+} from '../../typechain-types/contracts/logic/RailgunLogic';
 import { arrayToBigInt, bigIntToArray, arrayToByteLength } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { hash } from '../global/crypto';
@@ -202,7 +206,7 @@ class MerkleTree {
    */
   static async validateProof(proof: MerkleProof): Promise<boolean> {
     // Parse indices into binary string
-    const indicies = proof.indices
+    const indices = proof.indices
       .toString(2)
       .padStart(proof.elements.length, '0')
       .split('')
@@ -213,9 +217,9 @@ class MerkleTree {
 
     // Loop though each proof level and hash together
     for (let i = 0; i < proof.elements.length; i += 1) {
-      if (indicies[i] === '0') {
+      if (indices[i] === '0') {
         currentHash = await MerkleTree.hashLeftRight(currentHash, proof.elements[i]);
-      } else if (indicies[i] === '1') {
+      } else if (indices[i] === '1') {
         currentHash = await MerkleTree.hashLeftRight(proof.elements[i], currentHash);
       }
     }
@@ -243,6 +247,8 @@ class MerkleTree {
           // Parse log
           const parsedLog = contract.interface.parseLog(log);
 
+          console.log(parsedLog.name);
+
           // Check log type
           if (parsedLog.name === 'GeneratedCommitmentBatch') {
             // Type cast to GeneratedCommitmentBatchEventObject
@@ -252,20 +258,45 @@ class MerkleTree {
             const startPosition = args.startPosition.toNumber();
 
             // Get leaves
-            const leaves = await Promise.all(args.commitments.map(async (commitment) =>
-              hash.poseidon([
-                bigIntToArray(commitment.npk.toBigInt(), 32),
-                await getTokenID({
-                  tokenType: commitment.token.tokenType,
-                  tokenAddress: commitment.token.tokenAddress,
-                  tokenSubID: commitment.token.tokenSubID.toBigInt(),
-                }),
-                bigIntToArray(commitment.value.toBigInt(), 32),
-              ]),
-            ));
+            const leaves = await Promise.all(
+              args.commitments.map(async (commitment) =>
+                hash.poseidon([
+                  bigIntToArray(commitment.npk.toBigInt(), 32),
+                  await getTokenID({
+                    tokenType: commitment.token.tokenType,
+                    tokenAddress: commitment.token.tokenAddress,
+                    tokenSubID: commitment.token.tokenSubID.toBigInt(),
+                  }),
+                  bigIntToArray(commitment.value.toBigInt(), 32),
+                ]),
+              ),
+            );
 
             // Insert leaves
             await this.insertLeaves(leaves, startPosition);
+          } else if (parsedLog.name === 'CommitmentBatch') {
+            // Type cast to CommitmentBatchEventObject
+            const args = parsedLog.args as unknown as CommitmentBatchEventObject;
+
+            // Get start position
+            const startPosition = args.startPosition.toNumber();
+
+            // Get leaves
+            const leaves = args.hash.map((noteHash) => bigIntToArray(noteHash.toBigInt(), 32));
+
+            // Insert leaves
+            await this.insertLeaves(leaves, startPosition);
+          } else if (parsedLog.name === 'Nullifiers') {
+            // Type cast to NullifiersEventObject
+            const args = parsedLog.args as unknown as NullifiersEventObject;
+
+            // Get nullifiers as Uint8Array
+            const nullifiersFormatted = args.nullifier.map((nullifier) =>
+              bigIntToArray(nullifier.toBigInt(), 32),
+            );
+
+            // Push nullifiers to seen nullifiers array
+            this.nullifiers.push(...nullifiersFormatted);
           }
         }
       }),

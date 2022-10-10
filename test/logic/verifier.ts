@@ -81,7 +81,7 @@ describe('Logic/Verifier', () => {
         treeNumber: 0,
         withdraw: i % 3,
         adaptContract: arrayToHexString(hash.keccak256(new Uint8Array([i])), true).slice(0, 42),
-        adaptParams: hash.sha256(new Uint8Array([i])),
+        adaptParams: hash.keccak256(new Uint8Array([i])),
         commitmentCiphertext: new Array(i).fill({
           ciphertext: new Array(4).fill(bigIntToArray(BigInt(i), 32)),
           ephemeralKeys: new Array(2).fill(bigIntToArray(BigInt(i), 32)),
@@ -134,7 +134,10 @@ describe('Logic/Verifier', () => {
 
       // Create tree and add notes
       const merkletree = await MerkleTree.createTree();
-      await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), merkletree.length);
+      await merkletree.insertLeaves(
+        await Promise.all(notesIn.map((note) => note.getHash())),
+        merkletree.length,
+      );
 
       // Get dummy proof
       const tx = await dummyTransact(
@@ -197,7 +200,10 @@ describe('Logic/Verifier', () => {
 
       // Create tree and add notes
       const merkletree = await MerkleTree.createTree();
-      await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), merkletree.length);
+      await merkletree.insertLeaves(
+        await Promise.all(notesIn.map((note) => note.getHash())),
+        merkletree.length,
+      );
 
       // Get proof
       const tx = await transact(
@@ -257,7 +263,10 @@ describe('Logic/Verifier', () => {
 
         // Create tree and add notes
         const merkletree = await MerkleTree.createTree();
-        await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), merkletree.length);
+        await merkletree.insertLeaves(
+          await Promise.all(notesIn.map((note) => note.getHash())),
+          merkletree.length,
+        );
 
         // Get dummy proof
         const tx = await dummyTransact(

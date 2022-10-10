@@ -33,7 +33,7 @@ contract Verifier is OwnableUpgradeable {
   /**
    * @notice Sets verification key
    * @param _nullifiers - number of nullifiers this verification key is for
-   * @param _commitments - number of commitmets out this verification key is for
+   * @param _commitments - number of commitments out this verification key is for
    * @param _verifyingKey - verifyingKey to set
    */
   function setVerificationKey(
@@ -49,7 +49,7 @@ contract Verifier is OwnableUpgradeable {
   /**
    * @notice Gets verification key
    * @param _nullifiers - number of nullifiers this verification key is for
-   * @param _commitments - number of commitmets out this verification key is for
+   * @param _commitments - number of commitments out this verification key is for
    */
   function getVerificationKey(uint256 _nullifiers, uint256 _commitments)
     public

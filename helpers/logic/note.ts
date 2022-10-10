@@ -200,10 +200,7 @@ class Note {
    * @returns Encrypted random value
    */
   get encryptedRandom(): [Uint8Array, Uint8Array] {
-    return aes.gcm.encrypt(
-      [this.random],
-      this.viewingKey,
-    ) as [Uint8Array, Uint8Array];
+    return aes.gcm.encrypt([this.random], this.viewingKey) as [Uint8Array, Uint8Array];
   }
 
   /**
@@ -211,7 +208,7 @@ class Note {
    *
    * @returns Commitment preimage
    */
-   async getCommitmentPreimage(): Promise<CommitmentPreimage> {
+  async getCommitmentPreimage(): Promise<CommitmentPreimage> {
     return {
       npk: await this.getNotePublicKey(),
       token: this.tokenData,

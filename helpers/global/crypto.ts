@@ -1,9 +1,19 @@
 import crypto from 'crypto';
 import * as nobleED25519 from '@noble/ed25519';
 import { sha256 } from '@noble/hashes/sha256';
-import { keccak_256 } from '@noble/hashes/sha3';
+import { keccak_256, keccak_512 } from '@noble/hashes/sha3';
 import { buildEddsa, buildPoseidonOpt } from 'circomlibjs';
 import { arrayToBigInt, bigIntToArray, arrayToByteLength } from './bytes';
+
+/**
+ * Gets random bytes
+ *
+ * @param length - random bytes length
+ * @returns random bytes
+ */
+function randomBytes(length: number) {
+  return new Uint8Array(crypto.randomBytes(length));
+}
 
 const poseidonPromise = buildPoseidonOpt();
 
@@ -46,6 +56,16 @@ const hash = {
   keccak256: (input: Uint8Array): Uint8Array => {
     return keccak_256(input);
   },
+
+  /**
+   * Keccak5125 hash
+   *
+   * @param input - input to hash
+   * @returns hash
+   */
+  keccak512: (input: Uint8Array): Uint8Array => {
+    return keccak_512(input);
+  },
 };
 
 const aes = {
@@ -58,7 +78,7 @@ const aes = {
      * @returns encrypted bundle
      */
     encrypt(plaintext: Uint8Array[], key: Uint8Array): Uint8Array[] {
-      const iv = new Uint8Array(crypto.randomBytes(16));
+      const iv = randomBytes(16);
 
       const cipher = crypto.createCipheriv('aes-256-gcm', key, iv, {
         authTagLength: 16,
@@ -102,39 +122,57 @@ const aes = {
 };
 
 const ed25519 = {
-  /**
-   * Adjusts random value for curve25519
-   *
-   * @param random - random value
-   * @returns adjusted random
-   */
-  adjustRandom(random: Uint8Array): Uint8Array {
-    const randomHash = new Uint8Array(hash.sha256(random));
-    randomHash[0] &= 248;
-    randomHash[31] &= 127;
-    randomHash[31] |= 64;
-    return bigIntToArray(arrayToBigInt(randomHash) % nobleED25519.CURVE.n, 32);
-  },
+  railgunKeyExchange: {
+    /**
+     * Converts seed to curve scalar
+     *
+     * @param random - random value
+     * @returns adjusted random
+     */
+    seedToScalar(random: Uint8Array): Uint8Array {
+      // TODO: switch to 512 bit hash length as per FIPS-186
+      const randomHash = hash.sha256(random);
 
-  /**
-   * Generates ephemeral keys for note encryption
-   *
-   * @param random - randomness for ephemeral keys
-   * @param senderPrivKey - Private key of sender
-   * @param receiverPubKey - public key of receiver
-   * @returns ephemeral keys
-   */
-  ephemeralKeysGen(
-    random: Uint8Array,
-    senderPrivKey: Uint8Array,
-    receiverPubKey: Uint8Array,
-  ): Uint8Array[] {
-    const r = ed25519.adjustRandom(random);
-    const S = nobleED25519.Point.fromHex(senderPrivKey);
-    const R = nobleED25519.Point.fromHex(receiverPubKey);
-    const rS = S.multiply(arrayToBigInt(r)).toRawBytes();
-    const rR = R.multiply(arrayToBigInt(r)).toRawBytes();
-    return [rS, rR];
+      // Prune buffer to X25519 LE encoded integer
+      // This is not needed but is left for backwards compatibility with
+      // Railgun notes that have performed this in the past
+      // As this reduces entropy it is not ideal, but we consider it
+      // acceptable for now
+      // TODO: implement corrected algorithm in next note format update
+      randomHash[0] &= 248;
+      randomHash[31] &= 127;
+      randomHash[31] |= 64;
+
+      // Return mod n to fit to curve
+      // This should be (arrayToBigInt(randomHash) % nobleED25519.CURVE.n - 1n) + 1n
+      // but is implemented this way for backwards compatibility
+      // It will fail for any inputs that are a multiple of CURVE.n, (16/2^256 possibilities)
+      // We rely on sha256 preimage resistance to prevent a malicious actor
+      // from being able to trigger this failure condition
+      // TODO: implement corrected algorithm in next note format update
+      return bigIntToArray(arrayToBigInt(randomHash) % nobleED25519.CURVE.n, 32);
+    },
+
+    /**
+     * Generates ephemeral keys for note encryption
+     *
+     * @param random - randomness for ephemeral keys
+     * @param senderPrivKey - Private key of sender
+     * @param receiverPubKey - public key of receiver
+     * @returns ephemeral keys
+     */
+    ephemeralKeysGen(
+      random: Uint8Array,
+      senderPrivKey: Uint8Array,
+      receiverPubKey: Uint8Array,
+    ): Uint8Array[] {
+      const r = ed25519.railgunKeyExchange.seedToScalar(random);
+      const S = nobleED25519.Point.fromHex(senderPrivKey);
+      const R = nobleED25519.Point.fromHex(receiverPubKey);
+      const rS = S.multiply(arrayToBigInt(r)).toRawBytes();
+      const rR = R.multiply(arrayToBigInt(r)).toRawBytes();
+      return [rS, rR];
+    },
   },
 };
 
@@ -147,7 +185,7 @@ const edBabyJubJub = {
    * @returns private key
    */
   genRandomPrivateKey(): Uint8Array {
-    return new Uint8Array(crypto.randomBytes(32));
+    return randomBytes(32);
   },
 
   /**
@@ -173,7 +211,7 @@ const edBabyJubJub = {
    * @returns random point
    */
   genRandomPoint(): Promise<Uint8Array> {
-    return hash.poseidon([new Uint8Array(crypto.randomBytes(32))]);
+    return hash.poseidon([randomBytes(32)]);
   },
 
   /**
@@ -202,4 +240,4 @@ const edBabyJubJub = {
   },
 };
 
-export { hash, aes, ed25519, edBabyJubJub };
+export { randomBytes, hash, aes, ed25519, edBabyJubJub };

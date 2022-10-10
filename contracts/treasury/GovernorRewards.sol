@@ -117,7 +117,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
   }
 
   /**
-   * @notice Gets wheather a interval has been claimed or not
+   * @notice Gets whether a interval has been claimed or not
    * @param _account - account to check claim status for
    * @param _token - token to get claim status for
    * @param _interval - interval to check for
@@ -339,7 +339,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       precalculatedGlobalSnapshots[_startingInterval + i] = snapshots[i];
     }
 
-    // Set next precalc interval
+    // Set next precalculated interval
     nextSnapshotPreCalcInterval = _endingInterval + 1;
 
     for (uint256 i = 0; i < _postProcessTokens.length; i += 1) {

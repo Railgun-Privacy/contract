@@ -1,6 +1,6 @@
 declare module 'circomlibjs' {
   declare type FromMontgomery = (Uint8Array) => Uint8Array;
-  declare type ToMongomery = (Uint8Array) => Uint8Array;
+  declare type ToMontgomery = (Uint8Array) => Uint8Array;
 
   export interface CircomlibSignature {
     R8: [Uint8Array, Uint8Array];
@@ -12,7 +12,7 @@ declare module 'circomlibjs' {
     prv2pub(prv: Uint8Array): [Uint8Array, Uint8Array];
     F: {
       fromMontgomery: FromMontgomery;
-      toMontgomery: ToMongomery;
+      toMontgomery: ToMontgomery;
       p: bigint;
     };
   }
@@ -22,7 +22,7 @@ declare module 'circomlibjs' {
     (inputs: Uint8Array[]): Uint8Array;
     F: {
       fromMontgomery: FromMontgomery;
-      toMontgomery: ToMongomery;
+      toMontgomery: ToMontgomery;
     };
   }
   declare function buildPoseidon(): Promise<PoseidonFunction>;

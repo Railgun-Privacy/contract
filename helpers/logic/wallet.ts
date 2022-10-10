@@ -1,10 +1,13 @@
 import { TransactionResponse } from '@ethersproject/providers';
 import { RailgunLogic } from '../../typechain-types';
-import { GeneratedCommitmentBatchEventObject } from '../../typechain-types/contracts/logic/RailgunLogic';
+import {
+  CommitmentBatchEventObject,
+  GeneratedCommitmentBatchEventObject,
+} from '../../typechain-types/contracts/logic/RailgunLogic';
 import { arrayToHexString, hexStringToArray } from '../global/bytes';
-import { aes } from '../global/crypto';
+import { aes, randomBytes } from '../global/crypto';
 import { MerkleTree } from './merkletree';
-import { Note } from './note';
+import { getTokenID, Note, TokenData } from './note';
 
 class Wallet {
   spendingKey: Uint8Array;
@@ -29,7 +32,7 @@ class Wallet {
    *
    * @returns total balance
    */
-  get totalBalance() {
+  get totalBalance(): bigint {
     return this.notes
       .map((note) => note.value)
       .reduce((accumulator, noteValue) => accumulator + noteValue);
@@ -71,7 +74,7 @@ class Wallet {
                   this.viewingKey,
                 );
 
-                // Insert note in same index as merkle tree
+                // Insert into note array in same index as merkle tree
                 this.notes[startPosition + index] = new Note(
                   this.spendingKey,
                   this.viewingKey,
@@ -85,6 +88,17 @@ class Wallet {
                 );
               } catch {}
             });
+          } else if (parsedLog.name === 'CommitmentBatch') {
+            // Type cast to CommitmentBatchEventObject
+            const args = parsedLog.args as unknown as CommitmentBatchEventObject;
+
+            // Get start position
+            const startPosition = args.startPosition.toNumber();
+
+            // Loop through each note
+            args.ciphertext.forEach((ciphertext, index) => {
+              console.log(ciphertext);
+            });
           }
         }
       }),
@@ -94,10 +108,14 @@ class Wallet {
   /**
    * Get unspent notes
    *
-   * @param merkletree - merkle tree to check for unspent notes
+   * @param merkletree - merkle tree to use as seen nullifiers source
+   * @param token - token to get unspent notes for
    * @returns unspent notes
    */
-  async getUnspentNotes(merkletree: MerkleTree) {
+  async getUnspentNotes(merkletree: MerkleTree, token: TokenData): Promise<Note[]> {
+    // Get requested token ID as hex
+    const tokenID = arrayToHexString(await getTokenID(token), false);
+
     // Get note nullifiers as hex
     const noteNullifiers = await Promise.all(
       this.notes.map(async (note, index) =>
@@ -105,13 +123,68 @@ class Wallet {
       ),
     );
 
+    // Get note token IDs as hex
+    const noteTokenIDs = await Promise.all(
+      this.notes.map(async (note) => arrayToHexString(await note.getTokenID(), false)),
+    );
+
     // Get seen nullifiers as hex
     const seenNullifiers = merkletree.nullifiers.map((nullifier) =>
       arrayToHexString(nullifier, false),
     );
 
-    // Return notes that haven't had their nullifiers seen
-    return this.notes.filter((note, index) => !seenNullifiers.includes(noteNullifiers[index]));
+    // Return notes that haven't had their nullifiers seen and token IDs match
+    return this.notes
+      .filter((note, index) => !seenNullifiers.includes(noteNullifiers[index]))
+      .filter((note, index) => noteTokenIDs[index] === tokenID);
+  }
+
+  /**
+   * Gets inputs and outputs for a given test circuit
+   *
+   * @param merkletree - merkle tree to use as seen nullifiers source
+   * @param inputs - number of inputs
+   * @param outputs - number of outputs
+   * @param token - token to get notes for
+   * @returns inputs and outputs to use for test
+   */
+  async getTestTransactionInputs(
+    merkletree: MerkleTree,
+    inputs: number,
+    outputs: number,
+    token: TokenData,
+  ): Promise<{ inputs: Note[]; outputs: Note[] }> {
+    // Get unspent notes
+    const unspentNotes = await this.getUnspentNotes(merkletree, token);
+
+    // If unspent notes doesn't have enough notes to satisfy the requested number of inputs throw
+    if (unspentNotes.length < inputs) throw new Error('Not enough inputs');
+
+    // Get first 'inputs' number of notes and push to inputs array
+    const inputNotes: Note[] = unspentNotes.slice(0, inputs);
+
+    // Get sum of inputs values
+    const inputTotal = inputNotes.map((note) => note.value).reduce((right, left) => right + left);
+
+    // Divide input total by outputs
+    const outputPerNote = inputTotal / BigInt(outputs);
+
+    // Get remainder
+    const outputRemainder = inputTotal % BigInt(outputs);
+
+    // Get output per note array - add remainder to first note
+    const outputNoteValues: bigint[] = new Array(outputs).fill(outputPerNote) as bigint[];
+    outputNoteValues[0] += outputRemainder;
+
+    // Get output notes
+    const outputNotes: Note[] = outputNoteValues.map(
+      (value) => new Note(this.spendingKey, this.viewingKey, value, randomBytes(16), token),
+    );
+
+    return {
+      inputs: inputNotes,
+      outputs: outputNotes,
+    };
   }
 }
 

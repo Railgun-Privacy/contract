@@ -4,8 +4,8 @@
   "description": "Railgun Contract",
   "license": "UNLICENSED",
   "scripts": {
-    "lint": "solhint 'contracts/**/*.sol'; prettier --check './**'; eslint .",
-    "lint:fix": "npx prettier --write './**'; npx solhint --fix 'contracts/**/*.sol'",
+    "lint": "cspell --no-progress '**'; solhint 'contracts/**/*.sol'; prettier --check './**'; eslint .",
+    "lint:fix": "cspell --no-progress '**'; npx prettier --write './**'; npx solhint --fix 'contracts/**/*.sol'",
     "clean": "hardhat clean",
     "compile": "npm run clean && npm run lint && hardhat compile",
     "test": "hardhat test",

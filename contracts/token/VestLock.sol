@@ -13,7 +13,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
  * @title VestLock
  * @author Railgun Contributors
  * @notice Escrows vested tokens
- * @dev Designed to be used behing lightweight clones proxies
+ * @dev Designed to be used behind lightweight clones proxies
  */
 
 contract VestLock is Initializable, OwnableUpgradeable {

@@ -2,6 +2,7 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture, time, takeSnapshot } from '@nomicfoundation/hardhat-network-helpers';
 
+/* cspell:disable-next-line */
 const proposalDocument = 'QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D';
 
 describe('Governance/Voting', () => {

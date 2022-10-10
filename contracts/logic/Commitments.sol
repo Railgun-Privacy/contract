@@ -14,8 +14,8 @@ import { PoseidonT3 } from "./Poseidon.sol";
  * @title Commitments
  * @author Railgun Contributors
  * @notice Batch Incremental Merkle Tree for commitments
- * @dev Publically accessible functions to be put in RailgunLogic
- * Relevent external contract calls should be in those functions, not here
+ * @dev Publicly accessible functions to be put in RailgunLogic
+ * Relevant external contract calls should be in those functions, not here
  */
 contract Commitments is Initializable {
   // NOTE: The order of instantiation MUST stay the same across upgrades
@@ -23,7 +23,7 @@ contract Commitments is Initializable {
   // variable at the end of this file
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
-  // Commitment nullifiers (treenumber -> nullifier -> seen)
+  // Commitment nullifiers (tree number -> nullifier -> seen)
   mapping(uint256 => mapping(uint256 => bool)) public nullifiers;
 
   // The tree depth
@@ -44,13 +44,13 @@ contract Commitments is Initializable {
   // Tree number
   uint256 public treeNumber;
 
-  // The Merkle path to the leftmost leaf upon initialisation. It *should
+  // The Merkle path to the leftmost leaf upon initialization. It *should
   // not* be modified after it has been set by the initialize function.
   // Caching these values is essential to efficient appends.
   uint256[TREE_DEPTH] public zeros;
 
   // Right-most elements at each level
-  // Used for efficient upodates of the merkle tree
+  // Used for efficient updates of the merkle tree
   uint256[TREE_DEPTH] private filledSubTrees;
 
   // Whether the contract has already seen a particular Merkle tree root
@@ -63,7 +63,7 @@ contract Commitments is Initializable {
    */
   function initializeCommitments() internal onlyInitializing {
     /*
-    To initialise the Merkle tree, we need to calculate the Merkle root
+    To initialize the Merkle tree, we need to calculate the Merkle root
     assuming that each leaf is the zero value.
     H(H(a,b), H(c,d))
       /          \
@@ -118,7 +118,7 @@ contract Commitments is Initializable {
     Loop through leafHashes at each level, if the leaf is on the left (index is even)
     then hash with zeros value and update subtree on this level, if the leaf is on the
     right (index is odd) then hash with subtree value. After calculating each hash
-    push to relevent spot on leafHashes array. For gas efficiency we reuse the same
+    push to relevant spot on leafHashes array. For gas efficiency we reuse the same
     array and use the count variable to loop to the right index each time.
 
     Example of updating a tree of depth 4 with elements 13, 14, and 15
@@ -155,7 +155,7 @@ contract Commitments is Initializable {
     // Loop through each level of the merkle tree and update
     for (uint256 level = 0; level < TREE_DEPTH; level++) {
       // Calculate the index to start at for the next level
-      // >> is equivilent to / 2 rounded down
+      // >> is equivalent to / 2 rounded down
       nextLevelStartIndex = levelInsertionIndex >> 1;
 
       uint256 insertionElement = 0;
@@ -163,7 +163,7 @@ contract Commitments is Initializable {
       // If we're on the right, hash and increment to get on the left
       if (levelInsertionIndex % 2 == 1) {
         // Calculate index to insert hash into leafHashes[]
-        // >> is equivilent to / 2 rounded down
+        // >> is equivalent to / 2 rounded down
         nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
 
         // Calculate the hash for the next level
@@ -194,7 +194,7 @@ contract Commitments is Initializable {
         }
 
         // Calculate index to insert hash into leafHashes[]
-        // >> is equivilent to / 2 rounded down
+        // >> is equivalent to / 2 rounded down
         nextLevelHashIndex = (levelInsertionIndex >> 1) - nextLevelStartIndex;
 
         // Calculate the hash for the next level

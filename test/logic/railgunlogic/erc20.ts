@@ -176,7 +176,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
     ).to.be.revertedWith('RailgunLogic: Token is blocklisted');
   });
 
-  it('Should reject npks out of range', async function () {
+  it('Should reject npk out of range', async function () {
     const { railgunLogic, testERC20 } = await loadFixture(deploy);
 
     // Create random keys

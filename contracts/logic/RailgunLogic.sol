@@ -153,7 +153,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     bool _isInclusive,
     uint120 _feeBP
   ) public pure returns (uint120, uint120) {
-    // Expand width of amount to uint136 to accomodate full size of (2**120-1)*BASIS_POINTS
+    // Expand width of amount to uint136 to accommodate full size of (2**120-1)*BASIS_POINTS
     uint136 amountExpanded = _amount;
 
     // Base is the amount deposited into the railgun contract or withdrawn to the target eth address
@@ -302,10 +302,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       .getBooleanSlot(0x8dea8703c3cf94703383ce38a9c894669dccd4ca8e65ddb43267aa0248711450)
       .value = true;
 
-    // Setup behaviour check
+    // Setup behavior check
     bool result = false;
 
-    // Execute behaviour check
+    // Execute behavior check
     // solhint-disable-next-line no-inline-assembly
     assembly {
       mstore(0, caller())
@@ -353,11 +353,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       );
 
       // Retrieve treeNumber
-      uint256 treeNumber = transaction.boundParams.treeNumber;
+      uint256 _treeNumber = transaction.boundParams.treeNumber;
 
       // Check merkle root is valid
       require(
-        Commitments.rootHistory[treeNumber][transaction.merkleRoot],
+        Commitments.rootHistory[_treeNumber][transaction.merkleRoot],
         "RailgunLogic: Invalid Merkle Root"
       );
 
@@ -369,16 +369,16 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
         // Check if nullifier has been seen before
         require(
-          !Commitments.nullifiers[treeNumber][nullifier],
+          !Commitments.nullifiers[_treeNumber][nullifier],
           "RailgunLogic: Nullifier already seen"
         );
 
         // Push to nullifiers
-        Commitments.nullifiers[treeNumber][nullifier] = true;
+        Commitments.nullifiers[_treeNumber][nullifier] = true;
       }
 
       // Emit nullifiers event
-      emit Nullifiers(treeNumber, transaction.nullifiers);
+      emit Nullifiers(_treeNumber, transaction.nullifiers);
 
       // Verify proof
       require(Verifier.verify(transaction), "RailgunLogic: Invalid SNARK proof");
@@ -399,7 +399,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
         // Check if we've been asked to override the withdraw destination
         if (transaction.overrideOutput != address(0)) {
-          // Withdraw must == 2 and msg.sender must be the original recepient to change the output destination
+          // Withdraw must == 2 and msg.sender must be the original recipient to change the output destination
           require(
             msg.sender == output && transaction.boundParams.withdraw == WithdrawType.REDIRECT,
             "RailgunLogic: Can't override destination address"
@@ -439,7 +439,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
         require(
           transaction.boundParams.commitmentCiphertext.length == transaction.commitments.length - 1,
-          "RailgunLogic: Ciphertexts and commitments count mismatch"
+          "RailgunLogic: Ciphertext and commitments count mismatch"
         );
 
         // Increment insertion commitment count (minus 1 for withdrawn output)
@@ -448,7 +448,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         // Ensure ciphertext length matches the commitments length
         require(
           transaction.boundParams.commitmentCiphertext.length == transaction.commitments.length,
-          "RailgunLogic: Ciphertexts and commitments count mismatch"
+          "RailgunLogic: Ciphertext and commitments count mismatch"
         );
 
         // Increment insertion commitment count

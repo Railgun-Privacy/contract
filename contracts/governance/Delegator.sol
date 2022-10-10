@@ -18,7 +18,7 @@ contract Delegator is Ownable {
   any contract, and permission for function signature 0 is permission for
   any function.
 
-  Comments below use * to signify wildcard and . notation to seperate address/contract/function.
+  Comments below use * to signify wildcard and . notation to separate address/contract/function.
 
   caller.*.* allows caller to call any function on any contract
   caller.X.* allows caller to call any function on contract X
@@ -86,7 +86,7 @@ contract Delegator is Ownable {
   ) public view returns (bool) {
     /* 
     See comment on permissions mapping for structure
-    Comments below use * to signify wildcard and . notation to seperate contract/function
+    Comments below use * to signify wildcard and . notation to separate contract/function
     */
     return (_caller == Ownable.owner() ||
       permissions[_caller][_contract][_selector] || // Owner always has global permissions
@@ -123,7 +123,7 @@ contract Delegator is Ownable {
         // Call setPermission
         setPermission(caller, calledContract, _permissionSelector, permission);
 
-        // Return success with empty returndata bytes
+        // Return success with empty ReturnData bytes
         bytes memory empty;
         return (true, empty);
       } else if (selector == this.transferOwnership.selector) {
@@ -133,18 +133,18 @@ contract Delegator is Ownable {
         // Call transferOwnership
         Ownable.transferOwnership(newOwner);
 
-        // Return success with empty returndata bytes
+        // Return success with empty ReturnData bytes
         bytes memory empty;
         return (true, empty);
       } else if (selector == this.renounceOwnership.selector) {
         // Call renounceOwnership
         Ownable.renounceOwnership();
 
-        // Return success with empty returndata bytes
+        // Return success with empty ReturnData bytes
         bytes memory empty;
         return (true, empty);
       } else {
-        // Return failed with empty returndata bytes
+        // Return failed with empty ReturnData bytes
         bytes memory empty;
         return (false, empty);
       }

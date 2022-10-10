@@ -104,7 +104,7 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
  * @param encryptedRandoms - encrypted randoms to match
  * @returns matcher
  */
- function encryptedRandomMatcher(encryptedRandoms: Uint8Array[][]) {
+function encryptedRandomMatcher(encryptedRandoms: Uint8Array[][]) {
   // Return constructed matcher function
   return (contractEncryptedRandoms: BigNumber[][]): boolean => {
     // Loop through each encrypted random and check if they match
@@ -129,14 +129,16 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
  * @param commitmentPreimages - commitment preimage to match
  * @returns matcher
  */
- function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
+function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
   return (contractPreimages: CommitmentPreimageStructOutput[]): boolean => {
     // Loop through each preimage and check if they match
     const preimagesMatched = contractPreimages.map((preimage, index): boolean => {
       if (preimage.npk.toBigInt() !== arrayToBigInt(commitmentPreimages[index].npk)) return false;
       if (preimage.token.tokenType !== commitmentPreimages[index].token.tokenType) return false;
-      if (preimage.token.tokenAddress !== commitmentPreimages[index].token.tokenAddress) return false;
-      if (preimage.token.tokenSubID.toBigInt() !== commitmentPreimages[index].token.tokenSubID) return false;
+      if (preimage.token.tokenAddress !== commitmentPreimages[index].token.tokenAddress)
+        return false;
+      if (preimage.token.tokenSubID.toBigInt() !== commitmentPreimages[index].token.tokenSubID)
+        return false;
       if (preimage.value.toBigInt() !== commitmentPreimages[index].value) return false;
       return true;
     });
@@ -184,7 +186,7 @@ async function formatPublicInputs(
       // Get merkle proof
       const merkleProof = merkletree.generateProof(await note.getHash());
 
-      // Generate nullifier from merkle proof indicies
+      // Generate nullifier from merkle proof indices
       return note.getNullifier(merkleProof.indices);
     }),
   );
@@ -256,7 +258,7 @@ async function formatCircuitInputs(
       // Get merkle proof
       const merkleProof = merkletree.generateProof(await note.getHash());
 
-      // Generate nullifier from merkle proof indicies
+      // Generate nullifier from merkle proof indices
       return note.getNullifier(merkleProof.indices);
     }),
   );
@@ -329,8 +331,10 @@ async function dummyTransact(
   notesOut: (Note | WithdrawNote)[],
   overrideOutput: string,
 ) {
+  // Get required ciphertext length
   const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
 
+  // Create ciphertext
   const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
     ciphertext: new Array(4).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
       Uint8Array,
@@ -342,10 +346,13 @@ async function dummyTransact(
       Uint8Array,
       Uint8Array,
     ],
-    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()),
+    memo: new Array(Math.floor(Math.random() * 10))
+      .fill(1)
+      .map(() => edBabyJubJub.genRandomPrivateKey()),
   }));
 
-  const publicInputs = formatPublicInputs(
+  // Return formatted public inputs
+  return formatPublicInputs(
     dummyProof,
     merkletree,
     withdraw,
@@ -356,8 +363,6 @@ async function dummyTransact(
     overrideOutput,
     commitmentCiphertext,
   );
-
-  return publicInputs;
 }
 
 /**
@@ -382,10 +387,13 @@ async function transact(
   notesOut: (Note | WithdrawNote)[],
   overrideOutput: string,
 ) {
+  // Get artifact
   const artifact = getKeys(notesIn.length, notesOut.length);
 
+  // Get required ciphertext length
   const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
 
+  // Generate ciphertext
   const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
     ciphertext: new Array(4).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
       Uint8Array,
@@ -397,9 +405,12 @@ async function transact(
       Uint8Array,
       Uint8Array,
     ],
-    memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()),
+    memo: new Array(Math.floor(Math.random() * 10))
+      .fill(1)
+      .map(() => edBabyJubJub.genRandomPrivateKey()),
   }));
 
+  // Get circuit inputs
   const inputs = await formatCircuitInputs(
     merkletree,
     withdraw,
@@ -410,9 +421,11 @@ async function transact(
     commitmentCiphertext,
   );
 
+  // Generate proof
   const proof = await prove(artifact, inputs);
 
-  const publicInputs = await formatPublicInputs(
+  // Return public inputs
+  return formatPublicInputs(
     proof,
     merkletree,
     withdraw,
@@ -423,8 +436,6 @@ async function transact(
     overrideOutput,
     commitmentCiphertext,
   );
-
-  return publicInputs;
 }
 
 /**
@@ -440,14 +451,17 @@ function getFee(
   isInclusive: boolean,
   feeBP: bigint,
 ): { base: bigint; fee: bigint } {
+  // Define number of basis points in 100%
   const BASIS_POINTS = 10000n;
   let base;
   let fee;
 
   if (isInclusive) {
+    // Amount is base + fee, calculate base and fee
     base = amount - (amount * feeBP) / BASIS_POINTS;
     fee = amount - base;
   } else {
+    // Amount is base, calculate fee
     base = amount;
     fee = (BASIS_POINTS * base) / (BASIS_POINTS - feeBP) - base;
   }
