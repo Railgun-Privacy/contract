@@ -156,22 +156,41 @@ const ed25519 = {
     /**
      * Generates ephemeral keys for note encryption
      *
-     * @param random - randomness for ephemeral keys
-     * @param senderPrivKey - Private key of sender
-     * @param receiverPubKey - public key of receiver
+     * @param senderViewingPublicKey - Sender's viewing public key
+     * @param receiverViewingPublicKey - Receiver's viewing public key
+     * @param sharedRandom - random value shared by both parties
+     * @param senderRandom - random value only known to sender
      * @returns ephemeral keys
      */
-    ephemeralKeysGen(
-      random: Uint8Array,
-      senderPrivKey: Uint8Array,
-      receiverPubKey: Uint8Array,
-    ): Uint8Array[] {
-      const r = ed25519.railgunKeyExchange.seedToScalar(random);
-      const S = nobleED25519.Point.fromHex(senderPrivKey);
-      const R = nobleED25519.Point.fromHex(receiverPubKey);
-      const rS = S.multiply(arrayToBigInt(r)).toRawBytes();
-      const rR = R.multiply(arrayToBigInt(r)).toRawBytes();
-      return [rS, rR];
+    generateEphemeralKeys(
+      senderViewingPublicKey: Uint8Array,
+      receiverViewingPublicKey: Uint8Array,
+      sharedRandom: Uint8Array,
+      senderRandom: Uint8Array,
+    ) {
+      // Combine sender and shared random via XOR
+      // XOR is used because a 0 value senderRandom result in a no change to the sharedRandom
+      // allowing the receiver to invert the blinding operation
+      // Final random value is padded to 32 bytes
+      const finalRandom = bigIntToArray(arrayToBigInt(sharedRandom) ^ arrayToBigInt(senderRandom), 32);
+
+      // Get blinding scalar from random
+      const blindingScalar = ed25519.railgunKeyExchange.seedToScalar(finalRandom);
+
+      // Get public key points
+      const senderPublicKeyPoint = nobleED25519.Point.fromHex(senderViewingPublicKey);
+      const receiverPublicKeyPoint = nobleED25519.Point.fromHex(receiverViewingPublicKey);
+
+      // Multiply both public keys by blinding scalar
+      const blindedSenderPublicKeyPoint = senderPublicKeyPoint
+        .multiply(arrayToBigInt(blindingScalar))
+        .toRawBytes();
+      const blindedReceiverPublicKeyPoint = receiverPublicKeyPoint
+        .multiply(arrayToBigInt(blindingScalar))
+        .toRawBytes();
+      
+      // Return blinded keys
+      return { blindedSenderPublicKeyPoint, blindedReceiverPublicKeyPoint };
     },
   },
 };
