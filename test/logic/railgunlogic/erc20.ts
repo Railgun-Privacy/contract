@@ -108,6 +108,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
               tokenAddress: testERC20.address,
               tokenSubID: 0n,
             },
+            '',
           ),
       );
 
@@ -138,11 +139,18 @@ describe('Logic/RailgunLogic/ERC20', () => {
     }
 
     // Generate note with 0 value
-    const zeroNote = new Note(spendingKey, viewingKey, 0n, bigIntToArray(1n, 16), {
-      tokenType: TokenType.ERC20,
-      tokenAddress: testERC20.address,
-      tokenSubID: 0n,
-    });
+    const zeroNote = new Note(
+      spendingKey,
+      viewingKey,
+      0n,
+      bigIntToArray(1n, 16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0n,
+      },
+      '',
+    );
 
     // Check contract throws on zero value notes
     await expect(
@@ -161,11 +169,18 @@ describe('Logic/RailgunLogic/ERC20', () => {
     const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
     // Generate note
-    const note = new Note(spendingKey, viewingKey, 100n, bigIntToArray(1n, 16), {
-      tokenType: TokenType.ERC20,
-      tokenAddress: testERC20.address,
-      tokenSubID: 0n,
-    });
+    const note = new Note(
+      spendingKey,
+      viewingKey,
+      100n,
+      bigIntToArray(1n, 16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0n,
+      },
+      '',
+    );
 
     // Block token
     await railgunLogicAdmin.addToBlocklist([testERC20.address]);
@@ -184,11 +199,18 @@ describe('Logic/RailgunLogic/ERC20', () => {
     const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
     // Generate note
-    const note = new Note(spendingKey, viewingKey, 100n, bigIntToArray(1n, 16), {
-      tokenType: TokenType.ERC20,
-      tokenAddress: testERC20.address,
-      tokenSubID: 0n,
-    });
+    const note = new Note(
+      spendingKey,
+      viewingKey,
+      100n,
+      bigIntToArray(1n, 16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0n,
+      },
+      '',
+    );
 
     // Get preimage
     const preimage = await note.getCommitmentPreimage();

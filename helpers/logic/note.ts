@@ -1,5 +1,15 @@
-import { bigIntToArray, hexStringToArray, arrayToByteLength } from '../global/bytes';
-import { hash, edBabyJubJub, aes } from '../global/crypto';
+import {
+  bigIntToArray,
+  hexStringToArray,
+  arrayToByteLength,
+  combine,
+  chunk,
+  padToLength,
+  railgunBase37,
+  arrayToBigInt,
+  arrayToHexString,
+} from '../global/bytes';
+import { hash, edBabyJubJub, aes, ed25519, randomBytes } from '../global/crypto';
 
 export enum TokenType {
   'ERC20' = 0,
@@ -69,6 +79,8 @@ class Note {
 
   tokenData: TokenData;
 
+  memo: string;
+
   /**
    * Railgun Note
    *
@@ -77,6 +89,7 @@ class Note {
    * @param value - note value
    * @param random - note random field
    * @param tokenData - note token data
+   * @param memo - note memo
    */
   constructor(
     spendingKey: Uint8Array,
@@ -84,6 +97,7 @@ class Note {
     value: bigint,
     random: Uint8Array,
     tokenData: TokenData,
+    memo: string,
   ) {
     // Validate bounds
     if (spendingKey.length !== 32) throw Error('Invalid spending key length');
@@ -97,6 +111,7 @@ class Note {
     this.value = value;
     this.random = random;
     this.tokenData = tokenData;
+    this.memo = memo;
   }
 
   /**
@@ -114,7 +129,16 @@ class Note {
    * @returns spending public key
    */
   getSpendingPublicKey(): Promise<[Uint8Array, Uint8Array]> {
-    return edBabyJubJub.prv2pub(this.spendingKey);
+    return edBabyJubJub.privateKeyToPublicKey(this.spendingKey);
+  }
+
+  /**
+   * Get note viewing public key
+   *
+   * @returns viewing public key
+   */
+  getViewingPublicKey(): Promise<Uint8Array> {
+    return ed25519.privateKeyToPublicKey(this.viewingKey);
   }
 
   /**
@@ -215,6 +239,147 @@ class Note {
       value: this.value,
     };
   }
+
+  /**
+   * Generates encrypted commitment bundle
+   *
+   * @param senderViewingPrivateKey - sender's viewing private key
+   * @param blind - blind sender from receiver
+   * @returns Ciphertext
+   */
+  async encrypt(
+    senderViewingPrivateKey: Uint8Array,
+    blind: boolean,
+  ): Promise<CommitmentCiphertext> {
+    // For contract tests always use output type of 0
+    const outputType = 0n;
+
+    // For contract tests always use this fixed application identifier
+    const applicationIdentifier = railgunBase37.encode('railgun tests');
+
+    // Get sender public key
+    const senderViewingPublicKey = await ed25519.privateKeyToPublicKey(senderViewingPrivateKey);
+
+    // Get sender random, set to 0 is not blinding
+    const senderRandom = blind ? randomBytes(16) : new Uint8Array(15);
+
+    // Blind keys
+    const blindedKeys = ed25519.railgunKeyExchange.blindKeys(
+      senderViewingPublicKey,
+      await this.getViewingPublicKey(),
+      this.random,
+      senderRandom,
+    );
+
+    // Get shared key
+    const sharedKey = ed25519.getSharedKey(
+      senderViewingPrivateKey,
+      blindedKeys.blindedReceiverPublicKey,
+    );
+
+    // Encode memo text
+    const memo = chunk(new TextEncoder().encode(this.memo), 32);
+
+    // Right-pad last memo chunk to 32 bytes if it exists
+    if (memo.length > 0) {
+      memo[memo.length - 1] = padToLength(memo[memo.length - 1], 32, 'right');
+    }
+
+    // Encrypt shared ciphertext
+    const encryptedSharedBundle = aes.gcm.encrypt(
+      [
+        await this.getMasterPublicKey(),
+        combine([this.random, bigIntToArray(this.value, 16)]),
+        await this.getTokenID(),
+        ...memo,
+      ],
+      sharedKey,
+    );
+
+    // Calculate annotation data
+    const annotationData = [
+      combine([bigIntToArray(outputType, 1), senderRandom]),
+      combine([new Uint8Array(16), applicationIdentifier]),
+    ];
+
+    // Encrypt sender ciphertext
+    const encryptedSenderBundle = aes.ctr.encrypt(annotationData, senderViewingPrivateKey);
+
+    // Return formatted commitment bundle
+    return {
+      ciphertext: [
+        encryptedSharedBundle[0],
+        encryptedSharedBundle[1],
+        encryptedSharedBundle[2],
+        encryptedSharedBundle[3],
+      ],
+      ephemeralKeys: [blindedKeys.blindedSenderPublicKey, blindedKeys.blindedReceiverPublicKey],
+      memo: [
+        combine([encryptedSenderBundle[0], encryptedSenderBundle[1]]),
+        encryptedSenderBundle[2],
+        ...encryptedSharedBundle.slice(4),
+      ],
+    };
+  }
+
+  /**
+   * Decrypts note from encrypted bundle
+   *
+   * @param expectedHash - expected hash of note
+   * @param encrypted - encrypted commitment bundle
+   * @param viewingKey - viewing private key to try decrypting for
+   * @param spendingKey - spending private key to use in decrypted note
+   * @param tokenData - token data to use in decrypted note
+   * @returns decrypted note or undefined if decryption failed,
+   * spender key doesn't match, or token data doesn't match
+   */
+  static async decrypt(
+    expectedHash: Uint8Array,
+    encrypted: CommitmentCiphertext,
+    viewingKey: Uint8Array,
+    spendingKey: Uint8Array,
+    tokenData: TokenData,
+  ): Promise<Note | undefined> {
+    // Reconstruct encrypted shared bundle
+    const encryptedSharedBundle: Uint8Array[] = [
+      ...encrypted.ciphertext,
+      ...encrypted.memo.slice(2),
+    ];
+
+    let sharedBundle: Uint8Array[];
+
+    // Try to decrypt encrypted shared bundle
+    try {
+      // Get shared key
+      const sharedKey = ed25519.getSharedKey(viewingKey, encrypted.ephemeralKeys[0]);
+
+      // Decrypt
+      sharedBundle = aes.gcm.decrypt(encryptedSharedBundle, sharedKey);
+    } catch {
+      return undefined;
+    }
+
+    // Decode memo
+    const memo =
+      sharedBundle.length > 3 ? new TextDecoder().decode(combine(sharedBundle.slice(3))) : '';
+
+    // Construct note
+    const note = new Note(
+      spendingKey,
+      viewingKey,
+      arrayToBigInt(sharedBundle[1].slice(16, 32)),
+      sharedBundle[1].slice(0, 16),
+      tokenData,
+      memo.replace(/\u0000/g, ''),
+    );
+
+    // If hash matches return note
+    if (arrayToHexString(await note.getHash(), false) === arrayToHexString(expectedHash, false))
+      return note;
+
+    // Return undefined if hash doesn't match
+    return undefined;
+  }
 }
 
 class WithdrawNote {
@@ -283,6 +448,19 @@ class WithdrawNote {
       npk: this.getNotePublicKey(),
       token: this.tokenData,
       value: this.value,
+    };
+  }
+
+  /**
+   * Return dummy ciphertext
+   *
+   * @returns Dummy ciphertext
+   */
+  encrypt(): CommitmentCiphertext {
+    return {
+      ciphertext: [new Uint8Array(32), new Uint8Array(32), new Uint8Array(32), new Uint8Array(32)],
+      ephemeralKeys: [new Uint8Array(32), new Uint8Array(32)],
+      memo: [],
     };
   }
 }

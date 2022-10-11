@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { ProofBundle, prove, SolidityProof } from './prover';
 import { CommitmentCiphertext, CommitmentPreimage, Note, TokenData, WithdrawNote } from './note';
-import { edBabyJubJub, hash } from '../global/crypto';
+import { hash } from '../global/crypto';
 import { hexStringToArray, arrayToBigInt, bigIntToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { MerkleTree } from './merkletree';
@@ -334,22 +334,13 @@ async function dummyTransact(
   // Get required ciphertext length
   const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
 
+  // Get sender viewing private key
+  const senderViewingPrivateKey = notesIn[0].viewingKey;
+
   // Create ciphertext
-  const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
-    ciphertext: new Array(4).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
-      Uint8Array,
-      Uint8Array,
-      Uint8Array,
-      Uint8Array,
-    ],
-    ephemeralKeys: new Array(2).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
-      Uint8Array,
-      Uint8Array,
-    ],
-    memo: new Array(Math.floor(Math.random() * 10))
-      .fill(1)
-      .map(() => edBabyJubJub.genRandomPrivateKey()),
-  }));
+  const commitmentCiphertext = await Promise.all(
+    notesOut.slice(0, ciphertextLength).map((note) => note.encrypt(senderViewingPrivateKey, false)),
+  );
 
   // Return formatted public inputs
   return formatPublicInputs(
@@ -393,22 +384,13 @@ async function transact(
   // Get required ciphertext length
   const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
 
-  // Generate ciphertext
-  const commitmentCiphertext = new Array(ciphertextLength).fill(1).map(() => ({
-    ciphertext: new Array(4).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
-      Uint8Array,
-      Uint8Array,
-      Uint8Array,
-      Uint8Array,
-    ],
-    ephemeralKeys: new Array(2).fill(1).map(() => edBabyJubJub.genRandomPrivateKey()) as [
-      Uint8Array,
-      Uint8Array,
-    ],
-    memo: new Array(Math.floor(Math.random() * 10))
-      .fill(1)
-      .map(() => edBabyJubJub.genRandomPrivateKey()),
-  }));
+  // Get sender viewing private key
+  const senderViewingPrivateKey = notesIn[0].viewingKey;
+
+  // Create ciphertext
+  const commitmentCiphertext = await Promise.all(
+    notesOut.slice(0, ciphertextLength).map((note) => note.encrypt(senderViewingPrivateKey, false)),
+  );
 
   // Get circuit inputs
   const inputs = await formatCircuitInputs(

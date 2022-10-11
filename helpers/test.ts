@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat';
-import { randomBytes } from 'crypto';
 import { hexStringToArray } from './global/bytes';
+import { randomBytes } from './global/crypto';
 import { MerkleTree } from './logic/merkletree';
 import { Note } from './logic/note';
 import { Wallet } from './logic/wallet';
@@ -52,10 +52,11 @@ async function main() {
 
   const tree = await MerkleTree.createTree();
   const wallet = new Wallet(spendingKey, viewingKey);
+  wallet.tokens.push(tokenData);
 
   const notes = [
-    new Note(spendingKey, viewingKey, 10n, randomBytes(16), tokenData),
-    new Note(spendingKey, viewingKey, 20n, randomBytes(16), tokenData),
+    new Note(spendingKey, viewingKey, 10n, randomBytes(16), tokenData, ''),
+    new Note(spendingKey, viewingKey, 20n, randomBytes(16), tokenData, ''),
   ];
 
   const depositTransaction = await railgunLogic.generateDeposit(

@@ -4,7 +4,7 @@ import {
   CommitmentBatchEventObject,
   GeneratedCommitmentBatchEventObject,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
-import { arrayToHexString, hexStringToArray } from '../global/bytes';
+import { arrayToHexString, bigIntToArray, hexStringToArray } from '../global/bytes';
 import { aes, randomBytes } from '../global/crypto';
 import { MerkleTree } from './merkletree';
 import { getTokenID, Note, TokenData } from './note';
@@ -15,6 +15,8 @@ class Wallet {
   viewingKey: Uint8Array;
 
   notes: Note[] = [];
+
+  tokens: TokenData[] = [];
 
   /**
    * Railgun Wallet
@@ -85,6 +87,7 @@ class Wallet {
                     tokenAddress: args.commitments[index].token.tokenAddress,
                     tokenSubID: args.commitments[index].token.tokenSubID.toBigInt(),
                   },
+                  '',
                 );
               } catch {}
             });
@@ -95,10 +98,41 @@ class Wallet {
             // Get start position
             const startPosition = args.startPosition.toNumber();
 
-            // Loop through each note
-            args.ciphertext.forEach((ciphertext, index) => {
-              console.log(ciphertext);
-            });
+            // Loop through each token we're scanning
+            await Promise.all(
+              this.tokens.map((token) =>
+                Promise.all(
+                  // Loop through every note and try to decrypt as token
+                  args.ciphertext.map(async (ciphertext, index) => {
+                    // Attempt to decrypt note with token
+                    const note = await Note.decrypt(
+                      bigIntToArray(args.hash[index].toBigInt(), 32),
+                      {
+                        ciphertext: [
+                          bigIntToArray(ciphertext.ciphertext[0].toBigInt(), 32),
+                          bigIntToArray(ciphertext.ciphertext[1].toBigInt(), 32),
+                          bigIntToArray(ciphertext.ciphertext[2].toBigInt(), 32),
+                          bigIntToArray(ciphertext.ciphertext[3].toBigInt(), 32),
+                        ],
+                        ephemeralKeys: [
+                          bigIntToArray(ciphertext.ephemeralKeys[0].toBigInt(), 32),
+                          bigIntToArray(ciphertext.ephemeralKeys[1].toBigInt(), 32),
+                        ],
+                        memo: ciphertext.memo.map((element) =>
+                          bigIntToArray(element.toBigInt(), 32),
+                        ),
+                      },
+                      this.viewingKey,
+                      this.spendingKey,
+                      token,
+                    );
+
+                    // If note was decrypted add to wallet
+                    if (note) this.notes[startPosition + index] = note;
+                  }),
+                ),
+              ),
+            );
           }
         }
       }),
@@ -178,7 +212,7 @@ class Wallet {
 
     // Get output notes
     const outputNotes: Note[] = outputNoteValues.map(
-      (value) => new Note(this.spendingKey, this.viewingKey, value, randomBytes(16), token),
+      (value) => new Note(this.spendingKey, this.viewingKey, value, randomBytes(16), token, ''),
     );
 
     return {

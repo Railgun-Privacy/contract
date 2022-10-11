@@ -231,11 +231,18 @@ describe('Logic/RailgunLogic/Generic', () => {
       ).slice(0, 42);
 
       // Create note
-      const note = new Note(spendingKey, viewingKey, i, bigIntToArray(i, 16), {
-        tokenType: 0,
-        tokenAddress,
-        tokenSubID: 0n,
-      });
+      const note = new Note(
+        spendingKey,
+        viewingKey,
+        i,
+        bigIntToArray(i, 16),
+        {
+          tokenType: 0,
+          tokenAddress,
+          tokenSubID: 0n,
+        },
+        '',
+      );
 
       // Hash commitment and check
       expect(

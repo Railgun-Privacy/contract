@@ -399,7 +399,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
         // Check if we've been asked to override the withdraw destination
         if (transaction.overrideOutput != address(0)) {
-          // Withdraw must == 2 and msg.sender must be the original recipient to change the output destination
+          // Withdraw must == REDIRECT and msg.sender must be the original recipient to change the output destination
           require(
             msg.sender == output && transaction.boundParams.withdraw == WithdrawType.REDIRECT,
             "RailgunLogic: Can't override destination address"

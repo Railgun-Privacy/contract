@@ -106,4 +106,132 @@ function hexStringToArray(hexString: string) {
   return array;
 }
 
-export { arrayToByteLength, arrayToBigInt, bigIntToArray, arrayToHexString, hexStringToArray };
+/**
+ * Split bytes into array of chunks
+ *
+ * @param data - data to chunk
+ * @param size - size of chunks
+ * @returns chunked data
+ */
+function chunk(data: Uint8Array, size: number): Uint8Array[] {
+  // Define chunks array
+  const chunks: Uint8Array[] = [];
+
+  // Loop through data array
+  for (let i = 0; i < data.length; i += size) {
+    // Slice chunk
+    chunks.push(data.slice(i, i + size));
+  }
+
+  return chunks;
+}
+
+/**
+ * Combines Uint8Array chunks
+ *
+ * @param chunks - chunks to combine
+ * @returns combined data
+ */
+function combine(chunks: Uint8Array[]): Uint8Array {
+  return chunks.reduce((left, right) => new Uint8Array([...left, ...right]));
+}
+
+/**
+ * Pads bytes to length
+ *
+ * @param data - bytes to pad
+ * @param length - length to pad to
+ * @param side - side to add padding
+ * @returns padded data
+ */
+function padToLength(data: Uint8Array, length: number, side: 'left' | 'right'): Uint8Array {
+  // Calculate amount of padding needed
+  const slack = length - data.length;
+
+  if (side === 'left') {
+    // If padding is on left side, create new Uint8Array with 0 filled left
+    return new Uint8Array([...new Uint8Array(slack), ...data]);
+  } else {
+    // If padding is on right side, create new Uint8Array with 0 filled right
+    return new Uint8Array([...data, ...new Uint8Array(slack)]);
+  }
+}
+
+const railgunBase37 = {
+  CHARSET: ' 0123456789abcdefghijklmnopqrstuvwxyz',
+
+  /**
+   * Railgun-base37 encodes text
+   *
+   * @param text - text to encode
+   * @returns encoded bytes
+   */
+  encode(text: string): Uint8Array {
+    // Initialize output in base10
+    let outputNumber = 0n;
+
+    // Calculate number system base
+    const base = BigInt(railgunBase37.CHARSET.length);
+
+    // Loop through each char from least significant to most
+    for (let i = 0; i < text.length; i += 1) {
+      // Get decimal value of char
+      const charIndex = railgunBase37.CHARSET.indexOf(text[i]);
+
+      // Throw if char is invalid
+      if (charIndex === -1) throw new Error(`Invalid character: ${text[i]}`);
+
+      // Calculate positional multiplier for char
+      const positional = base ** BigInt(text.length - i - 1);
+
+      // Add char value to decimal
+      outputNumber += BigInt(charIndex) * positional;
+    }
+
+    // Convert base 10 to 16 byte array
+    return bigIntToArray(outputNumber, 16);
+  },
+
+  /**
+   * Decodes Railgun-base37 encoded bytes
+   *
+   * @param bytes - bytes to decode
+   * @returns text
+   */
+  decode(bytes: Uint8Array): string {
+    // Initialize output string
+    let output = '';
+
+    // Convert input to number
+    let inputNumber = arrayToBigInt(bytes);
+
+    // Calculate number system base
+    const base = BigInt(railgunBase37.CHARSET.length);
+
+    // Loop through input number it is the last positional
+    while (inputNumber > 0) {
+      // Calculate last positional value
+      const remainder = inputNumber % base;
+
+      // Add last positional value to start of string
+      output = `${railgunBase37.CHARSET[Number(remainder)]}${output}`;
+
+      // Subtract last positional value and shift right 1 position
+      inputNumber = (inputNumber - remainder) / base;
+    }
+
+    return output;
+  },
+};
+
+export {
+  arrayToByteLength,
+  arrayToBigInt,
+  bigIntToArray,
+  arrayToHexString,
+  hexStringToArray,
+  chunk,
+  combine,
+  padToLength,
+  railgunBase37,
+};

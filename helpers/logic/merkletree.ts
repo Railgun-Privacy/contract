@@ -247,8 +247,6 @@ class MerkleTree {
           // Parse log
           const parsedLog = contract.interface.parseLog(log);
 
-          console.log(parsedLog.name);
-
           // Check log type
           if (parsedLog.name === 'GeneratedCommitmentBatch') {
             // Type cast to GeneratedCommitmentBatchEventObject

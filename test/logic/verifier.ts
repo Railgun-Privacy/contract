@@ -115,21 +115,35 @@ describe('Logic/Verifier', () => {
       // Get notes in
       const notesIn = new Array(artifactConfig.nullifiers).fill(1).map(
         () =>
-          new Note(spendingKey, viewingKey, txTotal / BigInt(artifactConfig.nullifiers), random, {
-            tokenType: TokenType.ERC20,
-            tokenAddress: ethers.constants.AddressZero,
-            tokenSubID: 1n,
-          }),
+          new Note(
+            spendingKey,
+            viewingKey,
+            txTotal / BigInt(artifactConfig.nullifiers),
+            random,
+            {
+              tokenType: TokenType.ERC20,
+              tokenAddress: ethers.constants.AddressZero,
+              tokenSubID: 1n,
+            },
+            '',
+          ),
       );
 
       // Get notes out
       const notesOut = new Array(artifactConfig.commitments).fill(1).map(
         () =>
-          new Note(spendingKey, viewingKey, txTotal / BigInt(artifactConfig.commitments), random, {
-            tokenType: TokenType.ERC20,
-            tokenAddress: ethers.constants.AddressZero,
-            tokenSubID: 1n,
-          }),
+          new Note(
+            spendingKey,
+            viewingKey,
+            txTotal / BigInt(artifactConfig.commitments),
+            random,
+            {
+              tokenType: TokenType.ERC20,
+              tokenAddress: ethers.constants.AddressZero,
+              tokenSubID: 1n,
+            },
+            '',
+          ),
       );
 
       // Create tree and add notes
@@ -181,21 +195,35 @@ describe('Logic/Verifier', () => {
       // Get notes in
       const notesIn = new Array(artifactConfig.nullifiers).fill(1).map(
         () =>
-          new Note(spendingKey, viewingKey, txTotal / BigInt(artifactConfig.nullifiers), random, {
-            tokenType: TokenType.ERC20,
-            tokenAddress: ethers.constants.AddressZero,
-            tokenSubID: 1n,
-          }),
+          new Note(
+            spendingKey,
+            viewingKey,
+            txTotal / BigInt(artifactConfig.nullifiers),
+            random,
+            {
+              tokenType: TokenType.ERC20,
+              tokenAddress: ethers.constants.AddressZero,
+              tokenSubID: 1n,
+            },
+            '',
+          ),
       );
 
       // Get notes out
       const notesOut = new Array(artifactConfig.commitments).fill(1).map(
         () =>
-          new Note(spendingKey, viewingKey, txTotal / BigInt(artifactConfig.commitments), random, {
-            tokenType: TokenType.ERC20,
-            tokenAddress: ethers.constants.AddressZero,
-            tokenSubID: 1n,
-          }),
+          new Note(
+            spendingKey,
+            viewingKey,
+            txTotal / BigInt(artifactConfig.commitments),
+            random,
+            {
+              tokenType: TokenType.ERC20,
+              tokenAddress: ethers.constants.AddressZero,
+              tokenSubID: 1n,
+            },
+            '',
+          ),
       );
 
       // Create tree and add notes
@@ -244,21 +272,35 @@ describe('Logic/Verifier', () => {
         // Get notes in
         const notesIn = new Array(nullifiers).fill(1).map(
           () =>
-            new Note(spendingKey, viewingKey, txTotal / BigInt(nullifiers), random, {
-              tokenType: TokenType.ERC20,
-              tokenAddress: ethers.constants.AddressZero,
-              tokenSubID: 1n,
-            }),
+            new Note(
+              spendingKey,
+              viewingKey,
+              txTotal / BigInt(nullifiers),
+              random,
+              {
+                tokenType: TokenType.ERC20,
+                tokenAddress: ethers.constants.AddressZero,
+                tokenSubID: 1n,
+              },
+              '',
+            ),
         );
 
         // Get notes out
         const notesOut = new Array(commitments).fill(1).map(
           () =>
-            new Note(spendingKey, viewingKey, txTotal / BigInt(commitments), random, {
-              tokenType: TokenType.ERC20,
-              tokenAddress: ethers.constants.AddressZero,
-              tokenSubID: 1n,
-            }),
+            new Note(
+              spendingKey,
+              viewingKey,
+              txTotal / BigInt(commitments),
+              random,
+              {
+                tokenType: TokenType.ERC20,
+                tokenAddress: ethers.constants.AddressZero,
+                tokenSubID: 1n,
+              },
+              '',
+            ),
         );
 
         // Create tree and add notes
