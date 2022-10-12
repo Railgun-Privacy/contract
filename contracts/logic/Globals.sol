@@ -12,18 +12,21 @@ enum TokenType {
   ERC1155
 }
 
-// Transaction token data
 struct TokenData {
   TokenType tokenType;
   address tokenAddress;
   uint256 tokenSubID;
 }
 
-// Commitment ciphertext
 struct CommitmentCiphertext {
-  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {random, amount}, token (uint256)
+  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: IV & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {random, amount}, token (uint256)
   uint256[2] ephemeralKeys; // [blinded sender viewing key, blinded receiver viewing key]
   uint256[] memo; // Additional data
+}
+
+struct DepositCiphertext {
+  uint256[2] encryptedRandom; // IV & tag (16 bytes each), unused & random (16 bytes each)
+  uint256 ephemeralKey; // Throwaway key to generate shared key from
 }
 
 enum WithdrawType {
@@ -32,7 +35,6 @@ enum WithdrawType {
   REDIRECT
 }
 
-// Transaction bound parameters
 struct BoundParams {
   uint16 treeNumber;
   WithdrawType withdraw;
@@ -43,7 +45,6 @@ struct BoundParams {
   CommitmentCiphertext[] commitmentCiphertext;
 }
 
-// Transaction struct
 struct Transaction {
   SnarkProof proof;
   uint256 merkleRoot;
@@ -54,7 +55,6 @@ struct Transaction {
   address overrideOutput; // Only allowed if original destination == msg.sender & boundParams.withdraw == 2
 }
 
-// Commitment hash preimage
 struct CommitmentPreimage {
   uint256 npk; // Poseidon(mpk, random), mpk = Poseidon(spending public key, nullifier)
   TokenData token; // Token field
@@ -72,7 +72,6 @@ struct G2Point {
   uint256[2] y;
 }
 
-// Verification key for SNARK
 struct VerifyingKey {
   string artifactsIPFSHash;
   G1Point alpha1;
@@ -82,7 +81,6 @@ struct VerifyingKey {
   G1Point[] ic;
 }
 
-// Snark proof for transaction
 struct SnarkProof {
   G1Point a;
   G2Point b;

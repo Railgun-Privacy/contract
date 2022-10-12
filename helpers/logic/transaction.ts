@@ -1,7 +1,14 @@
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { ProofBundle, prove, SolidityProof } from './prover';
-import { CommitmentCiphertext, CommitmentPreimage, Note, TokenData, WithdrawNote } from './note';
+import {
+  CommitmentCiphertext,
+  CommitmentPreimage,
+  DepositCiphertext,
+  Note,
+  TokenData,
+  WithdrawNote,
+} from './note';
 import { hash } from '../global/crypto';
 import { hexStringToArray, arrayToBigInt, bigIntToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
@@ -10,6 +17,7 @@ import { getKeys } from './artifacts';
 import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStructOutput,
+  DepositCiphertextStructOutput,
   TokenDataStructOutput,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
 
@@ -215,6 +223,45 @@ function encryptedRandomMatcher(encryptedRandoms: Uint8Array[][]) {
 }
 
 /**
+ * Creates a chai matcher for deposit ciphertext
+ *
+ * @param depositCiphertext - deposit ciphertext to match
+ * @returns matcher
+ */
+function depositCiphertextMatcher(depositCiphertext: DepositCiphertext[]) {
+  // Return constructed matcher function
+  return (contractDepositCiphertext: DepositCiphertextStructOutput[]): boolean => {
+    // If lengths don't match return false
+    if (depositCiphertext.length !== contractDepositCiphertext.length) return false;
+
+    // Loop through each deposit ciphertext and check if they match
+    const depositCiphertextMatched = contractDepositCiphertext.map(
+      (ciphertext, depositCiphertextIndex): boolean => {
+        // Check ciphertext words match
+        const encryptedRandomMatched = ciphertext.encryptedRandom.map(
+          (element, elementIndex) =>
+            arrayToBigInt(
+              depositCiphertext[depositCiphertextIndex].encryptedRandom[elementIndex],
+            ) === element.toBigInt(),
+        );
+
+        // Return false if any elements returned false
+        if (encryptedRandomMatched.includes(false)) return false;
+
+        // Return false if ephemeral key doesn't match
+        return (
+          ciphertext.ephemeralKey.toBigInt() ===
+          arrayToBigInt(depositCiphertext[depositCiphertextIndex].ephemeralKey)
+        );
+      },
+    );
+
+    // Return false if any randoms returned false
+    return !depositCiphertextMatched.includes(false);
+  };
+}
+
+/**
  * Creates a chai matcher for commitment preimages
  *
  * @param commitmentPreimages - commitment preimage to match
@@ -245,7 +292,7 @@ function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
  * @param tokenData - token data to match
  * @returns matcher
  */
- function tokenDataMatcher(tokenData: TokenData) {
+function tokenDataMatcher(tokenData: TokenData) {
   return (contractTokenData: TokenDataStructOutput): boolean => {
     if (contractTokenData.tokenAddress !== tokenData.tokenAddress) return false;
     if (contractTokenData.tokenType !== tokenData.tokenType) return false;
@@ -563,6 +610,7 @@ export {
   hashesMatcher,
   ciphertextMatcher,
   encryptedRandomMatcher,
+  depositCiphertextMatcher,
   commitmentPreimageMatcher,
   tokenDataMatcher,
   formatPublicInputs,

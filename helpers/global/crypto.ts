@@ -251,7 +251,11 @@ const ed25519 = {
    * @param publicKey - counter party public key
    * @returns shared key
    */
-  getSharedKey(privateKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
+  getSharedKeyLegacy(privateKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
+    // LEGACY GET SHARED KEY METHOD
+    // Kept for backwards compatibility
+    // TODO: switch to corrected method in next note format update
+
     // Get ephemeral key point representation
     const publicKeyPoint = nobleED25519.Point.fromHex(publicKey);
 
@@ -260,6 +264,27 @@ const ed25519 = {
 
     // Multiply ephemeral key by private scalar to get shared key
     return publicKeyPoint.multiply(arrayToBigInt(privateScalar)).toRawBytes();
+  },
+
+  /**
+   * Generates shared key from private key and counter party public key
+   *
+   * @param privateKey - private key value
+   * @param publicKey - counter party public key
+   * @returns shared key
+   */
+  getSharedKey(privateKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
+    // Get ephemeral key point representation
+    const publicKeyPoint = nobleED25519.Point.fromHex(publicKey);
+
+    // Get private scalar
+    const privateScalar = ed25519.privateKeyToPrivateScalar(privateKey);
+
+    // Multiply ephemeral key by private scalar to get shared key preimage
+    const keyPreimage = publicKeyPoint.multiply(arrayToBigInt(privateScalar)).toRawBytes();
+
+    // SHA256 hash to get the final key
+    return sha256(keyPreimage);
   },
 
   railgunKeyExchange: {

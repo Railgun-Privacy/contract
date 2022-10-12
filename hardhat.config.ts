@@ -16,7 +16,7 @@ import mocharc from './.mocharc.json';
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   solidity: {
-    version: '0.8.12',
+    version: '0.8.17',
     settings: {
       optimizer: {
         enabled: true,

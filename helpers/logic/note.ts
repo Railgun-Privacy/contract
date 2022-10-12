@@ -29,6 +29,11 @@ export interface CommitmentCiphertext {
   memo: Uint8Array[];
 }
 
+export interface DepositCiphertext {
+  encryptedRandom: [Uint8Array, Uint8Array];
+  ephemeralKey: Uint8Array;
+}
+
 export interface CommitmentPreimage {
   npk: Uint8Array;
   token: TokenData;
@@ -241,6 +246,33 @@ class Note {
   }
 
   /**
+   * Encrypts random value for deposit
+   *
+   * @returns encrypted random bundle
+   */
+  async encryptForDeposit(): Promise<DepositCiphertext> {
+    // Generate a throwaway viewing key
+    const ephemeralViewingPrivateKey = randomBytes(32);
+    const ephemeralViewingPublicKey = await ed25519.privateKeyToPublicKey(
+      ephemeralViewingPrivateKey,
+    );
+
+    // Get shared key
+    const sharedKey = ed25519.getSharedKey(
+      ephemeralViewingPrivateKey,
+      await this.getViewingPublicKey(),
+    );
+
+    // Encrypt random
+    const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey) as [Uint8Array, Uint8Array];
+
+    return {
+      encryptedRandom,
+      ephemeralKey: ephemeralViewingPublicKey,
+    };
+  }
+
+  /**
    * Generates encrypted commitment bundle
    *
    * @param senderViewingPrivateKey - sender's viewing private key
@@ -272,7 +304,7 @@ class Note {
     );
 
     // Get shared key
-    const sharedKey = ed25519.getSharedKey(
+    const sharedKey = ed25519.getSharedKeyLegacy(
       senderViewingPrivateKey,
       blindedKeys.blindedReceiverPublicKey,
     );
@@ -351,7 +383,7 @@ class Note {
     // Try to decrypt encrypted shared bundle
     try {
       // Get shared key
-      const sharedKey = ed25519.getSharedKey(viewingKey, encrypted.ephemeralKeys[0]);
+      const sharedKey = ed25519.getSharedKeyLegacy(viewingKey, encrypted.ephemeralKeys[0]);
 
       // Decrypt
       sharedBundle = aes.gcm.decrypt(encryptedSharedBundle, sharedKey);

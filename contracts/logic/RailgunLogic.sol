@@ -9,20 +9,20 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { SNARK_SCALAR_FIELD, TokenType, WithdrawType, TokenData, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD, TokenType, WithdrawType, TokenData, DepositCiphertext, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
 import { TokenBlocklist } from "./TokenBlocklist.sol";
 import { PoseidonT4 } from "./Poseidon.sol";
 
+// TODO: Depreciate transaction functions in this contract in favour of transaction functions in Railgun Smart Wallet as they are created
+// Core validation logic should remain here
+
 /**
  * @title Railgun Logic
  * @author Railgun Contributors
- * @notice Functions to interact with the railgun contract
- * @dev Wallets for Railgun will only need to interact with functions specified in this contract.
- * This contract is written to be run behind a ERC1967-like proxy. Upon deployment of proxy the _data parameter should
- * call the initializeRailgunLogic function.
+ * @notice Logic to process transactions
  */
 contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBlocklist, Verifier {
   using SafeERC20 for IERC20;
@@ -63,12 +63,14 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256[2][] encryptedRandom
   );
 
-  event Withdraw(
-    address to,
-    TokenData token,
-    uint256 amount,
-    uint256 fee
+  event Deposit(
+    uint256 treeNumber,
+    uint256 startPosition,
+    CommitmentPreimage[] commitments,
+    DepositCiphertext[] depositCiphertext
   );
+
+  event Withdraw(address to, TokenData token, uint256 amount, uint256 fee);
 
   event Nullifiers(uint256 treeNumber, uint256[] nullifier);
 
@@ -500,4 +502,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     // Push new commitments to merkle tree after event due to insertLeaves causing side effects
     Commitments.insertLeaves(hashes);
   }
+
+  uint256[45] private __gap;
 }
