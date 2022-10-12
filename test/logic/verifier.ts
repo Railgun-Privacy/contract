@@ -19,6 +19,7 @@ import {
   bigIntToArray,
   hexStringToArray,
 } from '../../helpers/global/bytes';
+import { randomBytes } from 'crypto';
 
 describe('Logic/Verifier', () => {
   /**
@@ -107,7 +108,6 @@ describe('Logic/Verifier', () => {
       // Get placeholder values
       const spendingKey = edBabyJubJub.genRandomPrivateKey();
       const viewingKey = edBabyJubJub.genRandomPrivateKey();
-      const random = bigIntToArray(1n, 16);
 
       // Get total amount
       const txTotal = BigInt(artifactConfig.nullifiers) * BigInt(artifactConfig.commitments);
@@ -119,7 +119,7 @@ describe('Logic/Verifier', () => {
             spendingKey,
             viewingKey,
             txTotal / BigInt(artifactConfig.nullifiers),
-            random,
+            randomBytes(16),
             {
               tokenType: TokenType.ERC20,
               tokenAddress: ethers.constants.AddressZero,
@@ -136,7 +136,7 @@ describe('Logic/Verifier', () => {
             spendingKey,
             viewingKey,
             txTotal / BigInt(artifactConfig.commitments),
-            random,
+            randomBytes(16),
             {
               tokenType: TokenType.ERC20,
               tokenAddress: ethers.constants.AddressZero,
@@ -174,9 +174,7 @@ describe('Logic/Verifier', () => {
 
   it('Should verify proofs', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (process.env.LONG_TESTS === 'no') {
-      this.skip();
-    }
+    if (process.env.LONG_TESTS === 'no') this.skip();
 
     const { verifier } = await loadFixture(deploy);
 
@@ -187,7 +185,6 @@ describe('Logic/Verifier', () => {
       // Get placeholder values
       const spendingKey = edBabyJubJub.genRandomPrivateKey();
       const viewingKey = edBabyJubJub.genRandomPrivateKey();
-      const random = bigIntToArray(1n, 16);
 
       // Get total amount
       const txTotal = BigInt(artifactConfig.nullifiers) * BigInt(artifactConfig.commitments);
@@ -199,7 +196,7 @@ describe('Logic/Verifier', () => {
             spendingKey,
             viewingKey,
             txTotal / BigInt(artifactConfig.nullifiers),
-            random,
+            randomBytes(16),
             {
               tokenType: TokenType.ERC20,
               tokenAddress: ethers.constants.AddressZero,
@@ -216,7 +213,7 @@ describe('Logic/Verifier', () => {
             spendingKey,
             viewingKey,
             txTotal / BigInt(artifactConfig.commitments),
-            random,
+            randomBytes(16),
             {
               tokenType: TokenType.ERC20,
               tokenAddress: ethers.constants.AddressZero,
@@ -251,9 +248,7 @@ describe('Logic/Verifier', () => {
 
   it("Should throw error if circuit artifacts don't exist", async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (process.env.LONG_TESTS === 'no') {
-      this.skip();
-    }
+    if (process.env.LONG_TESTS === 'no') this.skip();
 
     const { verifierBypassSigner } = await loadFixture(deploy);
 
@@ -264,7 +259,6 @@ describe('Logic/Verifier', () => {
         // Get placeholder values
         const spendingKey = edBabyJubJub.genRandomPrivateKey();
         const viewingKey = edBabyJubJub.genRandomPrivateKey();
-        const random = bigIntToArray(1n, 16);
 
         // Get total amount
         const txTotal = BigInt(nullifiers) * BigInt(commitments);
@@ -276,7 +270,7 @@ describe('Logic/Verifier', () => {
               spendingKey,
               viewingKey,
               txTotal / BigInt(nullifiers),
-              random,
+              randomBytes(16),
               {
                 tokenType: TokenType.ERC20,
                 tokenAddress: ethers.constants.AddressZero,
@@ -293,7 +287,7 @@ describe('Logic/Verifier', () => {
               spendingKey,
               viewingKey,
               txTotal / BigInt(commitments),
-              random,
+              randomBytes(16),
               {
                 tokenType: TokenType.ERC20,
                 tokenAddress: ethers.constants.AddressZero,

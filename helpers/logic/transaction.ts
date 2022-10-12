@@ -7,7 +7,10 @@ import { hexStringToArray, arrayToBigInt, bigIntToArray } from '../global/bytes'
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { MerkleTree } from './merkletree';
 import { getKeys } from './artifacts';
-import { CommitmentPreimageStructOutput } from '../../typechain-types/contracts/logic/RailgunLogic';
+import {
+  CommitmentCiphertextStructOutput,
+  CommitmentPreimageStructOutput,
+} from '../../typechain-types/contracts/logic/RailgunLogic';
 
 export enum WithdrawType {
   NONE = 0,
@@ -99,6 +102,86 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
 }
 
 /**
+ * Creates a chai matcher for nullifiers
+ *
+ * @param nullifiers - nullifiers to match
+ * @returns matcher
+ */
+function nullifiersMatcher(nullifiers: Uint8Array[]) {
+  return (contractNullifiers: BigNumber[]): boolean => {
+    // If lengths don't match return false
+    if (nullifiers.length !== contractNullifiers.length) return false;
+
+    // Loop through each nullifier and check if they match
+    const nullifiersMatched = contractNullifiers.map(
+      (nullifier, nullifierIndex) =>
+        arrayToBigInt(nullifiers[nullifierIndex]) === nullifier.toBigInt(),
+    );
+
+    // Return false if any elements returned false
+    return !nullifiersMatched.includes(false);
+  };
+}
+
+/**
+ * Creates a chai matcher for note hashes
+ *
+ * @param hashes - note hashes to match
+ * @returns matcher
+ */
+function hashesMatcher(hashes: Uint8Array[]) {
+  // Logic is same as nullifiers matcher
+  return nullifiersMatcher(hashes);
+}
+
+/**
+ * Creates a chai matcher for ciphertext
+ *
+ * @param ciphertextVector - ciphertext to match
+ * @returns matcher
+ */
+function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
+  return (contractCipherText: CommitmentCiphertextStructOutput[]): boolean => {
+    // If lengths don't match return false
+    if (ciphertextVector.length !== contractCipherText.length) return false;
+
+    const ciphertextMatched = contractCipherText.map((ciphertext, ciphertextIndex) => {
+      // Check ciphertext words match
+      const cipherMatched = ciphertext.ciphertext.map(
+        (element, elementIndex) =>
+          arrayToBigInt(ciphertextVector[ciphertextIndex].ciphertext[elementIndex]) ===
+          element.toBigInt(),
+      );
+
+      // Check ephemeral keys match
+      const ephemeralKeysMatched = ciphertext.ephemeralKeys.map(
+        (element, elementIndex) =>
+          arrayToBigInt(ciphertextVector[ciphertextIndex].ephemeralKeys[elementIndex]) ===
+          element.toBigInt(),
+      );
+
+      // Return false if memo lengths don't match
+      if (ciphertextVector[ciphertextIndex].memo.length !== ciphertext.memo.length) return false;
+
+      // Check ephemeral keys match
+      const memoMatched = ciphertext.memo.map(
+        (element, elementIndex) =>
+          arrayToBigInt(ciphertextVector[ciphertextIndex].memo[elementIndex]) ===
+          element.toBigInt(),
+      );
+
+      // Return false if any elements returned false
+      if (cipherMatched.includes(false)) return false;
+      if (ephemeralKeysMatched.includes(false)) return false;
+      if (memoMatched.includes(false)) return false;
+    });
+
+    // Return false if any randoms returned false
+    return !ciphertextMatched.includes(false);
+  };
+}
+
+/**
  * Creates a chai matcher for encrypted random
  *
  * @param encryptedRandoms - encrypted randoms to match
@@ -107,12 +190,19 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
 function encryptedRandomMatcher(encryptedRandoms: Uint8Array[][]) {
   // Return constructed matcher function
   return (contractEncryptedRandoms: BigNumber[][]): boolean => {
+    // If lengths don't match return false
+    if (encryptedRandoms.length !== contractEncryptedRandoms.length) return false;
+
     // Loop through each encrypted random and check if they match
     const randomMatched = contractEncryptedRandoms.map((random, randomIndex): boolean => {
+      // If lengths don't match return false
+      if (random.length !== encryptedRandoms[randomIndex].length) return false;
+
       // Loop through each element in the encrypted random and check if they match
-      const elementsMatched = random.map((element, elementIndex) => {
-        return arrayToBigInt(encryptedRandoms[randomIndex][elementIndex]) === element.toBigInt();
-      });
+      const elementsMatched = random.map(
+        (element, elementIndex) =>
+          arrayToBigInt(encryptedRandoms[randomIndex][elementIndex]) === element.toBigInt(),
+      );
 
       // Return false if any elements returned false
       return !elementsMatched.includes(false);
@@ -453,6 +543,9 @@ function getFee(
 
 export {
   hashBoundParams,
+  nullifiersMatcher,
+  hashesMatcher,
+  ciphertextMatcher,
   encryptedRandomMatcher,
   commitmentPreimageMatcher,
   formatPublicInputs,

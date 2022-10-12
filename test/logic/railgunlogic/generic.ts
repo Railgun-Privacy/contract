@@ -9,7 +9,7 @@ import {
 import { getFee } from '../../../helpers/logic/transaction';
 import { hash, edBabyJubJub } from '../../../helpers/global/crypto';
 import { bigIntToArray, arrayToHexString, arrayToBigInt } from '../../../helpers/global/bytes';
-import { Note } from '../../../helpers/logic/note';
+import { Note, TokenType } from '../../../helpers/logic/note';
 
 describe('Logic/RailgunLogic/Generic', () => {
   /**
@@ -253,5 +253,38 @@ describe('Logic/RailgunLogic/Generic', () => {
         }),
       ).to.equal(arrayToBigInt(await note.getHash()));
     }
+  });
+
+  it('Should reject npk out of range', async function () {
+    const { railgunLogic, testERC20 } = await loadFixture(deploy);
+
+    // Create random keys
+    const viewingKey = edBabyJubJub.genRandomPrivateKey();
+    const spendingKey = edBabyJubJub.genRandomPrivateKey();
+
+    // Generate note
+    const note = new Note(
+      spendingKey,
+      viewingKey,
+      100n,
+      bigIntToArray(1n, 16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0n,
+      },
+      '',
+    );
+
+    // Get preimage
+    const preimage = await note.getCommitmentPreimage();
+
+    // Set preimage npm to value out of rance
+    preimage.npk = bigIntToArray(2n ** 256n - 1n, 32);
+
+    // Check contract throws
+    await expect(
+      railgunLogic.generateDeposit([preimage], [note.encryptedRandom]),
+    ).to.be.revertedWith('RailgunLogic: npk out of range');
   });
 });
