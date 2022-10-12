@@ -10,6 +10,7 @@ import { getKeys } from './artifacts';
 import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStructOutput,
+  TokenDataStructOutput,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
 
 export enum WithdrawType {
@@ -235,6 +236,21 @@ function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
 
     // Return false if any preimage matches returned false
     return !preimagesMatched.includes(false);
+  };
+}
+
+/**
+ * Creates a chai matcher for token data
+ *
+ * @param tokenData - token data to match
+ * @returns matcher
+ */
+ function tokenDataMatcher(tokenData: TokenData) {
+  return (contractTokenData: TokenDataStructOutput): boolean => {
+    if (contractTokenData.tokenAddress !== tokenData.tokenAddress) return false;
+    if (contractTokenData.tokenType !== tokenData.tokenType) return false;
+    if (contractTokenData.tokenSubID.toBigInt() !== tokenData.tokenSubID) return false;
+    return true;
   };
 }
 
@@ -548,6 +564,7 @@ export {
   ciphertextMatcher,
   encryptedRandomMatcher,
   commitmentPreimageMatcher,
+  tokenDataMatcher,
   formatPublicInputs,
   formatCircuitInputs,
   dummyTransact,

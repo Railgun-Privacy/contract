@@ -63,6 +63,13 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256[2][] encryptedRandom
   );
 
+  event Withdraw(
+    address to,
+    TokenData token,
+    uint256 amount,
+    uint256 fee
+  );
+
   event Nullifiers(uint256 treeNumber, uint256[] nullifier);
 
   /**
@@ -428,6 +435,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
           // Transfer fee to treasury
           token.safeTransfer(treasury, fee);
+
+          // Emit withdraw event
+          emit Withdraw(output, transaction.withdrawPreimage.token, base, fee);
         } else if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC721) {
           // ERC721 token
           revert("RailgunLogic: ERC721 not yet supported");

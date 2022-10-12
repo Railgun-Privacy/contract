@@ -7,7 +7,7 @@ import {
 } from '@nomicfoundation/hardhat-network-helpers';
 
 import { edBabyJubJub } from '../../../helpers/global/crypto';
-import { bigIntToArray } from '../../../helpers/global/bytes';
+import { arrayToHexString, bigIntToArray } from '../../../helpers/global/bytes';
 
 import { MerkleTree } from '../../../helpers/logic/merkletree';
 import { Wallet } from '../../../helpers/logic/wallet';
@@ -20,6 +20,7 @@ import {
   getFee,
   hashesMatcher,
   nullifiersMatcher,
+  tokenDataMatcher,
   transact,
   WithdrawType,
 } from '../../../helpers/logic/transaction';
@@ -574,6 +575,17 @@ describe('Logic/RailgunLogic/ERC20', () => {
           ciphertextMatcher(transactionInputs.boundParams.commitmentCiphertext),
         );
 
+      await expect(withdrawTX)
+        .to.emit(railgunLogicSnarkBypass, 'Withdraw')
+        .withArgs(
+          ethers.utils.getAddress(
+            arrayToHexString(transactionInputs.withdrawPreimage.npk.slice(12, 32), true),
+          ),
+          tokenDataMatcher(tokenData),
+          base,
+          fee,
+        );
+
       await expect(withdrawTX).to.changeTokenBalances(
         testERC20,
         [primaryAccount.address, railgunLogicSnarkBypass.address, treasuryAccount.address],
@@ -633,6 +645,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
         await expect(withdrawTX)
           .to.emit(railgunLogic, 'Nullifiers')
           .withArgs(0, nullifiersMatcher(transactionInputs.nullifiers));
+
         await expect(withdrawTX)
           .to.emit(railgunLogic, 'CommitmentBatch')
           .withArgs(
@@ -641,6 +654,11 @@ describe('Logic/RailgunLogic/ERC20', () => {
             hashesMatcher(hashes),
             ciphertextMatcher(transactionInputs.boundParams.commitmentCiphertext),
           );
+
+        await expect(withdrawTX)
+          .to.emit(railgunLogicSnarkBypass, 'Withdraw')
+          .withArgs(secondaryAccount.address, tokenDataMatcher(tokenData), base, fee);
+
         await expect(withdrawTX).to.changeTokenBalances(
           testERC20,
           [secondaryAccount.address, railgunLogic.address, treasuryAccount.address],
