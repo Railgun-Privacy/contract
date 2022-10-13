@@ -117,14 +117,14 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
  * @returns matcher
  */
 function nullifiersMatcher(nullifiers: Uint8Array[]) {
-  return (contractNullifiers: BigNumber[]): boolean => {
+  return (contractNullifiers: string[]): boolean => {
     // If lengths don't match return false
     if (nullifiers.length !== contractNullifiers.length) return false;
 
     // Loop through each nullifier and check if they match
     const nullifiersMatched = contractNullifiers.map(
       (nullifier, nullifierIndex) =>
-        arrayToBigInt(nullifiers[nullifierIndex]) === nullifier.toBigInt(),
+        arrayToHexString(nullifiers[nullifierIndex], true) === nullifier,
     );
 
     // Return false if any elements returned false
@@ -158,7 +158,7 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
       // Check ciphertext words match
       const cipherMatched = ciphertext.ciphertext.map(
         (element, elementIndex) =>
-        arrayToHexString(ciphertextVector[ciphertextIndex].ciphertext[elementIndex], true) ===
+          arrayToHexString(ciphertextVector[ciphertextIndex].ciphertext[elementIndex], true) ===
           element,
       );
 
@@ -166,12 +166,25 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
       if (ciphertextMatched.includes(false)) return false;
 
       // Check blinded keys match
-      if (arrayToHexString(ciphertextVector[ciphertextIndex].blindedReceiverViewingKey, true) !== ciphertext.blindedReceiverViewingKey) return false;
-      if (arrayToHexString(ciphertextVector[ciphertextIndex].blindedSenderViewingKey, true) !== ciphertext.blindedSenderViewingKey) return false;
+      if (
+        arrayToHexString(ciphertextVector[ciphertextIndex].blindedReceiverViewingKey, true) !==
+        ciphertext.blindedReceiverViewingKey
+      )
+        return false;
+      if (
+        arrayToHexString(ciphertextVector[ciphertextIndex].blindedSenderViewingKey, true) !==
+        ciphertext.blindedSenderViewingKey
+      )
+        return false;
 
       // Check memo and annotated data match
-      if (arrayToHexString(ciphertextVector[ciphertextIndex].memo, true) !== ciphertext.memo) return false;
-      if (arrayToHexString(ciphertextVector[ciphertextIndex].annotationData, true) !== ciphertext.annotationData) return false;
+      if (arrayToHexString(ciphertextVector[ciphertextIndex].memo, true) !== ciphertext.memo)
+        return false;
+      if (
+        arrayToHexString(ciphertextVector[ciphertextIndex].annotationData, true) !==
+        ciphertext.annotationData
+      )
+        return false;
 
       // Return false if any ciphertext elements returned false
       if (cipherMatched.includes(false)) return false;
@@ -202,8 +215,10 @@ function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
         // Check ciphertext words match
         const encryptedRandomMatched = ciphertext.encryptedRandom.map(
           (element, elementIndex) =>
-            arrayToHexString(shieldCiphertext[shieldCiphertextIndex].encryptedRandom[elementIndex], true) ===
-            element,
+            arrayToHexString(
+              shieldCiphertext[shieldCiphertextIndex].encryptedRandom[elementIndex],
+              true,
+            ) === element,
         );
 
         // Return false if any elements returned false
