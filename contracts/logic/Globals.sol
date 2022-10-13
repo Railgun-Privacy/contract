@@ -21,7 +21,7 @@ struct CommitmentCiphertext {
   bytes32[4] ciphertext; // Ciphertext order: IV & tag (16 bytes each), MPK, random & amount (16 bytes each), token
   bytes32 blindedSenderViewingKey;
   bytes32 blindedReceiverViewingKey;
-  bytes additionalData; // Only for sender to decrypt
+  bytes annotationData; // Only for sender to decrypt
   bytes memo; // Added to note ciphertext for decryption
 }
 

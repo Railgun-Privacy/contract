@@ -25,9 +25,9 @@ export interface TokenData {
 
 export interface CommitmentCiphertext {
   ciphertext: [Uint8Array, Uint8Array, Uint8Array, Uint8Array];
-  blindedSenderViewingKey: Uint8Array,
-  blindedReceiverViewingKey: Uint8Array,
-  additionalData: Uint8Array,
+  blindedSenderViewingKey: Uint8Array;
+  blindedReceiverViewingKey: Uint8Array;
+  annotationData: Uint8Array;
   memo: Uint8Array;
 }
 
@@ -48,17 +48,20 @@ export interface CommitmentPreimage {
  * @param tokenData - token data to get ID from
  * @returns token ID
  */
-async function getTokenID(tokenData: TokenData): Promise<Uint8Array> {
-  switch (tokenData.tokenType) {
-    case TokenType.ERC20:
-      return arrayToByteLength(hexStringToArray(tokenData.tokenAddress), 32);
-    case TokenType.ERC721:
-    case TokenType.ERC1155:
-      return hash.poseidon([
-        arrayToByteLength(hexStringToArray(tokenData.tokenAddress), 32),
-        bigIntToArray(tokenData.tokenSubID, 32),
-      ]);
+function getTokenID(tokenData: TokenData): Uint8Array {
+  // ERC20 tokenID is just the address
+  if (tokenData.tokenType === TokenType.ERC20) {
+    return arrayToByteLength(hexStringToArray(tokenData.tokenAddress), 32);
   }
+
+  // Other token types are the keccak256 hash of the token data
+  return hash.keccak256(
+    combine([
+      bigIntToArray(BigInt(tokenData.tokenType), 32),
+      padToLength(hexStringToArray(tokenData.tokenAddress), 32, 'left'),
+      bigIntToArray(tokenData.tokenSubID, 32),
+    ]),
+  );
 }
 
 /**
@@ -171,7 +174,7 @@ class Note {
    *
    * @returns token ID
    */
-  getTokenID(): Promise<Uint8Array> {
+  getTokenID(): Uint8Array {
     return getTokenID(this.tokenData);
   }
 
@@ -183,7 +186,7 @@ class Note {
   async getHash(): Promise<Uint8Array> {
     return hash.poseidon([
       await this.getNotePublicKey(),
-      await this.getTokenID(),
+      this.getTokenID(),
       bigIntToArray(this.value, 32),
     ]);
   }
@@ -301,7 +304,7 @@ class Note {
     );
 
     // Get shared key
-    const sharedKey = ed25519.getSharedKeyLegacy(
+    const sharedKey = ed25519.getSharedKey(
       senderViewingPrivateKey,
       blindedKeys.blindedReceiverPublicKey,
     );
@@ -319,14 +322,17 @@ class Note {
       [
         await this.getMasterPublicKey(),
         combine([this.random, bigIntToArray(this.value, 16)]),
-        await this.getTokenID(),
+        this.getTokenID(),
         ...memo,
       ],
       sharedKey,
     );
 
     // Encrypt sender ciphertext
-    const encryptedSenderBundle = aes.ctr.encrypt([combine([bigIntToArray(outputType, 1), senderRandom, applicationIdentifier])], senderViewingPrivateKey);
+    const encryptedSenderBundle = aes.ctr.encrypt(
+      [combine([bigIntToArray(outputType, 1), senderRandom, applicationIdentifier])],
+      senderViewingPrivateKey,
+    );
 
     // Return formatted commitment bundle
     return {
@@ -338,7 +344,7 @@ class Note {
       ],
       blindedSenderViewingKey: blindedKeys.blindedSenderPublicKey,
       blindedReceiverViewingKey: blindedKeys.blindedReceiverPublicKey,
-      additionalData: combine(encryptedSenderBundle),
+      annotationData: combine(encryptedSenderBundle),
       memo: encryptedSharedBundle[4],
     };
   }
@@ -364,7 +370,7 @@ class Note {
     // Reconstruct encrypted shared bundle
     const encryptedSharedBundle: Uint8Array[] = [
       ...encrypted.ciphertext,
-      ...encrypted.memo.slice(2),
+      encrypted.memo,
     ];
 
     let sharedBundle: Uint8Array[];
@@ -372,7 +378,7 @@ class Note {
     // Try to decrypt encrypted shared bundle
     try {
       // Get shared key
-      const sharedKey = ed25519.getSharedKeyLegacy(viewingKey, encrypted.ephemeralKeys[0]);
+      const sharedKey = ed25519.getSharedKey(viewingKey, encrypted.blindedSenderViewingKey);
 
       // Decrypt
       sharedBundle = aes.gcm.decrypt(encryptedSharedBundle, sharedKey);
@@ -382,7 +388,7 @@ class Note {
 
     // Decode memo
     const memo =
-      sharedBundle.length > 3 ? new TextDecoder().decode(combine(sharedBundle.slice(3))) : '';
+      sharedBundle.length > 3 ? new TextDecoder().decode(sharedBundle[3]) : '';
 
     // Construct note
     const note = new Note(
@@ -442,7 +448,7 @@ class UnshieldNote {
    *
    * @returns token ID
    */
-  getTokenID(): Promise<Uint8Array> {
+  getTokenID(): Uint8Array {
     return getTokenID(this.tokenData);
   }
 
@@ -454,7 +460,7 @@ class UnshieldNote {
   async getHash(): Promise<Uint8Array> {
     return hash.poseidon([
       this.getNotePublicKey(),
-      await this.getTokenID(),
+      this.getTokenID(),
       bigIntToArray(this.value, 32),
     ]);
   }
@@ -480,8 +486,10 @@ class UnshieldNote {
   encrypt(): CommitmentCiphertext {
     return {
       ciphertext: [new Uint8Array(32), new Uint8Array(32), new Uint8Array(32), new Uint8Array(32)],
-      ephemeralKeys: [new Uint8Array(32), new Uint8Array(32)],
-      memo: [],
+      blindedSenderViewingKey:  new Uint8Array(32),
+      blindedReceiverViewingKey:  new Uint8Array(32),
+      annotationData:  new Uint8Array(0),
+      memo: new Uint8Array(0),
     };
   }
 }

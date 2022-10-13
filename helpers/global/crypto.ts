@@ -251,28 +251,6 @@ const ed25519 = {
    * @param publicKey - counter party public key
    * @returns shared key
    */
-  getSharedKeyLegacy(privateKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
-    // LEGACY GET SHARED KEY METHOD
-    // Kept for backwards compatibility
-    // TODO: switch to corrected method in next note format update
-
-    // Get ephemeral key point representation
-    const publicKeyPoint = nobleED25519.Point.fromHex(publicKey);
-
-    // Get private scalar
-    const privateScalar = ed25519.privateKeyToPrivateScalar(privateKey);
-
-    // Multiply ephemeral key by private scalar to get shared key
-    return publicKeyPoint.multiply(arrayToBigInt(privateScalar)).toRawBytes();
-  },
-
-  /**
-   * Generates shared key from private key and counter party public key
-   *
-   * @param privateKey - private key value
-   * @param publicKey - counter party public key
-   * @returns shared key
-   */
   getSharedKey(privateKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
     // Get ephemeral key point representation
     const publicKeyPoint = nobleED25519.Point.fromHex(publicKey);
@@ -295,25 +273,11 @@ const ed25519 = {
      * @returns scalar
      */
     seedToScalar(seed: Uint8Array): Uint8Array {
-      // TODO: switch to 512 bit hash length as per FIPS-186 (keccak512)
-      const seedHash = hash.sha256(seed);
+      // Hash to 512 bit value as per FIPS-186
+      const seedHash = hash.sha512(seed);
 
-      // Prune buffer to X25519 LE encoded integer
-      // This is not needed but is left for backwards compatibility with
-      // Railgun notes that have performed this in the past
-      // As this reduces entropy it is not ideal, but we consider it
-      // acceptable for now
-      // TODO: implement corrected algorithm in next note format update
-      const seedHashPruned = ed25519.adjustBytes25519(seedHash, 'le');
-
-      // Return mod n to fit to curve
-      // This should be (arrayToBigInt(randomHash) % nobleED25519.CURVE.n - 1n) + 1n
-      // but is implemented this way for backwards compatibility
-      // It will fail for any inputs that are a multiple of CURVE.n, (16/2^256 possibilities)
-      // We rely on sha256 preimage resistance to prevent a malicious actor
-      // from being able to trigger this failure condition
-      // TODO: implement corrected algorithm in next note format update
-      return bigIntToArray(arrayToBigInt(seedHashPruned) % nobleED25519.CURVE.n, 32);
+      // Return (seedHash mod (n - 1)) + 1 to fit to range 0 < scalar < n
+      return bigIntToArray((arrayToBigInt(seedHash) % nobleED25519.CURVE.n - 1n) + 1n, 32);
     },
 
     /**

@@ -162,63 +162,25 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
           element,
       );
 
+      // Return false if any randoms returned false
+      if (ciphertextMatched.includes(false)) return false;
+
       // Check blinded keys match
-      const ephemeralKeysMatched = ciphertext.ephemeralKeys.map(
-        (element, elementIndex) =>
-          arrayToBigInt(ciphertextVector[ciphertextIndex].ephemeralKeys[elementIndex]) ===
-          element.toBigInt(),
-      );
+      if (arrayToHexString(ciphertextVector[ciphertextIndex].blindedReceiverViewingKey, true) !== ciphertext.blindedReceiverViewingKey) return false;
+      if (arrayToHexString(ciphertextVector[ciphertextIndex].blindedSenderViewingKey, true) !== ciphertext.blindedSenderViewingKey) return false;
 
-      // Return false if memo lengths don't match
-      if (ciphertextVector[ciphertextIndex].memo.length !== ciphertext.memo.length) return false;
+      // Check memo and annotated data match
+      if (arrayToHexString(ciphertextVector[ciphertextIndex].memo, true) !== ciphertext.memo) return false;
+      if (arrayToHexString(ciphertextVector[ciphertextIndex].annotationData, true) !== ciphertext.annotationData) return false;
 
-      // Check memo matches
-      const memoMatched = ciphertext.memo.map(
-        (element, elementIndex) =>
-          arrayToBigInt(ciphertextVector[ciphertextIndex].memo[elementIndex]) ===
-          element.toBigInt(),
-      );
-
-      // Return false if any elements returned false
+      // Return false if any ciphertext elements returned false
       if (cipherMatched.includes(false)) return false;
-      if (ephemeralKeysMatched.includes(false)) return false;
-      if (memoMatched.includes(false)) return false;
+
+      return true;
     });
 
-    // Return false if any randoms returned false
+    // Return false if any ciphertext returned false
     return !ciphertextMatched.includes(false);
-  };
-}
-
-/**
- * Creates a chai matcher for encrypted random
- *
- * @param encryptedRandoms - encrypted randoms to match
- * @returns matcher
- */
-function encryptedRandomMatcher(encryptedRandoms: Uint8Array[][]) {
-  // Return constructed matcher function
-  return (contractEncryptedRandoms: BigNumber[][]): boolean => {
-    // If lengths don't match return false
-    if (encryptedRandoms.length !== contractEncryptedRandoms.length) return false;
-
-    // Loop through each encrypted random and check if they match
-    const randomMatched = contractEncryptedRandoms.map((random, randomIndex): boolean => {
-      // If lengths don't match return false
-      if (random.length !== encryptedRandoms[randomIndex].length) return false;
-
-      // Loop through each element in the encrypted random and check if they match
-      const elementsMatched = random.map(
-        (element, elementIndex) =>
-          arrayToBigInt(encryptedRandoms[randomIndex][elementIndex]) === element.toBigInt(),
-      );
-
-      // Return false if any elements returned false
-      return !elementsMatched.includes(false);
-    });
-
-    // Return false if any randoms returned false
-    return !randomMatched.includes(false);
   };
 }
 
@@ -255,7 +217,7 @@ function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
       },
     );
 
-    // Return false if any randoms returned false
+    // Return false if any ciphertext returned false
     return !shieldCiphertextMatched.includes(false);
   };
 }
@@ -419,7 +381,7 @@ async function formatCircuitInputs(
   const commitmentsOut = await Promise.all(notesOut.map((note) => note.getHash()));
 
   // PRIVATE INPUTS
-  const token = await notesIn[0].getTokenID();
+  const token = notesIn[0].getTokenID();
   const publicKey = await notesIn[0].getSpendingPublicKey();
   const signature = await notesIn[0].sign(merkleRoot, boundParamsHash, nullifiers, commitmentsOut);
   const randomIn = notesIn.map((note) => note.random);
@@ -608,7 +570,6 @@ export {
   nullifiersMatcher,
   hashesMatcher,
   ciphertextMatcher,
-  encryptedRandomMatcher,
   shieldCiphertextMatcher,
   commitmentPreimageMatcher,
   tokenDataMatcher,
