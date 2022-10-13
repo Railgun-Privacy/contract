@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 // OpenZeppelin v4
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { StorageSlot } from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -39,10 +40,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   uint120 public unshieldFee;
 
   // Flat fee in wei that applies to NFT transactions
+  // THIS IS CURRENTLY SET TO 0 AND LOGIC IS NOT IMPLEMENTED
+  // TODO: Revisit adapt module structure if we want to implement this
   uint256 public nftFee;
 
   // Safety vectors
   mapping(uint256 => bool) public snarkSafetyVector;
+
+  // Token ID mapping
+  mapping(bytes32 => TokenData) public tokenIDMapping;
 
   // Treasury events
   event TreasuryChange(address treasury);
@@ -52,7 +58,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   event CommitmentBatch(
     uint256 treeNumber,
     uint256 startPosition,
-    uint256[] hash,
+    bytes32[] hash,
     CommitmentCiphertext[] ciphertext
   );
 
@@ -60,7 +66,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256 treeNumber,
     uint256 startPosition,
     CommitmentPreimage[] commitments,
-    uint256[2][] encryptedRandom
+    bytes32[2][] encryptedRandom
   );
 
   event Shield(
@@ -72,7 +78,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   event Unshield(address to, TokenData token, uint256 amount, uint256 fee);
 
-  event Nullifiers(uint256 treeNumber, uint256[] nullifier);
+  event Nullifiers(uint256 treeNumber, bytes32[] nullifier);
 
   /**
    * @notice Initialize Railgun contract
@@ -155,7 +161,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _amount - Amount to calculate for
    * @param _isInclusive - Whether the amount passed in is inclusive of the fee
    * @param _feeBP - Fee basis points
-   * @return base, fee
    */
   function getFee(
     uint136 _amount,
@@ -184,122 +189,172 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   /**
    * @notice Gets token field value from tokenData
-   * @param _tokenData - tokenData to calculate token field from
-   * @return tokenField - token field
    */
-  function getTokenField(TokenData memory _tokenData) public pure returns (uint256 tokenField) {
+  function getTokenField(TokenData memory _tokenData) public pure returns (bytes32) {
+    // ERC20 tokenID is just the address
     if (_tokenData.tokenType == TokenType.ERC20) {
-      tokenField = uint256(uint160(_tokenData.tokenAddress));
-    } else if (_tokenData.tokenType == TokenType.ERC721) {
-      revert("RailgunLogic: ERC721 not yet supported");
-    } else if (_tokenData.tokenType == TokenType.ERC1155) {
-      revert("RailgunLogic: ERC1155 not yet supported");
+      return bytes32(uint256(uint160(_tokenData.tokenAddress)));
     }
+
+    // Other token types are the keccak256 hash of the token data
+    return bytes32(uint256(keccak256(abi.encode(_tokenData.tokenType))) % SNARK_SCALAR_FIELD);
   }
 
   /**
    * @notice Hashes a commitment
-   * @param _commitmentPreimage - commitment to hash
-   * @return commitment hash
    */
   function hashCommitment(CommitmentPreimage memory _commitmentPreimage)
     public
     pure
-    returns (uint256)
+    returns (bytes32)
   {
     return
       PoseidonT4.poseidon(
         [
           _commitmentPreimage.npk,
           getTokenField(_commitmentPreimage.token),
-          _commitmentPreimage.value
+          bytes32(uint256(_commitmentPreimage.value))
         ]
       );
   }
 
   /**
-   * @notice Shields requested amount and token, creates a commitment hash from supplied values and adds to tree
-   * @param _notes - list of commitments to shield
+   * @notice Checks commitment ranges for validity
    */
-  function generateDeposit(
-    CommitmentPreimage[] calldata _notes,
-    uint256[2][] calldata _encryptedRandom
-  ) external {
-    // Get notes length
-    uint256 notesLength = _notes.length;
+  function validateCommitmentPreimage(CommitmentPreimage calldata _note)
+    public
+    view
+    returns (bool)
+  {
+    // Note must be more than 0
+    if (_note.value == 0) return false;
 
-    // Insertion and event arrays
-    uint256[] memory insertionLeaves = new uint256[](notesLength);
-    CommitmentPreimage[] memory generatedCommitments = new CommitmentPreimage[](notesLength);
+    // Note token must not be blocklisted
+    if (TokenBlocklist.tokenBlocklist[_note.token.tokenAddress]) return false;
 
-    require(
-      _notes.length == _encryptedRandom.length,
-      "RailgunLogic: notes and encrypted random length doesn't match"
-    );
+    // Note NPK must be in field
+    if (uint256(_note.npk) >= SNARK_SCALAR_FIELD) return false;
 
-    for (uint256 notesIter = 0; notesIter < notesLength; notesIter++) {
-      // Retrieve note
-      CommitmentPreimage calldata note = _notes[notesIter];
+    return true;
+  }
 
-      // Check shield amount is not 0
-      require(note.value > 0, "RailgunLogic: Cannot shield 0 tokens");
+  /**
+   * @notice Transfers tokens to contract and adjusts preimage with fee values
+   * @param _note - note to process
+   * @return adjusted note
+   */
+  function transferTokenIn(CommitmentPreimage calldata _note)
+    internal
+    returns (CommitmentPreimage memory)
+  {
+    CommitmentPreimage memory adjustedNote;
 
-      // Check if token is on the blocklist
-      require(
-        !TokenBlocklist.tokenBlocklist[note.token.tokenAddress],
-        "RailgunLogic: Token is blocklisted"
-      );
+    // Process shield request
+    if (_note.token.tokenType == TokenType.ERC20) {
+      // ERC20
 
-      // Check ypubkey is in snark scalar field
-      require(note.npk < SNARK_SCALAR_FIELD, "RailgunLogic: npk out of range");
+      // Get ERC20 interface
+      IERC20 token = IERC20(address(uint160(_note.token.tokenAddress)));
 
-      // Process shield request
-      if (note.token.tokenType == TokenType.ERC20) {
-        // ERC20
+      // Get base and fee amounts
+      (uint120 base, uint120 fee) = getFee(_note.value, true, RailgunLogic.shieldFee);
 
-        // Get ERC20 interface
-        IERC20 token = IERC20(address(uint160(note.token.tokenAddress)));
+      // Set adjusted preimage
+      adjustedNote = CommitmentPreimage({ npk: _note.npk, value: base, token: _note.token });
 
-        // Get base and fee amounts
-        (uint120 base, uint120 fee) = getFee(note.value, true, shieldFee);
+      // Transfer base to contract address
+      token.safeTransferFrom(address(msg.sender), address(this), base);
 
-        // Add GeneratedCommitment to event array
-        generatedCommitments[notesIter] = CommitmentPreimage({
-          npk: note.npk,
-          value: base,
-          token: note.token
-        });
+      // Transfer fee to treasury
+      token.safeTransferFrom(address(msg.sender), treasury, fee);
+    } else if (_note.token.tokenType == TokenType.ERC721) {
+      // ERC721 token
 
-        // Calculate commitment hash
-        uint256 hash = hashCommitment(generatedCommitments[notesIter]);
+      // Get ERC721 interface
+      IERC721 token = IERC721(address(uint160(_note.token.tokenAddress)));
 
-        // Add to insertion array
-        insertionLeaves[notesIter] = hash;
+      // No need to adjust note
+      adjustedNote = _note;
 
-        // Transfer base to output address
-        token.safeTransferFrom(address(msg.sender), address(this), base);
+      // Set tokenID mapping
+      tokenIDMapping[getTokenField(_note.token)] = _note.token;
 
-        // Transfer fee to treasury
-        token.safeTransferFrom(address(msg.sender), treasury, fee);
-      } else if (note.token.tokenType == TokenType.ERC721) {
-        // ERC721 token
-        revert("RailgunLogic: ERC721 not yet supported");
-      } else if (note.token.tokenType == TokenType.ERC1155) {
-        // ERC1155 token
-        revert("RailgunLogic: ERC1155 not yet supported");
-      }
+      // Transfer NFT to contract address
+      token.transferFrom(address(msg.sender), address(this), _note.token.tokenSubID);
+    } else if (_note.token.tokenType == TokenType.ERC1155) {
+      // ERC1155 token
+      revert("RailgunLogic: ERC1155 not yet supported");
     }
 
-    // Emit GeneratedCommitmentAdded events (for wallets) for the commitments
-    emit GeneratedCommitmentBatch(
-      Commitments.treeNumber,
-      Commitments.nextLeafIndex,
-      generatedCommitments,
-      _encryptedRandom
-    );
+    return adjustedNote;
+  }
 
-    // Push new commitments to merkle tree
-    Commitments.insertLeaves(insertionLeaves);
+  /**
+   * @notice Transfers tokens to contract and adjusts preimage with fee values
+   * @param _note - note to process
+   * @param _expectedHash - expected hash of note
+   * @param _redirect - if output redirect is allowed
+   */
+  function transferTokenOut(
+    CommitmentPreimage calldata _note,
+    bytes32 _expectedHash,
+    bool _redirect
+  ) internal {
+    // Hash commitment and check it matches the expected hash
+    bytes32 hash;
+
+    if (_redirect) {
+      // If redirect is allowed withdraw MUST be submitted by original recipient
+      hash = hashCommitment(
+        CommitmentPreimage({
+          npk: bytes32(uint256(uint160(msg.sender))),
+          token: _note.token,
+          value: _note.value
+        })
+      );
+    } else {
+      hash = hashCommitment(_note);
+    }
+
+    require(hash == _expectedHash, "RailgunLogic: Unshield preimage is invalid");
+
+    // Process unshield request
+    if (_note.token.tokenType == TokenType.ERC20) {
+      // ERC20
+
+      // Get ERC20 interface
+      IERC20 token = IERC20(address(uint160(_note.token.tokenAddress)));
+
+      // Get base and fee amounts
+      (uint120 base, uint120 fee) = getFee(_note.value, true, unshieldFee);
+
+      // Transfer base to output address
+      token.safeTransfer(address(uint160(uint256(_note.npk))), base);
+
+      // Transfer fee to treasury
+      token.safeTransfer(treasury, fee);
+
+      // Emit unshield event
+      emit Unshield(address(uint160(uint256(_note.npk))), _note.token, base, fee);
+    } else if (_note.token.tokenType == TokenType.ERC721) {
+      // ERC721 token
+
+      // Get ERC721 interface
+      IERC721 token = IERC721(address(uint160(_note.token.tokenAddress)));
+
+      // Transfer NFT to output address
+      token.transferFrom(
+        address(this),
+        address(uint160(uint256(_note.npk))),
+        _note.token.tokenSubID
+      );
+
+      // Emit unshield event
+      emit Unshield(address(uint160(uint256(_note.npk))), _note.token, 1, 0);
+    } else if (_note.token.tokenType == TokenType.ERC1155) {
+      // ERC1155 token
+      revert("RailgunLogic: ERC1155 not yet supported");
+    }
   }
 
   /**
@@ -341,167 +396,116 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   }
 
   /**
-   * @notice Execute batch of Railgun snark transactions
-   * @param _transactions - Transactions to execute
+   * @notice Sums number commitments in transaction batch
    */
-  function transact(Transaction[] calldata _transactions) external {
-    // Accumulate total number of insertion commitments
-    uint256 insertionCommitmentCount = 0;
+  function sumCommitments(Transaction[] calldata _transactions) public pure returns (uint256) {
+    uint256 commitments = 0;
 
-    // Loop through each transaction
-    uint256 transactionLength = _transactions.length;
-    for (uint256 transactionIter = 0; transactionIter < transactionLength; transactionIter++) {
-      // Retrieve transaction
-      Transaction calldata transaction = _transactions[transactionIter];
-
-      // If adaptContract is not zero check that it matches the caller
-      require(
-        transaction.boundParams.adaptContract == address(0) ||
-          transaction.boundParams.adaptContract == msg.sender,
-        "AdaptID doesn't match caller contract"
-      );
-
-      // Retrieve treeNumber
-      uint256 _treeNumber = transaction.boundParams.treeNumber;
-
-      // Check merkle root is valid
-      require(
-        Commitments.rootHistory[_treeNumber][transaction.merkleRoot],
-        "RailgunLogic: Invalid Merkle Root"
-      );
-
-      // Loop through each nullifier
-      uint256 nullifiersLength = transaction.nullifiers.length;
-      for (uint256 nullifierIter = 0; nullifierIter < nullifiersLength; nullifierIter++) {
-        // Retrieve nullifier
-        uint256 nullifier = transaction.nullifiers[nullifierIter];
-
-        // Check if nullifier has been seen before
-        require(
-          !Commitments.nullifiers[_treeNumber][nullifier],
-          "RailgunLogic: Nullifier already seen"
-        );
-
-        // Push to nullifiers
-        Commitments.nullifiers[_treeNumber][nullifier] = true;
-      }
-
-      // Emit nullifiers event
-      emit Nullifiers(_treeNumber, transaction.nullifiers);
-
-      // Verify proof
-      require(Verifier.verify(transaction), "RailgunLogic: Invalid SNARK proof");
-
-      if (transaction.boundParams.unshield != UnshieldType.NONE) {
-        // Last output is marked as unshield, process
-        // Hash the unshield commitment preimage
-        uint256 commitmentHash = hashCommitment(transaction.unshieldPreimage);
-
-        // Make sure the commitment hash matches the unshield transaction output
-        require(
-          commitmentHash == transaction.commitments[transaction.commitments.length - 1],
-          "RailgunLogic: Unshield commitment preimage is invalid"
-        );
-
-        // Fetch output address
-        address output = address(uint160(transaction.unshieldPreimage.npk));
-
-        // Check if we've been asked to override the unshield destination
-        if (transaction.overrideOutput != address(0)) {
-          // Unshield must == REDIRECT and msg.sender must be the original recipient to change the output destination
-          require(
-            msg.sender == output && transaction.boundParams.unshield == UnshieldType.REDIRECT,
-            "RailgunLogic: Can't override destination address"
-          );
-
-          // Override output address
-          output = transaction.overrideOutput;
-        }
-
-        // Process unshield request
-        if (transaction.unshieldPreimage.token.tokenType == TokenType.ERC20) {
-          // ERC20
-
-          // Get ERC20 interface
-          IERC20 token = IERC20(address(uint160(transaction.unshieldPreimage.token.tokenAddress)));
-
-          // Get base and fee amounts
-          (uint120 base, uint120 fee) = getFee(
-            transaction.unshieldPreimage.value,
-            true,
-            unshieldFee
-          );
-
-          // Transfer base to output address
-          token.safeTransfer(output, base);
-
-          // Transfer fee to treasury
-          token.safeTransfer(treasury, fee);
-
-          // Emit unshield event
-          emit Unshield(output, transaction.unshieldPreimage.token, base, fee);
-        } else if (transaction.unshieldPreimage.token.tokenType == TokenType.ERC721) {
-          // ERC721 token
-          revert("RailgunLogic: ERC721 not yet supported");
-        } else if (transaction.unshieldPreimage.token.tokenType == TokenType.ERC1155) {
-          // ERC1155 token
-          revert("RailgunLogic: ERC1155 not yet supported");
-        }
-
-        // Ensure ciphertext length matches the commitments length (minus 1 for unshield output)
-        require(
-          transaction.boundParams.commitmentCiphertext.length == transaction.commitments.length - 1,
-          "RailgunLogic: Ciphertext and commitments count mismatch"
-        );
-
-        // Increment insertion commitment count (minus 1 for unshield output)
-        insertionCommitmentCount += transaction.commitments.length - 1;
-      } else {
-        // Ensure ciphertext length matches the commitments length
-        require(
-          transaction.boundParams.commitmentCiphertext.length == transaction.commitments.length,
-          "RailgunLogic: Ciphertext and commitments count mismatch"
-        );
-
-        // Increment insertion commitment count
-        insertionCommitmentCount += transaction.commitments.length;
-      }
-    }
-
-    // Create insertion array
-    uint256[] memory hashes = new uint256[](insertionCommitmentCount);
-
-    // Create ciphertext array
-    CommitmentCiphertext[] memory ciphertext = new CommitmentCiphertext[](insertionCommitmentCount);
-
-    // Track insert position
-    uint256 insertPosition = 0;
-
-    // Loop through each transaction and accumulate commitments
     for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++) {
-      // Retrieve transaction
-      Transaction calldata transaction = _transactions[transactionIter];
-
-      // Loop through commitments and push to array
-      uint256 commitmentLength = transaction.boundParams.commitmentCiphertext.length;
-      for (uint256 commitmentIter = 0; commitmentIter < commitmentLength; commitmentIter++) {
-        // Push commitment hash to array
-        hashes[insertPosition] = transaction.commitments[commitmentIter];
-
-        // Push ciphertext to array
-        ciphertext[insertPosition] = transaction.boundParams.commitmentCiphertext[commitmentIter];
-
-        // Increment insert position
-        insertPosition++;
-      }
+      // The last commitment should NOT be counted if transaction includes unshield
+      // The ciphertext length is validated in the transaction validity function to reflect this
+      commitments += _transactions[transactionIter].boundParams.commitmentCiphertext.length;
     }
 
-    // Emit commitment state update
-    emit CommitmentBatch(Commitments.treeNumber, Commitments.nextLeafIndex, hashes, ciphertext);
-
-    // Push new commitments to merkle tree after event due to insertLeaves causing side effects
-    Commitments.insertLeaves(hashes);
+    return commitments;
   }
 
-  uint256[45] private __gap;
+  /**
+   * @notice Verifies transaction validity
+   */
+  function validateTransaction(Transaction calldata _transaction) public view returns (bool) {
+    // Gas price of eth transaction should be equal or greater than railgun transaction specified min gas price
+    if (_transaction.boundParams.minGasPrice < tx.gasprice) return false;
+
+    // Adapt contract must either equal 0 or msg.sender
+    if (
+      _transaction.boundParams.adaptContract != address(0) &&
+      _transaction.boundParams.adaptContract != msg.sender
+    ) return false;
+
+    // Merkle root must be a seen historical root
+    if (!Commitments.rootHistory[_transaction.boundParams.treeNumber][_transaction.merkleRoot])
+      return false;
+
+    // Loop through each nullifier
+    for (
+      uint256 nullifierIter = 0;
+      nullifierIter < _transaction.nullifiers.length;
+      nullifierIter++
+    ) {
+      // If nullifier has been seen before return false
+      if (
+        Commitments.nullifiers[_transaction.boundParams.treeNumber][
+          _transaction.nullifiers[nullifierIter]
+        ]
+      ) return false;
+    }
+
+    // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
+    if (_transaction.boundParams.unshield != UnshieldType.NONE) {
+      if (
+        _transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length - 1
+      ) return false;
+    } else {
+      if (_transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length)
+        return false;
+    }
+
+    // Verify SNARK proof
+    return Verifier.verify(_transaction);
+  }
+
+  /**
+   * @notice Accumulates transaction fields and nullifies nullifiers
+   * @param _transaction - transaction to process
+   * @param _commitments - commitments accumulator
+   * @param _commitmentsStartOffset - number of commitments already in the accumulator
+   * @param _ciphertext - commitment ciphertext accumulator, count will be identical to commitments accumulator
+   * @return New nullifier start offset, new commitments start offset
+   */
+  function accumulateAndNullifyTransaction(
+    Transaction calldata _transaction,
+    bytes32[] memory _commitments,
+    uint256 _commitmentsStartOffset,
+    CommitmentCiphertext[] memory _ciphertext
+  ) internal returns (uint256) {
+    // Loop through each nullifier
+    for (
+      uint256 nullifierIter = 0;
+      nullifierIter < _transaction.nullifiers.length;
+      nullifierIter++
+    ) {
+      // Set nullifier to seen
+      Commitments.nullifiers[_transaction.boundParams.treeNumber][
+        _transaction.nullifiers[nullifierIter]
+      ] = true;
+    }
+
+    // Emit nullifier event
+    emit Nullifiers(_transaction.boundParams.treeNumber, _transaction.nullifiers);
+
+    // Loop through each commitment
+    for (
+      uint256 commitmentsIter = 0;
+      // The last commitment should NOT be accumulated if transaction includes unshield
+      // The ciphertext length is validated in the transaction validity function to reflect this
+      commitmentsIter < _transaction.boundParams.commitmentCiphertext.length;
+      commitmentsIter++
+    ) {
+      // Push commitment to commitments accumulator
+      _commitments[_commitmentsStartOffset + commitmentsIter] = _transaction.commitments[
+        commitmentsIter
+      ];
+
+      // Push ciphertext to ciphertext accumulator
+      _ciphertext[_commitmentsStartOffset + commitmentsIter] = _transaction
+        .boundParams
+        .commitmentCiphertext[commitmentsIter];
+    }
+
+    // Return new starting offset
+    return _commitmentsStartOffset + _transaction.boundParams.commitmentCiphertext.length;
+  }
+
+  uint256[44] private __gap;
 }

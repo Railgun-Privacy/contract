@@ -5,7 +5,7 @@ import {
   GeneratedCommitmentBatchEventObject,
   NullifiersEventObject,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
-import { arrayToBigInt, bigIntToArray, arrayToByteLength } from '../global/bytes';
+import { arrayToBigInt, bigIntToArray, arrayToByteLength, hexStringToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { hash } from '../global/crypto';
 import { getTokenID } from './note';
@@ -259,7 +259,7 @@ class MerkleTree {
             const leaves = await Promise.all(
               args.commitments.map(async (commitment) =>
                 hash.poseidon([
-                  bigIntToArray(commitment.npk.toBigInt(), 32),
+                  hexStringToArray(commitment.npk),
                   await getTokenID({
                     tokenType: commitment.token.tokenType,
                     tokenAddress: commitment.token.tokenAddress,
@@ -280,7 +280,7 @@ class MerkleTree {
             const startPosition = args.startPosition.toNumber();
 
             // Get leaves
-            const leaves = args.hash.map((noteHash) => bigIntToArray(noteHash.toBigInt(), 32));
+            const leaves = args.hash.map((noteHash) => hexStringToArray(noteHash));
 
             // Insert leaves
             await this.insertLeaves(leaves, startPosition);
@@ -290,7 +290,7 @@ class MerkleTree {
 
             // Get nullifiers as Uint8Array
             const nullifiersFormatted = args.nullifier.map((nullifier) =>
-              bigIntToArray(nullifier.toBigInt(), 32),
+              hexStringToArray(nullifier),
             );
 
             // Push nullifiers to seen nullifiers array

@@ -10,7 +10,7 @@ import {
   UnshieldNote,
 } from './note';
 import { hash } from '../global/crypto';
-import { hexStringToArray, arrayToBigInt, bigIntToArray } from '../global/bytes';
+import { hexStringToArray, arrayToBigInt, bigIntToArray, arrayToHexString } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { MerkleTree } from './merkletree';
 import { getKeys } from './artifacts';
@@ -158,11 +158,11 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
       // Check ciphertext words match
       const cipherMatched = ciphertext.ciphertext.map(
         (element, elementIndex) =>
-          arrayToBigInt(ciphertextVector[ciphertextIndex].ciphertext[elementIndex]) ===
-          element.toBigInt(),
+        arrayToHexString(ciphertextVector[ciphertextIndex].ciphertext[elementIndex], true) ===
+          element,
       );
 
-      // Check ephemeral keys match
+      // Check blinded keys match
       const ephemeralKeysMatched = ciphertext.ephemeralKeys.map(
         (element, elementIndex) =>
           arrayToBigInt(ciphertextVector[ciphertextIndex].ephemeralKeys[elementIndex]) ===
@@ -172,7 +172,7 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
       // Return false if memo lengths don't match
       if (ciphertextVector[ciphertextIndex].memo.length !== ciphertext.memo.length) return false;
 
-      // Check ephemeral keys match
+      // Check memo matches
       const memoMatched = ciphertext.memo.map(
         (element, elementIndex) =>
           arrayToBigInt(ciphertextVector[ciphertextIndex].memo[elementIndex]) ===
@@ -240,8 +240,8 @@ function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
         // Check ciphertext words match
         const encryptedRandomMatched = ciphertext.encryptedRandom.map(
           (element, elementIndex) =>
-            arrayToBigInt(shieldCiphertext[shieldCiphertextIndex].encryptedRandom[elementIndex]) ===
-            element.toBigInt(),
+            arrayToHexString(shieldCiphertext[shieldCiphertextIndex].encryptedRandom[elementIndex], true) ===
+            element,
         );
 
         // Return false if any elements returned false
@@ -249,8 +249,8 @@ function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
 
         // Return false if ephemeral key doesn't match
         return (
-          ciphertext.ephemeralKey.toBigInt() ===
-          arrayToBigInt(shieldCiphertext[shieldCiphertextIndex].ephemeralKey)
+          ciphertext.ephemeralKey ===
+          arrayToHexString(shieldCiphertext[shieldCiphertextIndex].ephemeralKey, true)
         );
       },
     );
@@ -270,7 +270,7 @@ function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
   return (contractPreimages: CommitmentPreimageStructOutput[]): boolean => {
     // Loop through each preimage and check if they match
     const preimagesMatched = contractPreimages.map((preimage, index): boolean => {
-      if (preimage.npk.toBigInt() !== arrayToBigInt(commitmentPreimages[index].npk)) return false;
+      if (preimage.npk !== arrayToHexString(commitmentPreimages[index].npk, true)) return false;
       if (preimage.token.tokenType !== commitmentPreimages[index].token.tokenType) return false;
       if (preimage.token.tokenAddress !== commitmentPreimages[index].token.tokenAddress)
         return false;

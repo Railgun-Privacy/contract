@@ -2,13 +2,10 @@
 pragma solidity ^0.8.7;
 pragma abicoder v2;
 
-// OpenZeppelin v4
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-import { RailgunLogic, TokenBlocklist, Commitments } from "./RailgunLogic.sol";
-
-import { SNARK_SCALAR_FIELD, CommitmentPreimage, ShieldCiphertext, TokenType } from "./Globals.sol";
+import { TokenBlocklist } from "./TokenBlocklist.sol";
+import { Commitments } from "./Commitments.sol";
+import { RailgunLogic } from "./RailgunLogic.sol";
+import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCiphertext, TokenType, UnshieldType, Transaction } from "./Globals.sol";
 
 /**
  * @title Railgun Smart Wallet
@@ -17,8 +14,6 @@ import { SNARK_SCALAR_FIELD, CommitmentPreimage, ShieldCiphertext, TokenType } f
  * @dev Entry point for processing private meta-transactions
  */
 contract RailgunSmartWallet is RailgunLogic {
-  using SafeERC20 for IERC20;
-
   /**
    * @notice Shields requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _notes - list of commitments to shield
@@ -27,70 +22,33 @@ contract RailgunSmartWallet is RailgunLogic {
   function shield(
     CommitmentPreimage[] calldata _notes,
     ShieldCiphertext[] calldata _shieldCiphertext
-  ) external {
+  ) external payable {
     // Get notes length
     uint256 notesLength = _notes.length;
 
     // Insertion and event arrays
-    uint256[] memory insertionLeaves = new uint256[](notesLength);
+    bytes32[] memory insertionLeaves = new bytes32[](notesLength);
     CommitmentPreimage[] memory commitments = new CommitmentPreimage[](notesLength);
 
+    // Notes and ciphertext arrays must match
     require(
       _notes.length == _shieldCiphertext.length,
-      "RailgunSmartWallet: notes and shield ciphertext length doesn't match"
+      "RailgunSmartWallet: Notes and shield ciphertext length doesn't match"
     );
 
+    // Loop through each note and process
     for (uint256 notesIter = 0; notesIter < notesLength; notesIter++) {
-      // Retrieve note
-      CommitmentPreimage calldata note = _notes[notesIter];
-
-      // Check shield amount is not 0
-      require(note.value > 0, "RailgunSmartWallet: Cannot shield 0 tokens");
-
-      // Check if token is on the blocklist
+      // Check note is valid
       require(
-        !TokenBlocklist.tokenBlocklist[note.token.tokenAddress],
-        "RailgunSmartWallet: Token is blocklisted"
+        RailgunLogic.validateCommitmentPreimage(_notes[notesIter]),
+        "RailgunSmartWallet: Note is invalid"
       );
 
-      // Check ypubkey is in snark scalar field
-      require(note.npk < SNARK_SCALAR_FIELD, "RailgunSmartWallet: npk out of range");
+      // Process shield request and store adjusted note
+      commitments[notesIter] = RailgunLogic.transferTokenIn(_notes[notesIter]);
 
-      // Process shield request
-      if (note.token.tokenType == TokenType.ERC20) {
-        // ERC20
-
-        // Get ERC20 interface
-        IERC20 token = IERC20(address(uint160(note.token.tokenAddress)));
-
-        // Get base and fee amounts
-        (uint120 base, uint120 fee) = getFee(note.value, true, RailgunLogic.shieldFee);
-
-        // Add GeneratedCommitment to event array
-        commitments[notesIter] = CommitmentPreimage({
-          npk: note.npk,
-          value: base,
-          token: note.token
-        });
-
-        // Calculate commitment hash
-        uint256 hash = hashCommitment(commitments[notesIter]);
-
-        // Add to insertion array
-        insertionLeaves[notesIter] = hash;
-
-        // Transfer base to output address
-        token.safeTransferFrom(address(msg.sender), address(this), base);
-
-        // Transfer fee to treasury
-        token.safeTransferFrom(address(msg.sender), treasury, fee);
-      } else if (note.token.tokenType == TokenType.ERC721) {
-        // ERC721 token
-        revert("RailgunSmartWallet: ERC721 not yet supported");
-      } else if (note.token.tokenType == TokenType.ERC1155) {
-        // ERC1155 token
-        revert("RailgunSmartWallet: ERC1155 not yet supported");
-      }
+      // Hash note for merkle tree insertion
+      insertionLeaves[notesIter] = RailgunLogic.hashCommitment(_notes[notesIter]);
     }
 
     // Emit Shield events (for wallets) for the commitments
@@ -98,5 +56,56 @@ contract RailgunSmartWallet is RailgunLogic {
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
+  }
+
+  /**
+   * @notice Execute batch of Railgun snark transactions
+   * @param _transactions - Transactions to execute
+   */
+  function transact(Transaction[] calldata _transactions) external payable {
+    uint256 commitmentsCount = RailgunLogic.sumCommitments(_transactions);
+
+    // Create accumulators
+    bytes32[] memory commitments = new bytes32[](commitmentsCount);
+    uint256 commitmentsStartOffset = 0;
+    CommitmentCiphertext[] memory ciphertext = new CommitmentCiphertext[](commitmentsCount);
+
+    // Loop through each transaction
+    for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++) {
+      // Validate transaction
+      require(
+        RailgunLogic.validateTransaction(_transactions[transactionIter]),
+        "RailgunSmartWallet: Transaction isn't valid"
+      );
+
+      // Nullify, accumulate, and update offset
+      commitmentsStartOffset = RailgunLogic.accumulateAndNullifyTransaction(
+        _transactions[transactionIter],
+        commitments,
+        commitmentsStartOffset,
+        ciphertext
+      );
+
+      // If unshield is specified, process
+      RailgunLogic.transferTokenOut(
+        _transactions[transactionIter].unshieldPreimage,
+        _transactions[transactionIter].commitments[
+          _transactions[transactionIter].commitments.length - 1
+        ],
+        _transactions[transactionIter].boundParams.unshield == UnshieldType.REDIRECT
+      );
+    }
+
+    // Get insertion parameters
+    (
+      uint256 insertionTreeNumber,
+      uint256 insertionStartIndex
+    ) = getInsertionTreeNumberAndStartingIndex(commitments.length);
+
+    // Emit commitment state update
+    emit CommitmentBatch(insertionTreeNumber, insertionStartIndex, commitments, ciphertext);
+
+    // Push commitments to tree after events due to insertLeaves causing side effects
+    Commitments.insertLeaves(commitments);
   }
 }

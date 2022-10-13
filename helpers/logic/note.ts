@@ -25,8 +25,10 @@ export interface TokenData {
 
 export interface CommitmentCiphertext {
   ciphertext: [Uint8Array, Uint8Array, Uint8Array, Uint8Array];
-  ephemeralKeys: [Uint8Array, Uint8Array];
-  memo: Uint8Array[];
+  blindedSenderViewingKey: Uint8Array,
+  blindedReceiverViewingKey: Uint8Array,
+  additionalData: Uint8Array,
+  memo: Uint8Array;
 }
 
 export interface ShieldCiphertext {
@@ -323,14 +325,8 @@ class Note {
       sharedKey,
     );
 
-    // Calculate annotation data
-    const annotationData = [
-      combine([bigIntToArray(outputType, 1), senderRandom]),
-      combine([new Uint8Array(16), applicationIdentifier]),
-    ];
-
     // Encrypt sender ciphertext
-    const encryptedSenderBundle = aes.ctr.encrypt(annotationData, senderViewingPrivateKey);
+    const encryptedSenderBundle = aes.ctr.encrypt([combine([bigIntToArray(outputType, 1), senderRandom, applicationIdentifier])], senderViewingPrivateKey);
 
     // Return formatted commitment bundle
     return {
@@ -340,12 +336,10 @@ class Note {
         encryptedSharedBundle[2],
         encryptedSharedBundle[3],
       ],
-      ephemeralKeys: [blindedKeys.blindedSenderPublicKey, blindedKeys.blindedReceiverPublicKey],
-      memo: [
-        combine([encryptedSenderBundle[0], encryptedSenderBundle[1]]),
-        encryptedSenderBundle[2],
-        ...encryptedSharedBundle.slice(4),
-      ],
+      blindedSenderViewingKey: blindedKeys.blindedSenderPublicKey,
+      blindedReceiverViewingKey: blindedKeys.blindedReceiverPublicKey,
+      additionalData: combine(encryptedSenderBundle),
+      memo: encryptedSharedBundle[4],
     };
   }
 

@@ -24,22 +24,22 @@ contract Commitments is Initializable {
   // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
   // Commitment nullifiers (tree number -> nullifier -> seen)
-  mapping(uint256 => mapping(uint256 => bool)) public nullifiers;
+  mapping(uint256 => mapping(bytes32 => bool)) public nullifiers;
 
   // The tree depth
   uint256 internal constant TREE_DEPTH = 16;
 
   // Tree zero value
-  uint256 public constant ZERO_VALUE = uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD;
+  bytes32 public constant ZERO_VALUE = bytes32(uint256(keccak256("Railgun")) % SNARK_SCALAR_FIELD);
 
   // Next leaf index (number of inserted leaves in the current tree)
   uint256 public nextLeafIndex;
 
   // The Merkle root
-  uint256 public merkleRoot;
+  bytes32 public merkleRoot;
 
   // Store new tree root to quickly migrate to a new tree
-  uint256 private newTreeRoot;
+  bytes32 private newTreeRoot;
 
   // Tree number
   uint256 public treeNumber;
@@ -47,15 +47,15 @@ contract Commitments is Initializable {
   // The Merkle path to the leftmost leaf upon initialization. It *should
   // not* be modified after it has been set by the initialize function.
   // Caching these values is essential to efficient appends.
-  uint256[TREE_DEPTH] public zeros;
+  bytes32[TREE_DEPTH] public zeros;
 
   // Right-most elements at each level
   // Used for efficient updates of the merkle tree
-  uint256[TREE_DEPTH] private filledSubTrees;
+  bytes32[TREE_DEPTH] private filledSubTrees;
 
   // Whether the contract has already seen a particular Merkle tree root
   // treeNumber -> root -> seen
-  mapping(uint256 => mapping(uint256 => bool)) public rootHistory;
+  mapping(uint256 => mapping(bytes32 => bool)) public rootHistory;
 
   /**
    * @notice Calculates initial values for Merkle Tree
@@ -80,7 +80,7 @@ contract Commitments is Initializable {
     zeros[0] = ZERO_VALUE;
 
     // Store the current zero value for the level we just calculated it for
-    uint256 currentZero = ZERO_VALUE;
+    bytes32 currentZero = ZERO_VALUE;
 
     // Loop through each level
     for (uint256 i = 0; i < TREE_DEPTH; i++) {
@@ -102,7 +102,7 @@ contract Commitments is Initializable {
    * @param _right - Right side of hash
    * @return hash result
    */
-  function hashLeftRight(uint256 _left, uint256 _right) public pure returns (uint256) {
+  function hashLeftRight(bytes32 _left, bytes32 _right) public pure returns (bytes32) {
     return PoseidonT3.poseidon([_left, _right]);
   }
 
@@ -113,7 +113,7 @@ contract Commitments is Initializable {
    * _leafHashes and _count should never be reused.
    * @param _leafHashes - array of leaf hashes to be added to the merkle tree
    */
-  function insertLeaves(uint256[] memory _leafHashes) internal {
+  function insertLeaves(bytes32[] memory _leafHashes) internal {
     /*
     Loop through leafHashes at each level, if the leaf is on the left (index is even)
     then hash with zeros value and update subtree on this level, if the leaf is on the
@@ -179,7 +179,7 @@ contract Commitments is Initializable {
 
       // We'll always be on the left side now
       for (insertionElement; insertionElement < count; insertionElement += 2) {
-        uint256 right;
+        bytes32 right;
 
         // Calculate right value
         if (insertionElement < count - 1) {
@@ -230,6 +230,23 @@ contract Commitments is Initializable {
 
     // Increment tree number
     treeNumber++;
+  }
+
+  /**
+   * @notice Gets tree number that new commitments will get inserted to
+   * @param _newCommitments - number of new commitments
+   * @return treeNumber, startingIndex
+   */
+  function getInsertionTreeNumberAndStartingIndex(uint256 _newCommitments)
+    public
+    view
+    returns (uint256, uint256)
+  {
+    // New tree will be created if current one can't contain new leaves
+    if ((nextLeafIndex + _newCommitments) >= (2**TREE_DEPTH)) return (treeNumber + 1, 0);
+
+    // Else return current state
+    return (treeNumber, nextLeafIndex);
   }
 
   uint256[10] private __gap;

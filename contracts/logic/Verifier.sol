@@ -101,19 +101,19 @@ contract Verifier is OwnableUpgradeable {
 
     // Calculate inputs
     uint256[] memory inputs = new uint256[](2 + nullifiersLength + commitmentsLength);
-    inputs[0] = _transaction.merkleRoot;
+    inputs[0] = uint256(_transaction.merkleRoot);
 
     // Hash bound parameters
     inputs[1] = hashBoundParams(_transaction.boundParams);
 
     // Loop through nullifiers and add to inputs
     for (uint256 i = 0; i < nullifiersLength; i++) {
-      inputs[2 + i] = _transaction.nullifiers[i];
+      inputs[2 + i] = uint256(_transaction.nullifiers[i]);
     }
 
     // Loop through commitments and add to inputs
     for (uint256 i = 0; i < commitmentsLength; i++) {
-      inputs[2 + nullifiersLength + i] = _transaction.commitments[i];
+      inputs[2 + nullifiersLength + i] = uint256(_transaction.commitments[i]);
     }
 
     // Verify snark proof

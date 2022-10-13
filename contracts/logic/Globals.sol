@@ -4,7 +4,6 @@ pragma abicoder v2;
 
 // Constants
 uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-uint256 constant CIPHERTEXT_WORDS = 4;
 
 enum TokenType {
   ERC20,
@@ -19,14 +18,16 @@ struct TokenData {
 }
 
 struct CommitmentCiphertext {
-  uint256[CIPHERTEXT_WORDS] ciphertext; // Ciphertext order: IV & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {random, amount}, token (uint256)
-  uint256[2] ephemeralKeys; // [blinded sender viewing key, blinded receiver viewing key]
-  uint256[] memo; // Additional data
+  bytes32[4] ciphertext; // Ciphertext order: IV & tag (16 bytes each), MPK, random & amount (16 bytes each), token
+  bytes32 blindedSenderViewingKey;
+  bytes32 blindedReceiverViewingKey;
+  bytes additionalData; // Only for sender to decrypt
+  bytes memo; // Added to note ciphertext for decryption
 }
 
 struct ShieldCiphertext {
-  uint256[2] encryptedRandom; // IV & tag (16 bytes each), unused & random (16 bytes each)
-  uint256 ephemeralKey; // Throwaway key to generate shared key from
+  bytes32[2] encryptedRandom; // IV & tag (16 bytes each), unused & random (16 bytes each)
+  bytes32 ephemeralKey; // Throwaway key to generate shared key from
 }
 
 enum UnshieldType {
@@ -37,6 +38,7 @@ enum UnshieldType {
 
 struct BoundParams {
   uint16 treeNumber;
+  uint256 minGasPrice;
   UnshieldType unshield;
   address adaptContract;
   bytes32 adaptParams;
@@ -47,16 +49,15 @@ struct BoundParams {
 
 struct Transaction {
   SnarkProof proof;
-  uint256 merkleRoot;
-  uint256[] nullifiers;
-  uint256[] commitments;
+  bytes32 merkleRoot;
+  bytes32[] nullifiers;
+  bytes32[] commitments;
   BoundParams boundParams;
   CommitmentPreimage unshieldPreimage;
-  address overrideOutput; // Only allowed if original destination == msg.sender & boundParams.unshield == 2
 }
 
 struct CommitmentPreimage {
-  uint256 npk; // Poseidon(mpk, random), mpk = Poseidon(spending public key, nullifier)
+  bytes32 npk; // Poseidon(Poseidon(spending public key, nullifying key), random)
   TokenData token; // Token field
   uint120 value; // Note value
 }
