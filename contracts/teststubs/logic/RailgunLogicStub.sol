@@ -12,11 +12,11 @@ contract RailgunLogicStub is Commitments, RailgunLogic {
 
   function doubleInit(
     address payable _treasury,
-    uint120 _depositFee,
-    uint120 _withdrawFee,
+    uint120 _shieldFee,
+    uint120 _unshieldFee,
     uint256 _nftFee,
     address _owner
   ) external {
-    RailgunLogic.initializeRailgunLogic(_treasury, _depositFee, _withdrawFee, _nftFee, _owner);
+    RailgunLogic.initializeRailgunLogic(_treasury, _shieldFee, _unshieldFee, _nftFee, _owner);
   }
 }

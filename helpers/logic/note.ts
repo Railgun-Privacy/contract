@@ -29,7 +29,7 @@ export interface CommitmentCiphertext {
   memo: Uint8Array[];
 }
 
-export interface DepositCiphertext {
+export interface ShieldCiphertext {
   encryptedRandom: [Uint8Array, Uint8Array];
   ephemeralKey: Uint8Array;
 }
@@ -246,29 +246,24 @@ class Note {
   }
 
   /**
-   * Encrypts random value for deposit
+   * Encrypts random value for shield
    *
    * @returns encrypted random bundle
    */
-  async encryptForDeposit(): Promise<DepositCiphertext> {
-    // Generate a throwaway viewing key
-    const ephemeralViewingPrivateKey = randomBytes(32);
-    const ephemeralViewingPublicKey = await ed25519.privateKeyToPublicKey(
-      ephemeralViewingPrivateKey,
-    );
+  async encryptForShield(): Promise<ShieldCiphertext> {
+    // Generate a throwaway key
+    const ephemeralPrivateKey = randomBytes(32);
+    const ephemeralPublicKey = await ed25519.privateKeyToPublicKey(ephemeralPrivateKey);
 
     // Get shared key
-    const sharedKey = ed25519.getSharedKey(
-      ephemeralViewingPrivateKey,
-      await this.getViewingPublicKey(),
-    );
+    const sharedKey = ed25519.getSharedKey(ephemeralPrivateKey, await this.getViewingPublicKey());
 
     // Encrypt random
     const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey) as [Uint8Array, Uint8Array];
 
     return {
       encryptedRandom,
-      ephemeralKey: ephemeralViewingPublicKey,
+      ephemeralKey: ephemeralPublicKey,
     };
   }
 
@@ -414,38 +409,38 @@ class Note {
   }
 }
 
-class WithdrawNote {
-  withdrawAddress: string;
+class UnshieldNote {
+  unshieldAddress: string;
 
   value: bigint;
 
   tokenData: TokenData;
 
   /**
-   * Railgun Withdraw
+   * Railgun Unshield
    *
-   * @param withdrawAddress - address to withdraw to
+   * @param unshieldAddress - address to unshield to
    * @param value - note value
    * @param tokenData - note token data
    */
-  constructor(withdrawAddress: string, value: bigint, tokenData: TokenData) {
+  constructor(unshieldAddress: string, value: bigint, tokenData: TokenData) {
     // Validate bounds
-    if (!/^0x[a-fA-F0-9]{40}$/.test(withdrawAddress)) throw Error('Invalid withdraw address');
+    if (!/^0x[a-fA-F0-9]{40}$/.test(unshieldAddress)) throw Error('Invalid unshield address');
     if (value >= 2n ** 128n) throw Error('Value too high');
     if (!validateTokenData(tokenData)) throw Error('Invalid token data');
 
-    this.withdrawAddress = withdrawAddress;
+    this.unshieldAddress = unshieldAddress;
     this.value = value;
     this.tokenData = tokenData;
   }
 
   /**
-   * Return withdraw address as npk
+   * Return unshield address as npk
    *
    * @returns npk
    */
   getNotePublicKey() {
-    return arrayToByteLength(hexStringToArray(this.withdrawAddress), 32);
+    return arrayToByteLength(hexStringToArray(this.unshieldAddress), 32);
   }
 
   /**
@@ -497,4 +492,4 @@ class WithdrawNote {
   }
 }
 
-export { getTokenID, validateTokenData, Note, WithdrawNote };
+export { getTokenID, validateTokenData, Note, UnshieldNote };

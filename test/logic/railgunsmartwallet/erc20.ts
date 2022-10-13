@@ -12,7 +12,7 @@ import { bigIntToArray } from '../../../helpers/global/bytes';
 import { Note, TokenType } from '../../../helpers/logic/note';
 import {
   commitmentPreimageMatcher,
-  depositCiphertextMatcher,
+  shieldCiphertextMatcher,
   getFee,
 } from '../../../helpers/logic/transaction';
 import { loadAllArtifacts } from '../../../helpers/logic/artifacts';
@@ -61,7 +61,7 @@ describe('Logic/RailgunSmartWallet/ERC20', () => {
     // Set verifier keys
     await loadAllArtifacts(railgunSmartWalletAdmin);
 
-    // Deploy test ERC20 and approve for deposit
+    // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     const testERC20 = await TestERC20.deploy();
     const testERC20BypassSigner = testERC20.connect(snarkBypassSigner);
@@ -83,7 +83,7 @@ describe('Logic/RailgunSmartWallet/ERC20', () => {
     };
   }
 
-  it('Should deposit ERC20', async function () {
+  it('Should shield ERC20', async function () {
     const { railgunSmartWallet, primaryAccount, treasuryAccount, testERC20 } = await loadFixture(
       deploy,
     );
@@ -94,12 +94,12 @@ describe('Logic/RailgunSmartWallet/ERC20', () => {
     const viewingKey = edBabyJubJub.genRandomPrivateKey();
     const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
-    // Retrieve deposit fee
-    const depositFeeBP = (await railgunSmartWallet.depositFee()).toBigInt();
+    // Retrieve shield fee
+    const shieldFeeBP = (await railgunSmartWallet.shieldFee()).toBigInt();
 
-    // Loop through number of deposits in batch
+    // Loop through number of shields in batch
     for (let i = 1; i < loops; i += 1) {
-      // Create deposit notes
+      // Create shield notes
       const notes = new Array(i).fill(1).map(
         (x, index) =>
           new Note(
@@ -117,29 +117,29 @@ describe('Logic/RailgunSmartWallet/ERC20', () => {
       );
 
       // Fetch encrypted randoms
-      const depositCiphertext = await Promise.all(notes.map((note) => note.encryptForDeposit()));
+      const shieldCiphertext = await Promise.all(notes.map((note) => note.encryptForShield()));
 
       // Fetch commitment preimages
       const preimages = await Promise.all(notes.map((note) => note.getCommitmentPreimage()));
 
       // Get transaction
-      const tx = await railgunSmartWallet.deposit(preimages, depositCiphertext);
+      const tx = await railgunSmartWallet.shield(preimages, shieldCiphertext);
 
       // Check contract ensures random and preimages length matches
       await expect(
-        railgunSmartWallet.deposit(preimages, [...depositCiphertext, ...depositCiphertext]),
-      ).to.be.revertedWith("RailgunSmartWallet: notes and deposit ciphertext length doesn't match");
+        railgunSmartWallet.shield(preimages, [...shieldCiphertext, ...shieldCiphertext]),
+      ).to.be.revertedWith("RailgunSmartWallet: notes and shield ciphertext length doesn't match");
 
-      // Calculate total value of deposits
+      // Calculate total value of shields
       const total = notes.map((note) => note.value).reduce((left, right) => left + right);
 
       // Get fees
-      const { base, fee } = getFee(total, true, depositFeeBP);
+      const { base, fee } = getFee(total, true, shieldFeeBP);
 
-      // Get commitment preimages adjusted by deposit fee
+      // Get commitment preimages adjusted by shield fee
       const adjustedPreimages = preimages.map((preimage) => {
         // Get base
-        const noteBase = getFee(preimage.value, true, depositFeeBP).base;
+        const noteBase = getFee(preimage.value, true, shieldFeeBP).base;
 
         return {
           npk: preimage.npk,
@@ -151,12 +151,12 @@ describe('Logic/RailgunSmartWallet/ERC20', () => {
       // Check event is emitted and tokens were moved correctly
       // Start position should be nth triangular number of i - 1
       await expect(tx)
-        .to.emit(railgunSmartWallet, 'Deposit')
+        .to.emit(railgunSmartWallet, 'Shield')
         .withArgs(
           0,
           ((i - 1) / 2) * i,
           commitmentPreimageMatcher(adjustedPreimages),
-          depositCiphertextMatcher(depositCiphertext),
+          shieldCiphertextMatcher(shieldCiphertext),
         );
       await expect(tx).to.changeTokenBalances(
         testERC20,
@@ -181,14 +181,14 @@ describe('Logic/RailgunSmartWallet/ERC20', () => {
 
     // Check contract throws on zero value notes
     await expect(
-      railgunSmartWallet.deposit(
+      railgunSmartWallet.shield(
         [await zeroNote.getCommitmentPreimage()],
-        [await zeroNote.encryptForDeposit()],
+        [await zeroNote.encryptForShield()],
       ),
-    ).to.be.revertedWith('RailgunSmartWallet: Cannot deposit 0 tokens');
+    ).to.be.revertedWith('RailgunSmartWallet: Cannot shield 0 tokens');
   });
 
-  it("Shouldn't deposit blocklisted ERC20", async function () {
+  it("Shouldn't shield blocklisted ERC20", async function () {
     const { railgunSmartWallet, railgunSmartWalletAdmin, testERC20 } = await loadFixture(deploy);
 
     // Create random keys
@@ -214,9 +214,9 @@ describe('Logic/RailgunSmartWallet/ERC20', () => {
 
     // Check contract throws
     await expect(
-      railgunSmartWallet.deposit(
+      railgunSmartWallet.shield(
         [await note.getCommitmentPreimage()],
-        [await note.encryptForDeposit()],
+        [await note.encryptForShield()],
       ),
     ).to.be.revertedWith('RailgunSmartWallet: Token is blocklisted');
   });

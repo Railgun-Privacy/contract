@@ -7,7 +7,7 @@ import {
 import { arrayToHexString, bigIntToArray, hexStringToArray } from '../global/bytes';
 import { aes, randomBytes } from '../global/crypto';
 import { MerkleTree } from './merkletree';
-import { getTokenID, Note, TokenData, WithdrawNote } from './note';
+import { getTokenID, Note, TokenData, UnshieldNote } from './note';
 
 class Wallet {
   spendingKey: Uint8Array;
@@ -66,7 +66,7 @@ class Wallet {
 
             const startPosition = args.startPosition.toNumber();
 
-            // Loop through each deposit
+            // Loop through each shield
             args.encryptedRandom.forEach((encryptedRandom, index) => {
               // Try to decrypt
               try {
@@ -179,7 +179,7 @@ class Wallet {
    * @param merkletree - merkle tree to use as seen nullifiers source
    * @param inputs - number of inputs
    * @param outputs - number of outputs
-   * @param includeWithdraw - should include withdrawal
+   * @param includeUnshield - should include unshield
    * @param token - token to get notes for
    * @returns inputs and outputs to use for test
    */
@@ -187,9 +187,9 @@ class Wallet {
     merkletree: MerkleTree,
     inputs: number,
     outputs: number,
-    includeWithdraw: string | false,
+    includeUnshield: string | false,
     token: TokenData,
-  ): Promise<{ inputs: Note[]; outputs: (Note | WithdrawNote)[] }> {
+  ): Promise<{ inputs: Note[]; outputs: (Note | UnshieldNote)[] }> {
     // Get unspent notes
     const unspentNotes = await this.getUnspentNotes(merkletree, token);
 
@@ -213,14 +213,14 @@ class Wallet {
     outputNoteValues[0] += outputRemainder;
 
     // Get output notes
-    const outputNotes: (Note | WithdrawNote)[] = outputNoteValues.map(
+    const outputNotes: (Note | UnshieldNote)[] = outputNoteValues.map(
       (value) => new Note(this.spendingKey, this.viewingKey, value, randomBytes(16), token, ''),
     );
 
-    // If include withdraw, replace last note with withdraw
-    if (includeWithdraw) {
-      outputNotes[outputNotes.length - 1] = new WithdrawNote(
-        includeWithdraw,
+    // If include unshield, replace last note with unshield
+    if (includeUnshield) {
+      outputNotes[outputNotes.length - 1] = new UnshieldNote(
+        includeUnshield,
         outputNotes[outputNotes.length - 1].value,
         token,
       );

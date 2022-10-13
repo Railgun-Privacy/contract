@@ -4,10 +4,10 @@ import { ProofBundle, prove, SolidityProof } from './prover';
 import {
   CommitmentCiphertext,
   CommitmentPreimage,
-  DepositCiphertext,
+  ShieldCiphertext,
   Note,
   TokenData,
-  WithdrawNote,
+  UnshieldNote,
 } from './note';
 import { hash } from '../global/crypto';
 import { hexStringToArray, arrayToBigInt, bigIntToArray } from '../global/bytes';
@@ -17,11 +17,11 @@ import { getKeys } from './artifacts';
 import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStructOutput,
-  DepositCiphertextStructOutput,
+  ShieldCiphertextStructOutput,
   TokenDataStructOutput,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
 
-export enum WithdrawType {
+export enum UnshieldType {
   NONE = 0,
   WITHDRAW = 1,
   REDIRECT = 2,
@@ -29,7 +29,7 @@ export enum WithdrawType {
 
 export interface BoundParams {
   treeNumber: number;
-  withdraw: WithdrawType;
+  unshield: UnshieldType;
   adaptContract: string;
   adaptParams: Uint8Array;
   commitmentCiphertext: CommitmentCiphertext[];
@@ -41,7 +41,7 @@ export interface PublicInputs {
   nullifiers: Uint8Array[];
   commitments: Uint8Array[];
   boundParams: BoundParams;
-  withdrawPreimage: {
+  unshieldPreimage: {
     npk: Uint8Array;
     token: TokenData;
     value: bigint;
@@ -97,7 +97,7 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
   const encodedBytes = hexStringToArray(
     ethers.utils.defaultAbiCoder.encode(
       [
-        'tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',
+        'tuple(uint16 treeNumber, uint8 unshield, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',
       ],
       [boundParams],
     ),
@@ -223,26 +223,25 @@ function encryptedRandomMatcher(encryptedRandoms: Uint8Array[][]) {
 }
 
 /**
- * Creates a chai matcher for deposit ciphertext
+ * Creates a chai matcher for shield ciphertext
  *
- * @param depositCiphertext - deposit ciphertext to match
+ * @param shieldCiphertext - shield ciphertext to match
  * @returns matcher
  */
-function depositCiphertextMatcher(depositCiphertext: DepositCiphertext[]) {
+function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
   // Return constructed matcher function
-  return (contractDepositCiphertext: DepositCiphertextStructOutput[]): boolean => {
+  return (contractShieldCiphertext: ShieldCiphertextStructOutput[]): boolean => {
     // If lengths don't match return false
-    if (depositCiphertext.length !== contractDepositCiphertext.length) return false;
+    if (shieldCiphertext.length !== contractShieldCiphertext.length) return false;
 
-    // Loop through each deposit ciphertext and check if they match
-    const depositCiphertextMatched = contractDepositCiphertext.map(
-      (ciphertext, depositCiphertextIndex): boolean => {
+    // Loop through each shield ciphertext and check if they match
+    const shieldCiphertextMatched = contractShieldCiphertext.map(
+      (ciphertext, shieldCiphertextIndex): boolean => {
         // Check ciphertext words match
         const encryptedRandomMatched = ciphertext.encryptedRandom.map(
           (element, elementIndex) =>
-            arrayToBigInt(
-              depositCiphertext[depositCiphertextIndex].encryptedRandom[elementIndex],
-            ) === element.toBigInt(),
+            arrayToBigInt(shieldCiphertext[shieldCiphertextIndex].encryptedRandom[elementIndex]) ===
+            element.toBigInt(),
         );
 
         // Return false if any elements returned false
@@ -251,13 +250,13 @@ function depositCiphertextMatcher(depositCiphertext: DepositCiphertext[]) {
         // Return false if ephemeral key doesn't match
         return (
           ciphertext.ephemeralKey.toBigInt() ===
-          arrayToBigInt(depositCiphertext[depositCiphertextIndex].ephemeralKey)
+          arrayToBigInt(shieldCiphertext[shieldCiphertextIndex].ephemeralKey)
         );
       },
     );
 
     // Return false if any randoms returned false
-    return !depositCiphertextMatched.includes(false);
+    return !shieldCiphertextMatched.includes(false);
   };
 }
 
@@ -306,8 +305,8 @@ function tokenDataMatcher(tokenData: TokenData) {
  *
  * @param proof - snark proof
  * @param merkletree - merkle tree to get inclusion proofs from
- * @param withdraw - withdraw field
- * (0 for no withdraw, 1 for withdraw, 2 for withdraw with override allowed)
+ * @param unshield - unshield field
+ * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
  * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param notesIn - transaction inputs
@@ -319,11 +318,11 @@ function tokenDataMatcher(tokenData: TokenData) {
 async function formatPublicInputs(
   proof: ProofBundle,
   merkletree: MerkleTree,
-  withdraw: WithdrawType,
+  unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
-  notesOut: (Note | WithdrawNote)[],
+  notesOut: (Note | UnshieldNote)[],
   overrideOutput: string,
   commitmentCiphertext: CommitmentCiphertext[],
 ): Promise<PublicInputs> {
@@ -354,12 +353,12 @@ async function formatPublicInputs(
     commitments,
     boundParams: {
       treeNumber,
-      withdraw,
+      unshield,
       adaptContract,
       adaptParams,
       commitmentCiphertext,
     },
-    withdrawPreimage: {
+    unshieldPreimage: {
       npk: await notesOut[notesOut.length - 1].getNotePublicKey(),
       token: notesOut[notesOut.length - 1].tokenData,
       value: notesOut[notesOut.length - 1].value,
@@ -372,7 +371,7 @@ async function formatPublicInputs(
  * Formats inputs for prover
  *
  * @param merkletree - merkle tree to get inclusion proofs from
- * @param withdraw - withdraw field
+ * @param unshield - unshield field
  * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param notesIn - transaction inputs
@@ -382,11 +381,11 @@ async function formatPublicInputs(
  */
 async function formatCircuitInputs(
   merkletree: MerkleTree,
-  withdraw: WithdrawType,
+  unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
-  notesOut: (Note | WithdrawNote)[],
+  notesOut: (Note | UnshieldNote)[],
   commitmentCiphertext: CommitmentCiphertext[],
 ): Promise<CircuitInputs> {
   // PUBLIC INPUTS
@@ -399,7 +398,7 @@ async function formatCircuitInputs(
   // Get bound parameters hash
   const boundParamsHash = hashBoundParams({
     treeNumber,
-    withdraw,
+    unshield,
     adaptContract,
     adaptParams,
     commitmentCiphertext,
@@ -466,8 +465,8 @@ async function formatCircuitInputs(
  * Generates transaction with dummy proof
  *
  * @param merkletree - merkle tree to get inclusion proofs from
- * @param withdraw - withdraw field
- * (0 for no withdraw, 1 for withdraw, 2 for withdraw with override allowed)
+ * @param unshield - unshield field
+ * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
  * @param  adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param  notesIn - transaction inputs
@@ -477,15 +476,15 @@ async function formatCircuitInputs(
  */
 async function dummyTransact(
   merkletree: MerkleTree,
-  withdraw: WithdrawType,
+  unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
-  notesOut: (Note | WithdrawNote)[],
+  notesOut: (Note | UnshieldNote)[],
   overrideOutput: string,
 ) {
   // Get required ciphertext length
-  const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
+  const ciphertextLength = unshield === 0 ? notesOut.length : notesOut.length - 1;
 
   // Get sender viewing private key
   const senderViewingPrivateKey = notesIn[0].viewingKey;
@@ -499,7 +498,7 @@ async function dummyTransact(
   return formatPublicInputs(
     dummyProof,
     merkletree,
-    withdraw,
+    unshield,
     adaptContract,
     adaptParams,
     notesIn,
@@ -513,8 +512,8 @@ async function dummyTransact(
  * Generates and proves transaction
  *
  * @param merkletree - merkle tree to get inclusion proofs from
- * @param withdraw - withdraw field
- * (0 for no withdraw, 1 for withdraw, 2 for withdraw with override allowed)
+ * @param unshield - unshield field
+ * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
  * @param  adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param  notesIn - transaction inputs
@@ -524,18 +523,18 @@ async function dummyTransact(
  */
 async function transact(
   merkletree: MerkleTree,
-  withdraw: WithdrawType,
+  unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
-  notesOut: (Note | WithdrawNote)[],
+  notesOut: (Note | UnshieldNote)[],
   overrideOutput: string,
 ) {
   // Get artifact
   const artifact = getKeys(notesIn.length, notesOut.length);
 
   // Get required ciphertext length
-  const ciphertextLength = withdraw === 0 ? notesOut.length : notesOut.length - 1;
+  const ciphertextLength = unshield === 0 ? notesOut.length : notesOut.length - 1;
 
   // Get sender viewing private key
   const senderViewingPrivateKey = notesIn[0].viewingKey;
@@ -548,7 +547,7 @@ async function transact(
   // Get circuit inputs
   const inputs = await formatCircuitInputs(
     merkletree,
-    withdraw,
+    unshield,
     adaptContract,
     adaptParams,
     notesIn,
@@ -563,7 +562,7 @@ async function transact(
   return formatPublicInputs(
     proof,
     merkletree,
-    withdraw,
+    unshield,
     adaptContract,
     adaptParams,
     notesIn,
@@ -610,7 +609,7 @@ export {
   hashesMatcher,
   ciphertextMatcher,
   encryptedRandomMatcher,
-  depositCiphertextMatcher,
+  shieldCiphertextMatcher,
   commitmentPreimageMatcher,
   tokenDataMatcher,
   formatPublicInputs,

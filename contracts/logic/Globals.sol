@@ -24,24 +24,24 @@ struct CommitmentCiphertext {
   uint256[] memo; // Additional data
 }
 
-struct DepositCiphertext {
+struct ShieldCiphertext {
   uint256[2] encryptedRandom; // IV & tag (16 bytes each), unused & random (16 bytes each)
   uint256 ephemeralKey; // Throwaway key to generate shared key from
 }
 
-enum WithdrawType {
+enum UnshieldType {
   NONE,
-  WITHDRAW,
+  NORMAL,
   REDIRECT
 }
 
 struct BoundParams {
   uint16 treeNumber;
-  WithdrawType withdraw;
+  UnshieldType unshield;
   address adaptContract;
   bytes32 adaptParams;
-  // For withdraws do not include an element in ciphertext array
-  // Ciphertext array length = commitments - withdraws
+  // For unshields do not include an element in ciphertext array
+  // Ciphertext array length = commitments - unshields
   CommitmentCiphertext[] commitmentCiphertext;
 }
 
@@ -51,8 +51,8 @@ struct Transaction {
   uint256[] nullifiers;
   uint256[] commitments;
   BoundParams boundParams;
-  CommitmentPreimage withdrawPreimage;
-  address overrideOutput; // Only allowed if original destination == msg.sender & boundParams.withdraw == 2
+  CommitmentPreimage unshieldPreimage;
+  address overrideOutput; // Only allowed if original destination == msg.sender & boundParams.unshield == 2
 }
 
 struct CommitmentPreimage {

@@ -9,7 +9,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { SNARK_SCALAR_FIELD, TokenType, WithdrawType, TokenData, DepositCiphertext, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD, TokenType, UnshieldType, TokenData, ShieldCiphertext, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
@@ -35,8 +35,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   address payable public treasury; // Treasury contract
   uint120 private constant BASIS_POINTS = 10000; // Number of basis points that equal 100%
   // % fee in 100ths of a %. 100 = 1%.
-  uint120 public depositFee;
-  uint120 public withdrawFee;
+  uint120 public shieldFee;
+  uint120 public unshieldFee;
 
   // Flat fee in wei that applies to NFT transactions
   uint256 public nftFee;
@@ -46,7 +46,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   // Treasury events
   event TreasuryChange(address treasury);
-  event FeeChange(uint256 depositFee, uint256 withdrawFee, uint256 nftFee);
+  event FeeChange(uint256 shieldFee, uint256 unshieldFee, uint256 nftFee);
 
   // Transaction events
   event CommitmentBatch(
@@ -63,14 +63,14 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256[2][] encryptedRandom
   );
 
-  event Deposit(
+  event Shield(
     uint256 treeNumber,
     uint256 startPosition,
     CommitmentPreimage[] commitments,
-    DepositCiphertext[] depositCiphertext
+    ShieldCiphertext[] shieldCiphertext
   );
 
-  event Withdraw(address to, TokenData token, uint256 amount, uint256 fee);
+  event Unshield(address to, TokenData token, uint256 amount, uint256 fee);
 
   event Nullifiers(uint256 treeNumber, uint256[] nullifier);
 
@@ -79,15 +79,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @dev OpenZeppelin initializer ensures this can only be called once
    * This function also calls initializers on inherited contracts
    * @param _treasury - address to send usage fees to
-   * @param _depositFee - Deposit fee
-   * @param _withdrawFee - Withdraw fee
+   * @param _shieldFee - Shield fee
+   * @param _unshieldFee - Unshield fee
    * @param _nftFee - Flat fee in wei that applies to NFT transactions
    * @param _owner - governance contract
    */
   function initializeRailgunLogic(
     address payable _treasury,
-    uint120 _depositFee,
-    uint120 _withdrawFee,
+    uint120 _shieldFee,
+    uint120 _unshieldFee,
     uint256 _nftFee,
     address _owner
   ) public initializer {
@@ -97,7 +97,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
     // Set treasury and fee
     changeTreasury(_treasury);
-    changeFee(_depositFee, _withdrawFee, _nftFee);
+    changeFee(_shieldFee, _unshieldFee, _nftFee);
 
     // Change Owner
     OwnableUpgradeable.transferOwnership(_owner);
@@ -127,26 +127,26 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   /**
    * @notice Change fee rate for future transactions
-   * @param _depositFee - Deposit fee
-   * @param _withdrawFee - Withdraw fee
+   * @param _shieldFee - Shield fee
+   * @param _unshieldFee - Unshield fee
    * @param _nftFee - Flat fee in wei that applies to NFT transactions
    */
   function changeFee(
-    uint120 _depositFee,
-    uint120 _withdrawFee,
+    uint120 _shieldFee,
+    uint120 _unshieldFee,
     uint256 _nftFee
   ) public onlyOwner {
-    if (_depositFee != depositFee || _withdrawFee != withdrawFee || _nftFee != nftFee) {
-      require(_depositFee <= BASIS_POINTS, "RailgunLogic: Deposit Fee exceeds 100%");
-      require(_withdrawFee <= BASIS_POINTS, "RailgunLogic: Withdraw Fee exceeds 100%");
+    if (_shieldFee != shieldFee || _unshieldFee != unshieldFee || _nftFee != nftFee) {
+      require(_shieldFee <= BASIS_POINTS, "RailgunLogic: Shield Fee exceeds 100%");
+      require(_unshieldFee <= BASIS_POINTS, "RailgunLogic: Unshield Fee exceeds 100%");
 
       // Change fee
-      depositFee = _depositFee;
-      withdrawFee = _withdrawFee;
+      shieldFee = _shieldFee;
+      unshieldFee = _unshieldFee;
       nftFee = _nftFee;
 
       // Emit fee change event
-      emit FeeChange(_depositFee, _withdrawFee, _nftFee);
+      emit FeeChange(_shieldFee, _unshieldFee, _nftFee);
     }
   }
 
@@ -165,8 +165,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     // Expand width of amount to uint136 to accommodate full size of (2**120-1)*BASIS_POINTS
     uint136 amountExpanded = _amount;
 
-    // Base is the amount deposited into the railgun contract or withdrawn to the target eth address
-    // for deposits and withdraws respectively
+    // Base is the amount sent into the railgun contract or sent to the target eth address
+    // for shields and unshields respectively
     uint136 base;
     // Fee is the amount sent to the treasury
     uint136 fee;
@@ -218,8 +218,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   }
 
   /**
-   * @notice Deposits requested amount and token, creates a commitment hash from supplied values and adds to tree
-   * @param _notes - list of commitments to deposit
+   * @notice Shields requested amount and token, creates a commitment hash from supplied values and adds to tree
+   * @param _notes - list of commitments to shield
    */
   function generateDeposit(
     CommitmentPreimage[] calldata _notes,
@@ -241,8 +241,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Retrieve note
       CommitmentPreimage calldata note = _notes[notesIter];
 
-      // Check deposit amount is not 0
-      require(note.value > 0, "RailgunLogic: Cannot deposit 0 tokens");
+      // Check shield amount is not 0
+      require(note.value > 0, "RailgunLogic: Cannot shield 0 tokens");
 
       // Check if token is on the blocklist
       require(
@@ -253,7 +253,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Check ypubkey is in snark scalar field
       require(note.npk < SNARK_SCALAR_FIELD, "RailgunLogic: npk out of range");
 
-      // Process deposit request
+      // Process shield request
       if (note.token.tokenType == TokenType.ERC20) {
         // ERC20
 
@@ -261,7 +261,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         IERC20 token = IERC20(address(uint160(note.token.tokenAddress)));
 
         // Get base and fee amounts
-        (uint120 base, uint120 fee) = getFee(note.value, true, depositFee);
+        (uint120 base, uint120 fee) = getFee(note.value, true, shieldFee);
 
         // Add GeneratedCommitment to event array
         generatedCommitments[notesIter] = CommitmentPreimage({
@@ -392,25 +392,25 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Verify proof
       require(Verifier.verify(transaction), "RailgunLogic: Invalid SNARK proof");
 
-      if (transaction.boundParams.withdraw != WithdrawType.NONE) {
-        // Last output is marked as withdraw, process
-        // Hash the withdraw commitment preimage
-        uint256 commitmentHash = hashCommitment(transaction.withdrawPreimage);
+      if (transaction.boundParams.unshield != UnshieldType.NONE) {
+        // Last output is marked as unshield, process
+        // Hash the unshield commitment preimage
+        uint256 commitmentHash = hashCommitment(transaction.unshieldPreimage);
 
-        // Make sure the commitment hash matches the withdraw transaction output
+        // Make sure the commitment hash matches the unshield transaction output
         require(
           commitmentHash == transaction.commitments[transaction.commitments.length - 1],
-          "RailgunLogic: Withdraw commitment preimage is invalid"
+          "RailgunLogic: Unshield commitment preimage is invalid"
         );
 
         // Fetch output address
-        address output = address(uint160(transaction.withdrawPreimage.npk));
+        address output = address(uint160(transaction.unshieldPreimage.npk));
 
-        // Check if we've been asked to override the withdraw destination
+        // Check if we've been asked to override the unshield destination
         if (transaction.overrideOutput != address(0)) {
-          // Withdraw must == REDIRECT and msg.sender must be the original recipient to change the output destination
+          // Unshield must == REDIRECT and msg.sender must be the original recipient to change the output destination
           require(
-            msg.sender == output && transaction.boundParams.withdraw == WithdrawType.REDIRECT,
+            msg.sender == output && transaction.boundParams.unshield == UnshieldType.REDIRECT,
             "RailgunLogic: Can't override destination address"
           );
 
@@ -418,18 +418,18 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
           output = transaction.overrideOutput;
         }
 
-        // Process withdrawal request
-        if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC20) {
+        // Process unshield request
+        if (transaction.unshieldPreimage.token.tokenType == TokenType.ERC20) {
           // ERC20
 
           // Get ERC20 interface
-          IERC20 token = IERC20(address(uint160(transaction.withdrawPreimage.token.tokenAddress)));
+          IERC20 token = IERC20(address(uint160(transaction.unshieldPreimage.token.tokenAddress)));
 
           // Get base and fee amounts
           (uint120 base, uint120 fee) = getFee(
-            transaction.withdrawPreimage.value,
+            transaction.unshieldPreimage.value,
             true,
-            withdrawFee
+            unshieldFee
           );
 
           // Transfer base to output address
@@ -438,23 +438,23 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
           // Transfer fee to treasury
           token.safeTransfer(treasury, fee);
 
-          // Emit withdraw event
-          emit Withdraw(output, transaction.withdrawPreimage.token, base, fee);
-        } else if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC721) {
+          // Emit unshield event
+          emit Unshield(output, transaction.unshieldPreimage.token, base, fee);
+        } else if (transaction.unshieldPreimage.token.tokenType == TokenType.ERC721) {
           // ERC721 token
           revert("RailgunLogic: ERC721 not yet supported");
-        } else if (transaction.withdrawPreimage.token.tokenType == TokenType.ERC1155) {
+        } else if (transaction.unshieldPreimage.token.tokenType == TokenType.ERC1155) {
           // ERC1155 token
           revert("RailgunLogic: ERC1155 not yet supported");
         }
 
-        // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
+        // Ensure ciphertext length matches the commitments length (minus 1 for unshield output)
         require(
           transaction.boundParams.commitmentCiphertext.length == transaction.commitments.length - 1,
           "RailgunLogic: Ciphertext and commitments count mismatch"
         );
 
-        // Increment insertion commitment count (minus 1 for withdrawn output)
+        // Increment insertion commitment count (minus 1 for unshield output)
         insertionCommitmentCount += transaction.commitments.length - 1;
       } else {
         // Ensure ciphertext length matches the commitments length

@@ -32,7 +32,7 @@ async function main() {
 
   await loadAllArtifacts(railgunLogic);
 
-  // Deploy test ERC20 and approve for deposit
+  // Deploy test ERC20 and approve for shield
   const TestERC20 = await ethers.getContractFactory('TestERC20');
   const testERC20 = await TestERC20.deploy();
   await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
@@ -59,16 +59,16 @@ async function main() {
     new Note(spendingKey, viewingKey, 20n, randomBytes(16), tokenData, ''),
   ];
 
-  const depositTransaction = await railgunLogic.generateDeposit(
+  const shieldTransaction = await railgunLogic.generateDeposit(
     await Promise.all(notes.map((note) => note.getCommitmentPreimage())),
     notes.map((note) => note.encryptedRandom),
   );
 
-  await tree.scanTX(depositTransaction, railgunLogic);
+  await tree.scanTX(shieldTransaction, railgunLogic);
 
-  await wallet.scanTX(depositTransaction, railgunLogic);
+  await wallet.scanTX(shieldTransaction, railgunLogic);
 
-  const notesInputs = await wallet.getTestTransactionInputs(tree, 1, 2, tokenData);
+  const notesInputs = await wallet.getTestTransactionInputs(tree, 1, 2, false, tokenData);
 
   const transferTransaction = await railgunLogic.transact([
     await transact(

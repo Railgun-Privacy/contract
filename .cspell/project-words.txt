@@ -58,6 +58,9 @@ structs
 typechain
 unclaimable
 undelegate
+unshield
+unshieldable
+unshields
 Unsponsor
 unsponsored
 Unsponsoring

@@ -7,7 +7,7 @@ import { availableArtifacts, getKeys, loadAllArtifacts } from '../../helpers/log
 import { TokenType, CommitmentCiphertext, Note } from '../../helpers/logic/note';
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import {
-  WithdrawType,
+  UnshieldType,
   BoundParams,
   hashBoundParams,
   dummyTransact,
@@ -80,7 +80,7 @@ describe('Logic/Verifier', () => {
     for (let i = 0; i < loops; i += 1) {
       const vector: BoundParams = {
         treeNumber: 0,
-        withdraw: i % 3,
+        unshield: i % 3,
         adaptContract: arrayToHexString(hash.keccak256(new Uint8Array([i])), true).slice(0, 42),
         adaptParams: hash.keccak256(new Uint8Array([i])),
         commitmentCiphertext: new Array(i).fill({
@@ -156,7 +156,7 @@ describe('Logic/Verifier', () => {
       // Get dummy proof
       const tx = await dummyTransact(
         merkletree,
-        WithdrawType.NONE,
+        UnshieldType.NONE,
         ethers.constants.AddressZero,
         hexStringToArray(ethers.constants.HashZero),
         notesIn,
@@ -233,7 +233,7 @@ describe('Logic/Verifier', () => {
       // Get proof
       const tx = await transact(
         merkletree,
-        WithdrawType.NONE,
+        UnshieldType.NONE,
         ethers.constants.AddressZero,
         hexStringToArray(ethers.constants.HashZero),
         notesIn,
@@ -307,7 +307,7 @@ describe('Logic/Verifier', () => {
         // Get dummy proof
         const tx = await dummyTransact(
           merkletree,
-          WithdrawType.NONE,
+          UnshieldType.NONE,
           ethers.constants.AddressZero,
           hexStringToArray(ethers.constants.HashZero),
           notesIn,

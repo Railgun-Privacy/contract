@@ -89,12 +89,12 @@ describe('Token/Vesting', () => {
     // Claim stake
     await clone.claim(0);
 
-    // Now we should be able to withdraw
+    // Now we should be able to unshield
     await expect(
       await clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000),
     ).to.changeTokenBalance(testERC20, (await ethers.getSigners())[1].address, 1000);
 
-    // Should be able to withdraw ETH
+    // Should be able to unshield ETH
     await (
       await ethers.getSigners()
     )[1].sendTransaction({
@@ -159,7 +159,7 @@ describe('Token/Vesting', () => {
       'VestLock: new lock time must be less than old lock time',
     );
 
-    // Now we should be able to withdraw
+    // Now we should be able to unshield
     await expect(
       clone.transferERC20(testERC20.address, (await ethers.getSigners())[1].address, 1000),
     ).to.changeTokenBalance(testERC20, (await ethers.getSigners())[1].address, 1000);

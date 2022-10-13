@@ -50,7 +50,7 @@ describe('Logic/RailgunLogic/Generic', () => {
     const railgunLogicSnarkBypass = railgunLogic.connect(snarkBypassSigner);
     const railgunLogicAdmin = railgunLogic.connect(adminAccount);
 
-    // Deploy test ERC20 and approve for deposit
+    // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     const testERC20 = await TestERC20.deploy();
     const testERC20BypassSigner = testERC20.connect(snarkBypassSigner);
@@ -83,8 +83,8 @@ describe('Logic/RailgunLogic/Generic', () => {
     const { railgunLogic, railgunLogicAdmin } = await loadFixture(deploy);
 
     // Check initial fees
-    expect(await railgunLogicAdmin.depositFee()).to.equal(25n);
-    expect(await railgunLogicAdmin.withdrawFee()).to.equal(25n);
+    expect(await railgunLogicAdmin.shieldFee()).to.equal(25n);
+    expect(await railgunLogicAdmin.unshieldFee()).to.equal(25n);
     expect(await railgunLogicAdmin.nftFee()).to.equal(25n);
 
     // Change fee
@@ -105,8 +105,8 @@ describe('Logic/RailgunLogic/Generic', () => {
     );
 
     // Check changed fees
-    expect(await railgunLogicAdmin.depositFee()).to.equal(1n);
-    expect(await railgunLogicAdmin.withdrawFee()).to.equal(2n);
+    expect(await railgunLogicAdmin.shieldFee()).to.equal(1n);
+    expect(await railgunLogicAdmin.unshieldFee()).to.equal(2n);
     expect(await railgunLogicAdmin.nftFee()).to.equal(3n);
 
     // Make sure only governance can change fees
@@ -116,10 +116,10 @@ describe('Logic/RailgunLogic/Generic', () => {
 
     // Fees shouldn't be able to be set to more than 100%
     await expect(railgunLogicAdmin.changeFee(10001n, 5n, 6n)).to.be.revertedWith(
-      'RailgunLogic: Deposit Fee exceeds 100%',
+      'RailgunLogic: Shield Fee exceeds 100%',
     );
     await expect(railgunLogicAdmin.changeFee(3n, 10001n, 6n)).to.be.revertedWith(
-      'RailgunLogic: Withdraw Fee exceeds 100%',
+      'RailgunLogic: Unshield Fee exceeds 100%',
     );
   });
 

@@ -22,7 +22,7 @@ import {
   nullifiersMatcher,
   tokenDataMatcher,
   transact,
-  WithdrawType,
+  UnshieldType,
 } from '../../../helpers/logic/transaction';
 import { availableArtifacts, loadAllArtifacts } from '../../../helpers/logic/artifacts';
 import { randomBytes } from 'crypto';
@@ -70,7 +70,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
     // Set verifier keys
     await loadAllArtifacts(railgunLogicAdmin);
 
-    // Deploy test ERC20 and approve for deposit
+    // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     const testERC20 = await TestERC20.deploy();
     const testERC20BypassSigner = testERC20.connect(snarkBypassSigner);
@@ -92,7 +92,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
     };
   }
 
-  it('Should deposit ERC20', async function () {
+  it('Should shield ERC20', async function () {
     const { railgunLogic, primaryAccount, treasuryAccount, testERC20 } = await loadFixture(deploy);
 
     const loops = 5;
@@ -101,12 +101,12 @@ describe('Logic/RailgunLogic/ERC20', () => {
     const viewingKey = edBabyJubJub.genRandomPrivateKey();
     const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
-    // Retrieve deposit fee
-    const depositFeeBP = (await railgunLogic.depositFee()).toBigInt();
+    // Retrieve shield fee
+    const shieldFeeBP = (await railgunLogic.shieldFee()).toBigInt();
 
-    // Loop through number of deposits in batch
+    // Loop through number of shields in batch
     for (let i = 1; i < loops; i += 1) {
-      // Create deposit notes
+      // Create shield notes
       const notes = new Array(i).fill(1).map(
         (x, index) =>
           new Note(
@@ -137,16 +137,16 @@ describe('Logic/RailgunLogic/ERC20', () => {
         railgunLogic.generateDeposit(preimages, [...encryptedRandoms, ...encryptedRandoms]),
       ).to.be.revertedWith("RailgunLogic: notes and encrypted random length doesn't match");
 
-      // Calculate total value of deposits
+      // Calculate total value of shield
       const total = notes.map((note) => note.value).reduce((left, right) => left + right);
 
       // Get fees
-      const { base, fee } = getFee(total, true, depositFeeBP);
+      const { base, fee } = getFee(total, true, shieldFeeBP);
 
-      // Get commitment preimages adjusted by deposit fee
+      // Get commitment preimages adjusted by shield fee
       const adjustedPreimages = preimages.map((preimage) => {
         // Get base
-        const noteBase = getFee(preimage.value, true, depositFeeBP).base;
+        const noteBase = getFee(preimage.value, true, shieldFeeBP).base;
 
         return {
           npk: preimage.npk,
@@ -192,10 +192,10 @@ describe('Logic/RailgunLogic/ERC20', () => {
         [await zeroNote.getCommitmentPreimage()],
         [zeroNote.encryptedRandom],
       ),
-    ).to.be.revertedWith('RailgunLogic: Cannot deposit 0 tokens');
+    ).to.be.revertedWith('RailgunLogic: Cannot shield 0 tokens');
   });
 
-  it("Shouldn't deposit blocklisted ERC20", async function () {
+  it("Shouldn't shield blocklisted ERC20", async function () {
     const { railgunLogic, railgunLogicAdmin, testERC20 } = await loadFixture(deploy);
 
     // Create random keys
@@ -249,35 +249,32 @@ describe('Logic/RailgunLogic/ERC20', () => {
     wallet.tokens.push(tokenData);
 
     // Number of notes to create at the start
-    const initialDepositCount = 50;
+    const initialShieldCount = 50;
 
-    // Create deposit notes
-    const depositNotes = new Array(initialDepositCount)
+    // Create shield notes
+    const shieldNotes = new Array(initialShieldCount)
       .fill(0)
       .map(
         () => new Note(spendingKey, viewingKey, 100n * 10n ** 18n, randomBytes(16), tokenData, ''),
       );
 
     // Get preimages
-    const depositPreimages = await Promise.all(
-      depositNotes.map((note) => note.getCommitmentPreimage()),
+    const shieldPreimages = await Promise.all(
+      shieldNotes.map((note) => note.getCommitmentPreimage()),
     );
 
     // Get encrypted randoms
-    const depositEncryptedRandoms = depositNotes.map((note) => note.encryptedRandom);
+    const shieldEncryptedRandoms = shieldNotes.map((note) => note.encryptedRandom);
 
-    // Deposit
-    const depositTX = await railgunContract.generateDeposit(
-      depositPreimages,
-      depositEncryptedRandoms,
-    );
+    // Shield
+    const shieldTX = await railgunContract.generateDeposit(shieldPreimages, shieldEncryptedRandoms);
 
-    // Scan deposit
-    await merkletree.scanTX(depositTX, railgunContract);
-    await wallet.scanTX(depositTX, railgunContract);
+    // Scan shield
+    await merkletree.scanTX(shieldTX, railgunContract);
+    await wallet.scanTX(shieldTX, railgunContract);
 
     // Track starting position of tree
-    let startPosition = initialDepositCount;
+    let startPosition = initialShieldCount;
 
     // Loop through each circuit
     for (const artifactConfig of availableArtifacts()) {
@@ -296,7 +293,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
       // Get transaction inputs
       const transactionInputs = await prover(
         merkletree,
-        WithdrawType.NONE,
+        UnshieldType.NONE,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         notes.inputs,
@@ -334,7 +331,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
             nullifiers: transactionInputs.nullifiers,
             commitments: transactionInputs.commitments,
             boundParams: transactionInputs.boundParams,
-            withdrawPreimage: transactionInputs.withdrawPreimage,
+            unshieldPreimage: transactionInputs.unshieldPreimage,
             overrideOutput: transactionInputs.overrideOutput,
           },
         ]),
@@ -349,7 +346,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
             nullifiers: transactionInputs.nullifiers,
             commitments: transactionInputs.commitments,
             boundParams: transactionInputs.boundParams,
-            withdrawPreimage: transactionInputs.withdrawPreimage,
+            unshieldPreimage: transactionInputs.unshieldPreimage,
             overrideOutput: transactionInputs.overrideOutput,
           },
         ]),
@@ -395,7 +392,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
       // Create transaction locked to dummy signer
       const transactionInputsAdaptLocked = await dummyTransact(
         merkletree,
-        WithdrawType.NONE,
+        UnshieldType.NONE,
         await railgunLogicSnarkBypass.signer.getAddress(),
         new Uint8Array(32),
         notesAdaptLocked.inputs,
@@ -421,7 +418,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
     }
   });
 
-  it('Should withdraw ERC20', async function () {
+  it('Should unshield ERC20', async function () {
     const {
       railgunLogic,
       railgunLogicSnarkBypass,
@@ -435,8 +432,8 @@ describe('Logic/RailgunLogic/ERC20', () => {
     const viewingKey = edBabyJubJub.genRandomPrivateKey();
     const spendingKey = edBabyJubJub.genRandomPrivateKey();
 
-    // Retrieve withdraw fee
-    const withdrawFeeBP = (await railgunLogicSnarkBypass.withdrawFee()).toBigInt();
+    // Retrieve unshield fee
+    const unshieldFeeBP = (await railgunLogicSnarkBypass.unshieldFee()).toBigInt();
 
     // Get token data
     const tokenData = {
@@ -451,35 +448,35 @@ describe('Logic/RailgunLogic/ERC20', () => {
     wallet.tokens.push(tokenData);
 
     // Number of notes to create at the start
-    const initialDepositCount = 50;
+    const initialShieldCount = 50;
 
-    // Create deposit notes
-    const depositNotes = new Array(initialDepositCount)
+    // Create shield notes
+    const shieldNotes = new Array(initialShieldCount)
       .fill(0)
       .map(
         () => new Note(spendingKey, viewingKey, 100n * 10n ** 18n, randomBytes(16), tokenData, ''),
       );
 
     // Get preimages
-    const depositPreimages = await Promise.all(
-      depositNotes.map((note) => note.getCommitmentPreimage()),
+    const shieldPreimages = await Promise.all(
+      shieldNotes.map((note) => note.getCommitmentPreimage()),
     );
 
     // Get encrypted randoms
-    const depositEncryptedRandoms = depositNotes.map((note) => note.encryptedRandom);
+    const shieldEncryptedRandoms = shieldNotes.map((note) => note.encryptedRandom);
 
-    // Deposit
-    const depositTX = await railgunLogicSnarkBypass.generateDeposit(
-      depositPreimages,
-      depositEncryptedRandoms,
+    // Shield
+    const shieldTX = await railgunLogicSnarkBypass.generateDeposit(
+      shieldPreimages,
+      shieldEncryptedRandoms,
     );
 
-    // Scan deposit
-    await merkletree.scanTX(depositTX, railgunLogicSnarkBypass);
-    await wallet.scanTX(depositTX, railgunLogicSnarkBypass);
+    // Scan shield
+    await merkletree.scanTX(shieldTX, railgunLogicSnarkBypass);
+    await wallet.scanTX(shieldTX, railgunLogicSnarkBypass);
 
     // Track starting position of tree
-    let startPosition = initialDepositCount;
+    let startPosition = initialShieldCount;
 
     // Loop through each circuit
     for (const artifactConfig of availableArtifacts()) {
@@ -492,11 +489,11 @@ describe('Logic/RailgunLogic/ERC20', () => {
         tokenData,
       );
 
-      // Get total value of withdraw
+      // Get total value of unshield
       const total = notes.outputs[notes.outputs.length - 1].value;
 
       // Get fees
-      const { base, fee } = getFee(total, true, withdrawFeeBP);
+      const { base, fee } = getFee(total, true, unshieldFeeBP);
 
       // Get note hashes
       const hashes = await Promise.all(notes.outputs.map((note) => note.getHash()));
@@ -505,7 +502,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
       // Get transaction inputs
       const transactionInputs = await dummyTransact(
         merkletree,
-        WithdrawType.WITHDRAW,
+        UnshieldType.WITHDRAW,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         notes.inputs,
@@ -533,13 +530,13 @@ describe('Logic/RailgunLogic/ERC20', () => {
             nullifiers: transactionInputs.nullifiers,
             commitments: transactionInputs.commitments,
             boundParams: transactionInputs.boundParams,
-            withdrawPreimage: transactionInputs.withdrawPreimage,
+            unshieldPreimage: transactionInputs.unshieldPreimage,
             overrideOutput: secondaryAccount.address,
           },
         ]),
       ).to.be.revertedWith("RailgunLogic: Can't override destination address");
 
-      // Should fail if withdraw preimage has been modified
+      // Should fail if unshield preimage has been modified
       await expect(
         railgunLogicSnarkBypass.transact([
           {
@@ -548,25 +545,25 @@ describe('Logic/RailgunLogic/ERC20', () => {
             nullifiers: transactionInputs.nullifiers,
             commitments: transactionInputs.commitments,
             boundParams: transactionInputs.boundParams,
-            withdrawPreimage: {
-              npk: transactionInputs.withdrawPreimage.npk,
-              token: transactionInputs.withdrawPreimage.token,
-              value: transactionInputs.withdrawPreimage.value * 2n,
+            unshieldPreimage: {
+              npk: transactionInputs.unshieldPreimage.npk,
+              token: transactionInputs.unshieldPreimage.token,
+              value: transactionInputs.unshieldPreimage.value * 2n,
             },
             overrideOutput: secondaryAccount.address,
           },
         ]),
-      ).to.be.revertedWith('RailgunLogic: Withdraw commitment preimage is invalid');
+      ).to.be.revertedWith('RailgunLogic: Unshield commitment preimage is invalid');
 
-      // Withdraw
-      const withdrawTX = await railgunLogicSnarkBypass.transact([transactionInputs]);
+      // Unshield
+      const unshieldTX = await railgunLogicSnarkBypass.transact([transactionInputs]);
 
       // Check event is emitted and tokens were moved correctly
-      await expect(withdrawTX)
+      await expect(unshieldTX)
         .to.emit(railgunLogicSnarkBypass, 'Nullifiers')
         .withArgs(0, nullifiersMatcher(transactionInputs.nullifiers));
 
-      await expect(withdrawTX)
+      await expect(unshieldTX)
         .to.emit(railgunLogicSnarkBypass, 'CommitmentBatch')
         .withArgs(
           0,
@@ -575,26 +572,26 @@ describe('Logic/RailgunLogic/ERC20', () => {
           ciphertextMatcher(transactionInputs.boundParams.commitmentCiphertext),
         );
 
-      await expect(withdrawTX)
-        .to.emit(railgunLogicSnarkBypass, 'Withdraw')
+      await expect(unshieldTX)
+        .to.emit(railgunLogicSnarkBypass, 'Unshield')
         .withArgs(
           ethers.utils.getAddress(
-            arrayToHexString(transactionInputs.withdrawPreimage.npk.slice(12, 32), true),
+            arrayToHexString(transactionInputs.unshieldPreimage.npk.slice(12, 32), true),
           ),
           tokenDataMatcher(tokenData),
           base,
           fee,
         );
 
-      await expect(withdrawTX).to.changeTokenBalances(
+      await expect(unshieldTX).to.changeTokenBalances(
         testERC20,
         [primaryAccount.address, railgunLogicSnarkBypass.address, treasuryAccount.address],
         [base, -total, fee],
       );
 
       // Scan transaction
-      await merkletree.scanTX(withdrawTX, railgunLogicSnarkBypass);
-      await wallet.scanTX(withdrawTX, railgunLogicSnarkBypass);
+      await merkletree.scanTX(unshieldTX, railgunLogicSnarkBypass);
+      await wallet.scanTX(unshieldTX, railgunLogicSnarkBypass);
 
       // Increment start position
       startPosition += notes.outputs.length - 1;
@@ -612,11 +609,11 @@ describe('Logic/RailgunLogic/ERC20', () => {
           tokenData,
         );
 
-        // Get total value of withdraw
+        // Get total value of unshield
         const total = notes.outputs[notes.outputs.length - 1].value;
 
         // Get fees
-        const { base, fee } = getFee(total, true, withdrawFeeBP);
+        const { base, fee } = getFee(total, true, unshieldFeeBP);
 
         // Get note hashes
         const hashes = await Promise.all(notes.outputs.map((note) => note.getHash()));
@@ -625,7 +622,7 @@ describe('Logic/RailgunLogic/ERC20', () => {
         // Get transaction inputs
         const transactionInputs = await transact(
           merkletree,
-          WithdrawType.REDIRECT,
+          UnshieldType.REDIRECT,
           ethers.constants.AddressZero,
           new Uint8Array(32),
           notes.inputs,
@@ -633,20 +630,20 @@ describe('Logic/RailgunLogic/ERC20', () => {
           secondaryAccount.address,
         );
 
-        // Shouldn't be able to redirect if original withdraw address isn't the submitter
+        // Shouldn't be able to redirect if original unshield address isn't the submitter
         await expect(railgunLogicSnarkBypass.transact([transactionInputs])).to.be.revertedWith(
           "RailgunLogic: Can't override destination address",
         );
 
-        // Withdraw
-        const withdrawTX = await railgunLogic.transact([transactionInputs]);
+        // Unshield
+        const unshieldTX = await railgunLogic.transact([transactionInputs]);
 
         // Check event is emitted and tokens were moved correctly
-        await expect(withdrawTX)
+        await expect(unshieldTX)
           .to.emit(railgunLogic, 'Nullifiers')
           .withArgs(0, nullifiersMatcher(transactionInputs.nullifiers));
 
-        await expect(withdrawTX)
+        await expect(unshieldTX)
           .to.emit(railgunLogic, 'CommitmentBatch')
           .withArgs(
             0,
@@ -655,19 +652,19 @@ describe('Logic/RailgunLogic/ERC20', () => {
             ciphertextMatcher(transactionInputs.boundParams.commitmentCiphertext),
           );
 
-        await expect(withdrawTX)
-          .to.emit(railgunLogicSnarkBypass, 'Withdraw')
+        await expect(unshieldTX)
+          .to.emit(railgunLogicSnarkBypass, 'Unshield')
           .withArgs(secondaryAccount.address, tokenDataMatcher(tokenData), base, fee);
 
-        await expect(withdrawTX).to.changeTokenBalances(
+        await expect(unshieldTX).to.changeTokenBalances(
           testERC20,
           [secondaryAccount.address, railgunLogic.address, treasuryAccount.address],
           [base, -total, fee],
         );
 
         // Scan transaction
-        await merkletree.scanTX(withdrawTX, railgunLogic);
-        await wallet.scanTX(withdrawTX, railgunLogic);
+        await merkletree.scanTX(unshieldTX, railgunLogic);
+        await wallet.scanTX(unshieldTX, railgunLogic);
 
         // Increment start position
         startPosition += notes.outputs.length - 1;
