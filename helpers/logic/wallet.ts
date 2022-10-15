@@ -111,8 +111,12 @@ class Wallet {
                           hexStringToArray(ciphertext.ciphertext[2]),
                           hexStringToArray(ciphertext.ciphertext[3]),
                         ],
-                        blindedSenderViewingKey: hexStringToArray(ciphertext.blindedSenderViewingKey),
-                        blindedReceiverViewingKey: hexStringToArray(ciphertext.blindedReceiverViewingKey),
+                        blindedSenderViewingKey: hexStringToArray(
+                          ciphertext.blindedSenderViewingKey,
+                        ),
+                        blindedReceiverViewingKey: hexStringToArray(
+                          ciphertext.blindedReceiverViewingKey,
+                        ),
                         annotationData: hexStringToArray(ciphertext.annotationData),
                         memo: hexStringToArray(ciphertext.memo),
                       },

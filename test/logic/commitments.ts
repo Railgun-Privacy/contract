@@ -98,6 +98,9 @@ describe('Logic/Commitments', () => {
       // Add another element to insert list
       insertList.push(randomBytes(32));
 
+      // Check the insertion numbers
+      expect(await commitments.getInsertionTreeNumberAndStartingIndex(insertList.length)).to.deep.equal([0, merkletree.length]);
+
       // Update with insert list on local and contract
       await commitments.insertLeavesStub(insertList);
       await merkletree.insertLeaves(insertList, merkletree.length);
@@ -116,14 +119,26 @@ describe('Logic/Commitments', () => {
     // Check tree number is 0
     expect(await commitments.treeNumber()).to.equal(0);
 
-    // Set next leaf index to filled one less than filled tree
+    // Set next leaf index to one less than filled tree
     await commitments.setNextLeafIndex(2 ** 16 - 2);
+
+    // Check the insertion numbers
+    expect(await commitments.getInsertionTreeNumberAndStartingIndex(1)).to.deep.equal([0, 2 ** 16 - 2]);
 
     // Insert leaf hash
     await commitments.insertLeavesStub([randomBytes(32)]);
 
-    // Check tree number is 1
+    // Check the insertion numbers
+    expect(await commitments.getInsertionTreeNumberAndStartingIndex(1)).to.deep.equal([0, 2 ** 16 - 1]);
+
+    // Check tree number is 0
     expect(await commitments.treeNumber()).to.equal(0);
+
+    // Insert leaf hash
+    await commitments.insertLeavesStub([randomBytes(32)]);
+
+    // Check the insertion numbers
+    expect(await commitments.getInsertionTreeNumberAndStartingIndex(1)).to.deep.equal([1, 0]);
 
     // Insert leaf hash
     await commitments.insertLeavesStub([randomBytes(32)]);

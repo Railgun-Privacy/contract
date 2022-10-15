@@ -180,16 +180,16 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   }
 
   /**
-   * @notice Gets token field value from tokenData
+   * @notice Gets token ID value from tokenData
    */
-  function getTokenField(TokenData memory _tokenData) public pure returns (bytes32) {
+  function getTokenID(TokenData memory _tokenData) public pure returns (bytes32) {
     // ERC20 tokenID is just the address
     if (_tokenData.tokenType == TokenType.ERC20) {
       return bytes32(uint256(uint160(_tokenData.tokenAddress)));
     }
 
     // Other token types are the keccak256 hash of the token data
-    return bytes32(uint256(keccak256(abi.encode(_tokenData.tokenType))) % SNARK_SCALAR_FIELD);
+    return bytes32(uint256(keccak256(abi.encode(_tokenData))) % SNARK_SCALAR_FIELD);
   }
 
   /**
@@ -204,7 +204,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       PoseidonT4.poseidon(
         [
           _commitmentPreimage.npk,
-          getTokenField(_commitmentPreimage.token),
+          getTokenID(_commitmentPreimage.token),
           bytes32(uint256(_commitmentPreimage.value))
         ]
       );
@@ -269,7 +269,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       adjustedNote = _note;
 
       // Set tokenID mapping
-      tokenIDMapping[getTokenField(_note.token)] = _note.token;
+      tokenIDMapping[getTokenID(_note.token)] = _note.token;
 
       // Transfer NFT to contract address
       token.transferFrom(address(msg.sender), address(this), _note.token.tokenSubID);

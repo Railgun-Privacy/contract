@@ -5,7 +5,7 @@ pragma abicoder v2;
 import { Commitments } from "../../logic/Commitments.sol";
 import { RailgunLogic } from "../../logic/RailgunLogic.sol";
 
-contract RailgunLogicStub is Commitments, RailgunLogic {
+contract RailgunLogicStub is RailgunLogic {
   function forceNewTree() external {
     Commitments.newTree();
   }
@@ -18,5 +18,12 @@ contract RailgunLogicStub is Commitments, RailgunLogic {
     address _owner
   ) external {
     RailgunLogic.initializeRailgunLogic(_treasury, _shieldFee, _unshieldFee, _nftFee, _owner);
+  }
+
+  function setMerkleRoot(
+    uint256 _treeNumber,
+    bytes32 _root
+  ) external {
+    Commitments.rootHistory[_treeNumber][_root] = true;
   }
 }

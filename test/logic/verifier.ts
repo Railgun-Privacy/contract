@@ -12,11 +12,7 @@ import {
   dummyTransact,
   transact,
 } from '../../helpers/logic/transaction';
-import {
-  arrayToHexString,
-  arrayToBigInt,
-  hexStringToArray,
-} from '../../helpers/global/bytes';
+import { arrayToHexString, arrayToBigInt, hexStringToArray } from '../../helpers/global/bytes';
 import { randomBytes } from 'crypto';
 
 describe('Logic/Verifier', () => {

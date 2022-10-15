@@ -8,6 +8,7 @@ import {
   arrayToBigInt,
   arrayToHexString,
 } from '../global/bytes';
+import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { hash, edBabyJubJub, aes, ed25519, randomBytes } from '../global/crypto';
 
 export enum TokenType {
@@ -54,12 +55,17 @@ function getTokenID(tokenData: TokenData): Uint8Array {
   }
 
   // Other token types are the keccak256 hash of the token data
-  return hash.keccak256(
-    combine([
-      bigIntToArray(BigInt(tokenData.tokenType), 32),
-      padToLength(hexStringToArray(tokenData.tokenAddress), 32, 'left'),
-      bigIntToArray(tokenData.tokenSubID, 32),
-    ]),
+  return bigIntToArray(
+    arrayToBigInt(
+      hash.keccak256(
+        combine([
+          bigIntToArray(BigInt(tokenData.tokenType), 32),
+          padToLength(hexStringToArray(tokenData.tokenAddress), 32, 'left'),
+          bigIntToArray(tokenData.tokenSubID, 32),
+        ]),
+      ),
+    ) % SNARK_SCALAR_FIELD,
+    32,
   );
 }
 
