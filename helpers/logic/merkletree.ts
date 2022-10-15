@@ -1,8 +1,8 @@
 import { TransactionResponse } from '@ethersproject/providers';
 import { RailgunLogic } from '../../typechain-types';
 import {
-  CommitmentBatchEventObject,
-  GeneratedCommitmentBatchEventObject,
+  TransactEventObject,
+  ShieldEventObject,
   NullifiersEventObject,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
 import { arrayToBigInt, bigIntToArray, arrayToByteLength, hexStringToArray } from '../global/bytes';
@@ -248,9 +248,9 @@ class MerkleTree {
           const parsedLog = contract.interface.parseLog(log);
 
           // Check log type
-          if (parsedLog.name === 'GeneratedCommitmentBatch') {
-            // Type cast to GeneratedCommitmentBatchEventObject
-            const args = parsedLog.args as unknown as GeneratedCommitmentBatchEventObject;
+          if (parsedLog.name === 'Shield') {
+            // Type cast to ShieldEventObject
+            const args = parsedLog.args as unknown as ShieldEventObject;
 
             // Get start position
             const startPosition = args.startPosition.toNumber();
@@ -260,7 +260,7 @@ class MerkleTree {
               args.commitments.map(async (commitment) =>
                 hash.poseidon([
                   hexStringToArray(commitment.npk),
-                  await getTokenID({
+                  getTokenID({
                     tokenType: commitment.token.tokenType,
                     tokenAddress: commitment.token.tokenAddress,
                     tokenSubID: commitment.token.tokenSubID.toBigInt(),
@@ -272,9 +272,9 @@ class MerkleTree {
 
             // Insert leaves
             await this.insertLeaves(leaves, startPosition);
-          } else if (parsedLog.name === 'CommitmentBatch') {
-            // Type cast to CommitmentBatchEventObject
-            const args = parsedLog.args as unknown as CommitmentBatchEventObject;
+          } else if (parsedLog.name === 'Transact') {
+            // Type cast to TransactEventObject
+            const args = parsedLog.args as unknown as TransactEventObject;
 
             // Get start position
             const startPosition = args.startPosition.toNumber();

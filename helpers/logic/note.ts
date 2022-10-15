@@ -264,10 +264,10 @@ class Note {
     const sharedKey = ed25519.getSharedKey(ephemeralPrivateKey, await this.getViewingPublicKey());
 
     // Encrypt random
-    const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey) as [Uint8Array, Uint8Array];
+    const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey);
 
     return {
-      encryptedRandom,
+      encryptedRandom: [encryptedRandom[0], padToLength(encryptedRandom[1], 32, 'left')],
       ephemeralKey: ephemeralPublicKey,
     };
   }
@@ -310,12 +310,7 @@ class Note {
     );
 
     // Encode memo text
-    const memo = chunk(new TextEncoder().encode(this.memo), 32);
-
-    // Right-pad last memo chunk to 32 bytes if it exists
-    if (memo.length > 0) {
-      memo[memo.length - 1] = padToLength(memo[memo.length - 1], 32, 'right');
-    }
+    const memo = new TextEncoder().encode(this.memo);
 
     // Encrypt shared ciphertext
     const encryptedSharedBundle = aes.gcm.encrypt(
@@ -323,7 +318,7 @@ class Note {
         await this.getMasterPublicKey(),
         combine([this.random, bigIntToArray(this.value, 16)]),
         this.getTokenID(),
-        ...memo,
+        memo,
       ],
       sharedKey,
     );
@@ -350,6 +345,45 @@ class Note {
   }
 
   /**
+   * Decrypts shielded note
+   *
+   * @param ephemeralKey - ephemeral key to us ein decryption
+   * @param encryptedRandom - encrypted random to decrypt
+   * @param token - token data
+   * @param value - note value
+   * @param viewingKey - viewing private key to try decrypting for
+   * @param spendingKey - spending private key to use in decrypted note
+   * @returns decrypted note or undefined if decryption failed
+   */
+  static decryptShield(
+    ephemeralKey: Uint8Array,
+    encryptedRandom: [Uint8Array, Uint8Array],
+    token: TokenData,
+    value: bigint,
+    viewingKey: Uint8Array,
+    spendingKey: Uint8Array,
+  ): Note | undefined {
+    // Try to decrypt encrypted random
+    try {
+      // Get shared key
+      const sharedKey = ed25519.getSharedKey(viewingKey, ephemeralKey);
+
+      // Decrypt
+      const random = aes.gcm.decrypt(
+        [encryptedRandom[0], encryptedRandom[1].slice(16, 32)],
+        sharedKey,
+      )[0];
+
+      // Construct note
+      const note = new Note(spendingKey, viewingKey, value, random, token, '');
+
+      return note;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Decrypts note from encrypted bundle
    *
    * @param expectedHash - expected hash of note
@@ -368,10 +402,7 @@ class Note {
     tokenData: TokenData,
   ): Promise<Note | undefined> {
     // Reconstruct encrypted shared bundle
-    const encryptedSharedBundle: Uint8Array[] = [
-      ...encrypted.ciphertext,
-      encrypted.memo,
-    ];
+    const encryptedSharedBundle: Uint8Array[] = [...encrypted.ciphertext, encrypted.memo];
 
     let sharedBundle: Uint8Array[];
 
@@ -387,8 +418,7 @@ class Note {
     }
 
     // Decode memo
-    const memo =
-      sharedBundle.length > 3 ? new TextDecoder().decode(sharedBundle[3]) : '';
+    const memo = sharedBundle.length > 3 ? new TextDecoder().decode(sharedBundle[3]) : '';
 
     // Construct note
     const note = new Note(
@@ -486,9 +516,9 @@ class UnshieldNote {
   encrypt(): CommitmentCiphertext {
     return {
       ciphertext: [new Uint8Array(32), new Uint8Array(32), new Uint8Array(32), new Uint8Array(32)],
-      blindedSenderViewingKey:  new Uint8Array(32),
-      blindedReceiverViewingKey:  new Uint8Array(32),
-      annotationData:  new Uint8Array(0),
+      blindedSenderViewingKey: new Uint8Array(32),
+      blindedReceiverViewingKey: new Uint8Array(32),
+      annotationData: new Uint8Array(0),
       memo: new Uint8Array(0),
     };
   }

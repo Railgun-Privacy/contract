@@ -17,7 +17,6 @@ import { Commitments } from "./Commitments.sol";
 import { TokenBlocklist } from "./TokenBlocklist.sol";
 import { PoseidonT4 } from "./Poseidon.sol";
 
-// TODO: Depreciate transaction functions in this contract in favour of transaction functions in Railgun Smart Wallet as they are created
 // Core validation logic should remain here
 
 /**
@@ -55,18 +54,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   event FeeChange(uint256 shieldFee, uint256 unshieldFee, uint256 nftFee);
 
   // Transaction events
-  event CommitmentBatch(
+  event Transact(
     uint256 treeNumber,
     uint256 startPosition,
     bytes32[] hash,
     CommitmentCiphertext[] ciphertext
-  );
-
-  event GeneratedCommitmentBatch(
-    uint256 treeNumber,
-    uint256 startPosition,
-    CommitmentPreimage[] commitments,
-    bytes32[2][] encryptedRandom
   );
 
   event Shield(

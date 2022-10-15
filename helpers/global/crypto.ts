@@ -277,7 +277,7 @@ const ed25519 = {
       const seedHash = hash.sha512(seed);
 
       // Return (seedHash mod (n - 1)) + 1 to fit to range 0 < scalar < n
-      return bigIntToArray((arrayToBigInt(seedHash) % nobleED25519.CURVE.n - 1n) + 1n, 32);
+      return bigIntToArray((arrayToBigInt(seedHash) % nobleED25519.CURVE.n) - 1n + 1n, 32);
     },
 
     /**
@@ -328,15 +328,6 @@ const ed25519 = {
 const eddsaPromise = buildEddsa();
 
 const edBabyJubJub = {
-  /**
-   * Generates random eddsa-babyjubjub privateKey
-   *
-   * @returns private key
-   */
-  genRandomPrivateKey(): Uint8Array {
-    return randomBytes(32);
-  },
-
   /**
    * Convert eddsa-babyjubjub private key to public key
    *

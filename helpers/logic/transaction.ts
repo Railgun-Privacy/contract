@@ -1,5 +1,4 @@
 import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
 import { ProofBundle, prove, SolidityProof } from './prover';
 import {
   CommitmentCiphertext,
@@ -29,6 +28,7 @@ export enum UnshieldType {
 
 export interface BoundParams {
   treeNumber: number;
+  minGasPrice: bigint;
   unshield: UnshieldType;
   adaptContract: string;
   adaptParams: Uint8Array;
@@ -46,7 +46,6 @@ export interface PublicInputs {
     token: TokenData;
     value: bigint;
   };
-  overrideOutput: string;
 }
 
 export interface CircuitInputs {
@@ -93,11 +92,13 @@ const dummyProof: ProofBundle = {
  * @returns hash
  */
 function hashBoundParams(boundParams: BoundParams): Uint8Array {
+  console.log(boundParams);
+
   // Encode bytes
   const encodedBytes = hexStringToArray(
     ethers.utils.defaultAbiCoder.encode(
       [
-        'tuple(uint16 treeNumber, uint8 unshield, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',
+        'tuple(uint16 treeNumber, uint48 minGasPrice, uint8 unshield, address adaptContract, bytes32 adaptParams, tuple(bytes32[4] ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey, bytes annotationData, bytes memo)[] commitmentCiphertext) boundParams',
       ],
       [boundParams],
     ),
@@ -282,25 +283,25 @@ function tokenDataMatcher(tokenData: TokenData) {
  *
  * @param proof - snark proof
  * @param merkletree - merkle tree to get inclusion proofs from
+ * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
  * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
  * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param notesIn - transaction inputs
  * @param notesOut - transaction outputs
- * @param overrideOutput - redirect output to address
  * @param commitmentCiphertext - commitment ciphertext
  * @returns inputs
  */
 async function formatPublicInputs(
   proof: ProofBundle,
   merkletree: MerkleTree,
+  minGasPrice: bigint,
   unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
   notesOut: (Note | UnshieldNote)[],
-  overrideOutput: string,
   commitmentCiphertext: CommitmentCiphertext[],
 ): Promise<PublicInputs> {
   // Get Merkle Root
@@ -330,6 +331,7 @@ async function formatPublicInputs(
     commitments,
     boundParams: {
       treeNumber,
+      minGasPrice,
       unshield,
       adaptContract,
       adaptParams,
@@ -340,7 +342,6 @@ async function formatPublicInputs(
       token: notesOut[notesOut.length - 1].tokenData,
       value: notesOut[notesOut.length - 1].value,
     },
-    overrideOutput,
   };
 }
 
@@ -348,6 +349,7 @@ async function formatPublicInputs(
  * Formats inputs for prover
  *
  * @param merkletree - merkle tree to get inclusion proofs from
+ * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
  * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
@@ -358,6 +360,7 @@ async function formatPublicInputs(
  */
 async function formatCircuitInputs(
   merkletree: MerkleTree,
+  minGasPrice: bigint,
   unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
@@ -375,6 +378,7 @@ async function formatCircuitInputs(
   // Get bound parameters hash
   const boundParamsHash = hashBoundParams({
     treeNumber,
+    minGasPrice,
     unshield,
     adaptContract,
     adaptParams,
@@ -442,23 +446,23 @@ async function formatCircuitInputs(
  * Generates transaction with dummy proof
  *
  * @param merkletree - merkle tree to get inclusion proofs from
+ * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
  * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
- * @param  adaptContract - adapt contract to lock transaction to (0 if no lock)
+ * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
- * @param  notesIn - transaction inputs
+ * @param notesIn - transaction inputs
  * @param notesOut - transaction outputs
- * @param overrideOutput - redirect output to address
  * @returns transaction
  */
 async function dummyTransact(
   merkletree: MerkleTree,
+  minGasPrice: bigint,
   unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
   notesOut: (Note | UnshieldNote)[],
-  overrideOutput: string,
 ) {
   // Get required ciphertext length
   const ciphertextLength = unshield === 0 ? notesOut.length : notesOut.length - 1;
@@ -475,12 +479,12 @@ async function dummyTransact(
   return formatPublicInputs(
     dummyProof,
     merkletree,
+    minGasPrice,
     unshield,
     adaptContract,
     adaptParams,
     notesIn,
     notesOut,
-    overrideOutput,
     commitmentCiphertext,
   );
 }
@@ -489,23 +493,23 @@ async function dummyTransact(
  * Generates and proves transaction
  *
  * @param merkletree - merkle tree to get inclusion proofs from
+ * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
  * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
  * @param  adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param  notesIn - transaction inputs
  * @param notesOut - transaction outputs
- * @param overrideOutput - redirect output to address
  * @returns transaction
  */
 async function transact(
   merkletree: MerkleTree,
+  minGasPrice: bigint,
   unshield: UnshieldType,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
   notesOut: (Note | UnshieldNote)[],
-  overrideOutput: string,
 ) {
   // Get artifact
   const artifact = getKeys(notesIn.length, notesOut.length);
@@ -524,6 +528,7 @@ async function transact(
   // Get circuit inputs
   const inputs = await formatCircuitInputs(
     merkletree,
+    minGasPrice,
     unshield,
     adaptContract,
     adaptParams,
@@ -539,12 +544,12 @@ async function transact(
   return formatPublicInputs(
     proof,
     merkletree,
+    minGasPrice,
     unshield,
     adaptContract,
     adaptParams,
     notesIn,
     notesOut,
-    overrideOutput,
     commitmentCiphertext,
   );
 }

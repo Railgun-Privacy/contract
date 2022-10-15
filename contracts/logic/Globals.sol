@@ -38,7 +38,7 @@ enum UnshieldType {
 
 struct BoundParams {
   uint16 treeNumber;
-  uint256 minGasPrice;
+  uint48 minGasPrice;
   UnshieldType unshield;
   address adaptContract;
   bytes32 adaptParams;

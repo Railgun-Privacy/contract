@@ -103,7 +103,7 @@ contract RailgunSmartWallet is RailgunLogic {
     ) = getInsertionTreeNumberAndStartingIndex(commitments.length);
 
     // Emit commitment state update
-    emit CommitmentBatch(insertionTreeNumber, insertionStartIndex, commitments, ciphertext);
+    emit Transact(insertionTreeNumber, insertionStartIndex, commitments, ciphertext);
 
     // Push commitments to tree after events due to insertLeaves causing side effects
     Commitments.insertLeaves(commitments);

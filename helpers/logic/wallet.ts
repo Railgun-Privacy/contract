@@ -1,11 +1,11 @@
 import { TransactionResponse } from '@ethersproject/providers';
 import { RailgunLogic } from '../../typechain-types';
 import {
-  CommitmentBatchEventObject,
-  GeneratedCommitmentBatchEventObject,
+  TransactEventObject,
+  ShieldEventObject,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
-import { arrayToHexString, bigIntToArray, hexStringToArray } from '../global/bytes';
-import { aes, randomBytes } from '../global/crypto';
+import { arrayToHexString, hexStringToArray } from '../global/bytes';
+import { randomBytes } from '../global/crypto';
 import { MerkleTree } from './merkletree';
 import { getTokenID, Note, TokenData, UnshieldNote } from './note';
 
@@ -60,40 +60,37 @@ class Wallet {
           const parsedLog = contract.interface.parseLog(log);
 
           // Check log type
-          if (parsedLog.name === 'GeneratedCommitmentBatch') {
-            // Type cast to GeneratedCommitmentBatchEventObject
-            const args = parsedLog.args as unknown as GeneratedCommitmentBatchEventObject;
+          if (parsedLog.name === 'Shield') {
+            // Type cast to ShieldEventObject
+            const args = parsedLog.args as unknown as ShieldEventObject;
 
+            // Get start position
             const startPosition = args.startPosition.toNumber();
 
-            // Loop through each shield
-            args.encryptedRandom.forEach((encryptedRandom, index) => {
+            // Loop through each shield and attempt to decrypt
+            args.shieldCiphertext.map((shieldCiphertext, index) => {
               // Try to decrypt
-              try {
-                // Decrypt will throw on failure
-                const decrypted = aes.gcm.decrypt(
-                  encryptedRandom.map((element) => hexStringToArray(element.toHexString())),
-                  this.viewingKey,
-                );
+              const decrypted = Note.decryptShield(
+                hexStringToArray(shieldCiphertext.ephemeralKey),
+                shieldCiphertext.encryptedRandom.map(hexStringToArray) as [Uint8Array, Uint8Array],
+                {
+                  tokenType: args.commitments[index].token.tokenType,
+                  tokenAddress: args.commitments[index].token.tokenAddress,
+                  tokenSubID: args.commitments[index].token.tokenSubID.toBigInt(),
+                },
+                args.commitments[index].value.toBigInt(),
+                this.viewingKey,
+                this.spendingKey,
+              );
 
-                // Insert into note array in same index as merkle tree
-                this.notes[startPosition + index] = new Note(
-                  this.spendingKey,
-                  this.viewingKey,
-                  args.commitments[index].value.toBigInt(),
-                  decrypted[0],
-                  {
-                    tokenType: args.commitments[index].token.tokenType,
-                    tokenAddress: args.commitments[index].token.tokenAddress,
-                    tokenSubID: args.commitments[index].token.tokenSubID.toBigInt(),
-                  },
-                  '',
-                );
-              } catch {}
+              // Insert into note array in same index as merkle tree
+              if (decrypted) {
+                this.notes[startPosition + index] = decrypted;
+              }
             });
-          } else if (parsedLog.name === 'CommitmentBatch') {
-            // Type cast to CommitmentBatchEventObject
-            const args = parsedLog.args as unknown as CommitmentBatchEventObject;
+          } else if (parsedLog.name === 'Transact') {
+            // Type cast to TransactEventObject
+            const args = parsedLog.args as unknown as TransactEventObject;
 
             // Get start position
             const startPosition = args.startPosition.toNumber();
@@ -106,21 +103,18 @@ class Wallet {
                   args.ciphertext.map(async (ciphertext, index) => {
                     // Attempt to decrypt note with token
                     const note = await Note.decrypt(
-                      bigIntToArray(args.hash[index].toBigInt(), 32),
+                      hexStringToArray(args.hash[index]),
                       {
                         ciphertext: [
-                          bigIntToArray(ciphertext.ciphertext[0].toBigInt(), 32),
-                          bigIntToArray(ciphertext.ciphertext[1].toBigInt(), 32),
-                          bigIntToArray(ciphertext.ciphertext[2].toBigInt(), 32),
-                          bigIntToArray(ciphertext.ciphertext[3].toBigInt(), 32),
+                          hexStringToArray(ciphertext.ciphertext[0]),
+                          hexStringToArray(ciphertext.ciphertext[1]),
+                          hexStringToArray(ciphertext.ciphertext[2]),
+                          hexStringToArray(ciphertext.ciphertext[3]),
                         ],
-                        ephemeralKeys: [
-                          bigIntToArray(ciphertext.ephemeralKeys[0].toBigInt(), 32),
-                          bigIntToArray(ciphertext.ephemeralKeys[1].toBigInt(), 32),
-                        ],
-                        memo: ciphertext.memo.map((element) =>
-                          bigIntToArray(element.toBigInt(), 32),
-                        ),
+                        blindedSenderViewingKey: hexStringToArray(ciphertext.blindedSenderViewingKey),
+                        blindedReceiverViewingKey: hexStringToArray(ciphertext.blindedReceiverViewingKey),
+                        annotationData: hexStringToArray(ciphertext.annotationData),
+                        memo: hexStringToArray(ciphertext.memo),
                       },
                       this.viewingKey,
                       this.spendingKey,
@@ -148,7 +142,7 @@ class Wallet {
    */
   async getUnspentNotes(merkletree: MerkleTree, token: TokenData): Promise<Note[]> {
     // Get requested token ID as hex
-    const tokenID = arrayToHexString(await getTokenID(token), false);
+    const tokenID = arrayToHexString(getTokenID(token), false);
 
     // Get note nullifiers as hex
     const noteNullifiers = await Promise.all(
@@ -158,9 +152,7 @@ class Wallet {
     );
 
     // Get note token IDs as hex
-    const noteTokenIDs = await Promise.all(
-      this.notes.map(async (note) => arrayToHexString(await note.getTokenID(), false)),
-    );
+    const noteTokenIDs = this.notes.map((note) => arrayToHexString(note.getTokenID(), false));
 
     // Get seen nullifiers as hex
     const seenNullifiers = merkletree.nullifiers.map((nullifier) =>
