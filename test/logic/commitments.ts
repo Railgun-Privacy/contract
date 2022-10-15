@@ -5,6 +5,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { arrayToBigInt } from '../../helpers/global/bytes';
 import { hash } from '../../helpers/global/crypto';
 import { MerkleTree } from '../../helpers/logic/merkletree';
+import { randomBytes } from 'crypto';
 
 describe('Logic/Commitments', () => {
   /**
@@ -95,10 +96,10 @@ describe('Logic/Commitments', () => {
     const insertList = [];
     for (let i = 0; i < loops; i += 1) {
       // Add another element to insert list
-      insertList.push(new Uint8Array([i]));
+      insertList.push(randomBytes(32));
 
       // Update with insert list on local and contract
-      await commitments.insertLeavesStub(insertList.map(arrayToBigInt));
+      await commitments.insertLeavesStub(insertList);
       await merkletree.insertLeaves(insertList, merkletree.length);
 
       // Check roots match
@@ -119,13 +120,13 @@ describe('Logic/Commitments', () => {
     await commitments.setNextLeafIndex(2 ** 16 - 2);
 
     // Insert leaf hash
-    await commitments.insertLeavesStub([1]);
+    await commitments.insertLeavesStub([randomBytes(32)]);
 
     // Check tree number is 1
     expect(await commitments.treeNumber()).to.equal(0);
 
     // Insert leaf hash
-    await commitments.insertLeavesStub([1]);
+    await commitments.insertLeavesStub([randomBytes(32)]);
 
     // Check tree number is 1
     expect(await commitments.treeNumber()).to.equal(1);

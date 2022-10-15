@@ -3,7 +3,6 @@ import {
   hexStringToArray,
   arrayToByteLength,
   combine,
-  chunk,
   padToLength,
   railgunBase37,
   arrayToBigInt,

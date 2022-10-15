@@ -2,7 +2,6 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-import { hash, edBabyJubJub } from '../../helpers/global/crypto';
 import { availableArtifacts, getKeys, loadAllArtifacts } from '../../helpers/logic/artifacts';
 import { TokenType, CommitmentCiphertext, Note } from '../../helpers/logic/note';
 import { MerkleTree } from '../../helpers/logic/merkletree';
@@ -16,7 +15,6 @@ import {
 import {
   arrayToHexString,
   arrayToBigInt,
-  bigIntToArray,
   hexStringToArray,
 } from '../../helpers/global/bytes';
 import { randomBytes } from 'crypto';
@@ -79,14 +77,17 @@ describe('Logic/Verifier', () => {
 
     for (let i = 0; i < loops; i += 1) {
       const vector: BoundParams = {
-        treeNumber: 0,
+        treeNumber: i,
+        minGasPrice: BigInt(i * 2),
         unshield: i % 3,
-        adaptContract: arrayToHexString(hash.keccak256(new Uint8Array([i])), true).slice(0, 42),
-        adaptParams: hash.keccak256(new Uint8Array([i])),
+        adaptContract: arrayToHexString(randomBytes(20), true),
+        adaptParams: randomBytes(32),
         commitmentCiphertext: new Array(i).fill({
-          ciphertext: new Array(4).fill(bigIntToArray(BigInt(i), 32)),
-          ephemeralKeys: new Array(2).fill(bigIntToArray(BigInt(i), 32)),
-          memo: new Array(i).fill(bigIntToArray(BigInt(i), 32)),
+          ciphertext: new Array(4).fill(randomBytes(32)),
+          blindedSenderViewingKey: randomBytes(32),
+          blindedReceiverViewingKey: randomBytes(32),
+          annotationData: randomBytes(i),
+          memo: randomBytes(i * 2),
         }) as CommitmentCiphertext[],
       };
 
@@ -106,8 +107,8 @@ describe('Logic/Verifier', () => {
     // Loop through each circuit artifact
     for (const artifactConfig of availableArtifacts()) {
       // Get placeholder values
-      const spendingKey = edBabyJubJub.genRandomPrivateKey();
-      const viewingKey = edBabyJubJub.genRandomPrivateKey();
+      const spendingKey = randomBytes(32);
+      const viewingKey = randomBytes(32);
 
       // Get total amount
       const txTotal = BigInt(artifactConfig.nullifiers) * BigInt(artifactConfig.commitments);
@@ -156,12 +157,12 @@ describe('Logic/Verifier', () => {
       // Get dummy proof
       const tx = await dummyTransact(
         merkletree,
+        0n,
         UnshieldType.NONE,
         ethers.constants.AddressZero,
         hexStringToArray(ethers.constants.HashZero),
         notesIn,
         notesOut,
-        ethers.constants.AddressZero,
       );
 
       // Check that dummy proof check returns true
@@ -183,8 +184,8 @@ describe('Logic/Verifier', () => {
     // Loop through each circuit artifact
     for (const artifactConfig of availableArtifacts()) {
       // Get placeholder values
-      const spendingKey = edBabyJubJub.genRandomPrivateKey();
-      const viewingKey = edBabyJubJub.genRandomPrivateKey();
+      const spendingKey = randomBytes(32);
+      const viewingKey = randomBytes(32);
 
       // Get total amount
       const txTotal = BigInt(artifactConfig.nullifiers) * BigInt(artifactConfig.commitments);
@@ -233,12 +234,12 @@ describe('Logic/Verifier', () => {
       // Get proof
       const tx = await transact(
         merkletree,
+        0n,
         UnshieldType.NONE,
         ethers.constants.AddressZero,
         hexStringToArray(ethers.constants.HashZero),
         notesIn,
         notesOut,
-        ethers.constants.AddressZero,
       );
 
       // Check that proof check returns true
@@ -257,8 +258,8 @@ describe('Logic/Verifier', () => {
     for (let nullifiers = 1; nullifiers < limit; nullifiers += 1) {
       for (let commitments = 1; commitments < limit; commitments += 1) {
         // Get placeholder values
-        const spendingKey = edBabyJubJub.genRandomPrivateKey();
-        const viewingKey = edBabyJubJub.genRandomPrivateKey();
+        const spendingKey = randomBytes(32);
+        const viewingKey = randomBytes(32);
 
         // Get total amount
         const txTotal = BigInt(nullifiers) * BigInt(commitments);
@@ -307,12 +308,12 @@ describe('Logic/Verifier', () => {
         // Get dummy proof
         const tx = await dummyTransact(
           merkletree,
+          0n,
           UnshieldType.NONE,
           ethers.constants.AddressZero,
           hexStringToArray(ethers.constants.HashZero),
           notesIn,
           notesOut,
-          ethers.constants.AddressZero,
         );
 
         await expect(verifierBypassSigner.verify(tx)).to.be.revertedWith('Verifier: Key not set');

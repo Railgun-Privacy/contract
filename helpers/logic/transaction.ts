@@ -92,8 +92,6 @@ const dummyProof: ProofBundle = {
  * @returns hash
  */
 function hashBoundParams(boundParams: BoundParams): Uint8Array {
-  console.log(boundParams);
-
   // Encode bytes
   const encodedBytes = hexStringToArray(
     ethers.utils.defaultAbiCoder.encode(
