@@ -58,8 +58,22 @@ describe('Logic/RailgunLogic', () => {
       adminAccount.address,
     );
 
+    // Get alternative signers
     const railgunLogicSnarkBypass = railgunLogic.connect(snarkBypassSigner);
     const railgunLogicAdmin = railgunLogic.connect(adminAccount);
+
+    // Deploy test ERC20 and approve for deposit
+    const TestERC20 = await ethers.getContractFactory('TestERC20');
+    const testERC20 = await TestERC20.deploy();
+    const testERC20BypassSigner = testERC20.connect(snarkBypassSigner);
+    await testERC20.transfer('0x000000000000000000000000000000000000dEaD', 2n ** 256n / 2n);
+    await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
+    await testERC20BypassSigner.approve(railgunLogic.address, 2n ** 256n - 1n);
+
+    // Deploy test ERC721
+    const TestERC721 = await ethers.getContractFactory('TestERC721');
+    const testERC721 = await TestERC721.deploy();
+    const testERC721BypassSigner = testERC721.connect(snarkBypassSigner);
 
     return {
       primaryAccount,
@@ -68,6 +82,10 @@ describe('Logic/RailgunLogic', () => {
       railgunLogic,
       railgunLogicSnarkBypass,
       railgunLogicAdmin,
+      testERC20,
+      testERC20BypassSigner,
+      testERC721,
+      testERC721BypassSigner,
     };
   }
 
