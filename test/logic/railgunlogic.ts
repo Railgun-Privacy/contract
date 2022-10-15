@@ -24,7 +24,8 @@ describe('Logic/RailgunLogic', () => {
     const snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
     // Get primary and treasury accounts
-    const [primaryAccount, treasuryAccount, adminAccount, proxyAdminAccount] = await ethers.getSigners();
+    const [primaryAccount, treasuryAccount, adminAccount, proxyAdminAccount] =
+      await ethers.getSigners();
 
     // Deploy poseidon libraries
     const PoseidonT3 = await ethers.getContractFactory('PoseidonT3');
@@ -196,11 +197,11 @@ describe('Logic/RailgunLogic', () => {
         },
         '',
       );
-  
+
       expect(await railgunLogic.getTokenID(erc20Note.tokenData)).to.deep.equal(
         arrayToHexString(erc20Note.getTokenID(), true),
       );
-  
+
       const erc721Note = new Note(
         randomBytes(32),
         randomBytes(32),
@@ -213,11 +214,11 @@ describe('Logic/RailgunLogic', () => {
         },
         '',
       );
-  
+
       expect(await railgunLogic.getTokenID(erc721Note.tokenData)).to.deep.equal(
         arrayToHexString(erc721Note.getTokenID(), true),
       );
-  
+
       const erc1155Note = new Note(
         randomBytes(32),
         randomBytes(32),
@@ -230,7 +231,7 @@ describe('Logic/RailgunLogic', () => {
         },
         '',
       );
-  
+
       expect(await railgunLogic.getTokenID(erc1155Note.tokenData)).to.deep.equal(
         arrayToHexString(erc1155Note.getTokenID(), true),
       );
@@ -259,7 +260,7 @@ describe('Logic/RailgunLogic', () => {
 
   it('Should hash commitments', async () => {
     const { railgunLogic } = await loadFixture(deploy);
-    
+
     const loops = 5;
 
     for (let iter = 0; iter <= 5; iter += 1) {
@@ -275,11 +276,11 @@ describe('Logic/RailgunLogic', () => {
         },
         '',
       );
-  
-      expect(await railgunLogic.hashCommitment(await erc20Note.getCommitmentPreimage())).to.deep.equal(
-        arrayToHexString(await erc20Note.getHash(), true),
-      );
-  
+
+      expect(
+        await railgunLogic.hashCommitment(await erc20Note.getCommitmentPreimage()),
+      ).to.deep.equal(arrayToHexString(await erc20Note.getHash(), true));
+
       const erc721Note = new Note(
         randomBytes(32),
         randomBytes(32),
@@ -292,11 +293,11 @@ describe('Logic/RailgunLogic', () => {
         },
         '',
       );
-  
-      expect(await railgunLogic.hashCommitment(await erc721Note.getCommitmentPreimage())).to.deep.equal(
-        arrayToHexString(await erc721Note.getHash(), true),
-      );
-  
+
+      expect(
+        await railgunLogic.hashCommitment(await erc721Note.getCommitmentPreimage()),
+      ).to.deep.equal(arrayToHexString(await erc721Note.getHash(), true));
+
       const erc1155Note = new Note(
         randomBytes(32),
         randomBytes(32),
@@ -309,10 +310,59 @@ describe('Logic/RailgunLogic', () => {
         },
         '',
       );
-  
-      expect(await railgunLogic.hashCommitment(await erc1155Note.getCommitmentPreimage())).to.deep.equal(
-        arrayToHexString(await erc1155Note.getHash(), true),
-      );
+
+      expect(
+        await railgunLogic.hashCommitment(await erc1155Note.getCommitmentPreimage()),
+      ).to.deep.equal(arrayToHexString(await erc1155Note.getHash(), true));
     }
+  });
+
+  it('Should validate commitments', async () => {
+    const { railgunLogic, railgunLogicAdmin } = await loadFixture(deploy);
+
+    const validNote = new Note(
+      randomBytes(32),
+      randomBytes(32),
+      100n,
+      randomBytes(16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: arrayToHexString(randomBytes(20), true),
+        tokenSubID: 0n,
+      },
+      '',
+    );
+
+    expect(
+      await railgunLogic.validateCommitmentPreimage(await validNote.getCommitmentPreimage()),
+    ).to.equal(true);
+
+    const zeroNote = new Note(
+      randomBytes(32),
+      randomBytes(32),
+      0n,
+      randomBytes(16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: arrayToHexString(randomBytes(20), true),
+        tokenSubID: 0n,
+      },
+      '',
+    );
+
+    expect(
+      await railgunLogic.validateCommitmentPreimage(await zeroNote.getCommitmentPreimage()),
+    ).to.equal(false);
+
+    const invalidNPK = await validNote.getCommitmentPreimage();
+    invalidNPK.npk = new Uint8Array(32).fill(255);
+
+    expect(await railgunLogic.validateCommitmentPreimage(invalidNPK)).to.equal(false);
+
+    await railgunLogicAdmin.addToBlocklist([validNote.tokenData.tokenAddress]);
+
+    expect(
+      await railgunLogic.validateCommitmentPreimage(await validNote.getCommitmentPreimage()),
+    ).to.equal(false);
   });
 });
