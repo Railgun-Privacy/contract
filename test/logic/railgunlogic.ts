@@ -154,17 +154,17 @@ describe('Logic/RailgunLogic', () => {
   it('Should calculate fee', async () => {
     const { railgunLogic } = await loadFixture(deploy);
 
-    const loops = 5n;
+    const loops = 5;
 
     // Loop through fee basis points
-    for (let feeBP = 0n; feeBP < loops; feeBP += 1n) {
+    for (let feeBP = 0; feeBP < loops; feeBP += 1) {
       // Loop through amounts from 10 to 10^15
-      for (let i = 1n; i <= 15n; i += 1n) {
+      for (let i = 1; i <= 15; i += 1) {
         // Get base amount
-        const base = 10n ** i;
+        const base = 10n ** BigInt(i);
 
         // Get fee amount
-        const { fee } = getFee(base, false, feeBP);
+        const { fee } = getFee(base, false, BigInt(feeBP));
 
         // Get total
         const total = base + fee;
@@ -181,56 +181,60 @@ describe('Logic/RailgunLogic', () => {
   it('Should get token field', async () => {
     const { railgunLogic } = await loadFixture(deploy);
 
-    const erc20Note = new Note(
-      randomBytes(32),
-      randomBytes(32),
-      100n,
-      randomBytes(16),
-      {
-        tokenType: TokenType.ERC20,
-        tokenAddress: arrayToHexString(randomBytes(20), true),
-        tokenSubID: 0n,
-      },
-      '',
-    );
+    const loops = 5;
 
-    expect(await railgunLogic.getTokenID(erc20Note.tokenData)).to.deep.equal(
-      arrayToHexString(erc20Note.getTokenID(), true),
-    );
-
-    const erc721Note = new Note(
-      randomBytes(32),
-      randomBytes(32),
-      100n,
-      randomBytes(16),
-      {
-        tokenType: TokenType.ERC721,
-        tokenAddress: arrayToHexString(randomBytes(20), true),
-        tokenSubID: 100n,
-      },
-      '',
-    );
-
-    expect(await railgunLogic.getTokenID(erc721Note.tokenData)).to.deep.equal(
-      arrayToHexString(erc721Note.getTokenID(), true),
-    );
-
-    const erc1155Note = new Note(
-      randomBytes(32),
-      randomBytes(32),
-      100n,
-      randomBytes(16),
-      {
-        tokenType: TokenType.ERC1155,
-        tokenAddress: arrayToHexString(randomBytes(20), true),
-        tokenSubID: 655352n,
-      },
-      '',
-    );
-
-    expect(await railgunLogic.getTokenID(erc1155Note.tokenData)).to.deep.equal(
-      arrayToHexString(erc1155Note.getTokenID(), true),
-    );
+    for (let iter = 0; iter <= 5; iter += 1) {
+      const erc20Note = new Note(
+        randomBytes(32),
+        randomBytes(32),
+        BigInt(loops),
+        randomBytes(16),
+        {
+          tokenType: TokenType.ERC20,
+          tokenAddress: arrayToHexString(randomBytes(20), true),
+          tokenSubID: 0n,
+        },
+        '',
+      );
+  
+      expect(await railgunLogic.getTokenID(erc20Note.tokenData)).to.deep.equal(
+        arrayToHexString(erc20Note.getTokenID(), true),
+      );
+  
+      const erc721Note = new Note(
+        randomBytes(32),
+        randomBytes(32),
+        BigInt(loops),
+        randomBytes(16),
+        {
+          tokenType: TokenType.ERC721,
+          tokenAddress: arrayToHexString(randomBytes(20), true),
+          tokenSubID: BigInt(loops * 2),
+        },
+        '',
+      );
+  
+      expect(await railgunLogic.getTokenID(erc721Note.tokenData)).to.deep.equal(
+        arrayToHexString(erc721Note.getTokenID(), true),
+      );
+  
+      const erc1155Note = new Note(
+        randomBytes(32),
+        randomBytes(32),
+        BigInt(loops),
+        randomBytes(16),
+        {
+          tokenType: TokenType.ERC1155,
+          tokenAddress: arrayToHexString(randomBytes(20), true),
+          tokenSubID: BigInt(loops * 2),
+        },
+        '',
+      );
+  
+      expect(await railgunLogic.getTokenID(erc1155Note.tokenData)).to.deep.equal(
+        arrayToHexString(erc1155Note.getTokenID(), true),
+      );
+    }
   });
 
   it('Should pass safety vector checks', async () => {
@@ -251,5 +255,64 @@ describe('Logic/RailgunLogic', () => {
     await expect(railgunLogic.treasury()).to.be.fulfilled;
     await expect(railgunLogic.checkSafetyVectors()).to.be.fulfilled;
     await expect(railgunLogic.treasury()).to.be.reverted;
+  });
+
+  it('Should hash commitments', async () => {
+    const { railgunLogic } = await loadFixture(deploy);
+    
+    const loops = 5;
+
+    for (let iter = 0; iter <= 5; iter += 1) {
+      const erc20Note = new Note(
+        randomBytes(32),
+        randomBytes(32),
+        BigInt(loops),
+        randomBytes(16),
+        {
+          tokenType: TokenType.ERC20,
+          tokenAddress: arrayToHexString(randomBytes(20), true),
+          tokenSubID: 0n,
+        },
+        '',
+      );
+  
+      expect(await railgunLogic.hashCommitment(await erc20Note.getCommitmentPreimage())).to.deep.equal(
+        arrayToHexString(await erc20Note.getHash(), true),
+      );
+  
+      const erc721Note = new Note(
+        randomBytes(32),
+        randomBytes(32),
+        BigInt(loops),
+        randomBytes(16),
+        {
+          tokenType: TokenType.ERC721,
+          tokenAddress: arrayToHexString(randomBytes(20), true),
+          tokenSubID: BigInt(loops * 2),
+        },
+        '',
+      );
+  
+      expect(await railgunLogic.hashCommitment(await erc721Note.getCommitmentPreimage())).to.deep.equal(
+        arrayToHexString(await erc721Note.getHash(), true),
+      );
+  
+      const erc1155Note = new Note(
+        randomBytes(32),
+        randomBytes(32),
+        BigInt(loops),
+        randomBytes(16),
+        {
+          tokenType: TokenType.ERC1155,
+          tokenAddress: arrayToHexString(randomBytes(20), true),
+          tokenSubID: BigInt(loops * 2),
+        },
+        '',
+      );
+  
+      expect(await railgunLogic.hashCommitment(await erc1155Note.getCommitmentPreimage())).to.deep.equal(
+        arrayToHexString(await erc1155Note.getHash(), true),
+      );
+    }
   });
 });
