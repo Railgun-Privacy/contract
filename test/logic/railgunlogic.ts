@@ -6,7 +6,14 @@ import {
   impersonateAccount,
 } from '@nomicfoundation/hardhat-network-helpers';
 
-import { dummyTransact, getFee, transact, UnshieldType } from '../../helpers/logic/transaction';
+import {
+  ciphertextMatcher,
+  dummyTransact,
+  getFee,
+  nullifiersMatcher,
+  transact,
+  UnshieldType,
+} from '../../helpers/logic/transaction';
 import { Note, TokenType, UnshieldNote } from '../../helpers/logic/note';
 import { randomBytes } from '../../helpers/global/crypto';
 import { arrayToHexString } from '../../helpers/global/bytes';
@@ -623,6 +630,93 @@ describe('Logic/RailgunLogic', () => {
       expect(await railgunLogic.validateTransaction(dummyTransaction, { gasPrice: 100 })).to.equal(
         false,
       );
+    }
+  });
+
+  it('Should accumulate and nullify transaction', async () => {
+    const { railgunLogic } = await loadFixture(deploy);
+
+    const loops = 5;
+
+    // Create random viewing and spending keys
+    const spendingKey = randomBytes(32);
+    const viewingKey = randomBytes(32);
+    const tokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: ethers.constants.AddressZero,
+      tokenSubID: 0n,
+    };
+
+    for (let i = 1; i < loops; i += 1) {
+      // Create notes in and notes out
+      const notesIn = new Array(i * 2)
+        .fill(1)
+        .map(() => new Note(spendingKey, viewingKey, 50n, randomBytes(16), tokenData, ''));
+
+      const notesOut = new Array(i)
+        .fill(1)
+        .map(() => new Note(spendingKey, viewingKey, 100n, randomBytes(16), tokenData, ''));
+
+      // Create merkle tree and insert notes
+      const tree = await MerkleTree.createTree();
+      await tree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), 0);
+
+      // Get transaction
+      const transaction = await dummyTransact(
+        tree,
+        0n,
+        UnshieldType.NONE,
+        ethers.constants.AddressZero,
+        new Uint8Array(32),
+        notesIn,
+        notesOut,
+      );
+
+      // Check nullifier event is emitted
+      await expect(railgunLogic.accumulateAndNullifyTransactionStub(transaction, i, 0))
+        .to.emit(railgunLogic, 'Nullifiers')
+        .withArgs(0, nullifiersMatcher(transaction.nullifiers));
+
+      // Check returned values match transaction values
+      const accumulateAndNullifyReturned =
+        await railgunLogic.callStatic.accumulateAndNullifyTransactionStub(transaction, i, 0);
+
+      expect(accumulateAndNullifyReturned[0]).to.equal(i);
+
+      expect(accumulateAndNullifyReturned[1]).to.deep.equal(
+        transaction.commitments.map((commitment) => arrayToHexString(commitment, true)),
+      );
+
+      const matcher = ciphertextMatcher(transaction.boundParams.commitmentCiphertext);
+      expect(matcher(accumulateAndNullifyReturned[2])).to.equal(true);
+
+      // Check returned values match transaction values with offset values
+      const accumulateAndNullifyReturnedOffset =
+        await railgunLogic.callStatic.accumulateAndNullifyTransactionStub(transaction, i + 1, 1);
+
+      expect(accumulateAndNullifyReturnedOffset[0]).to.equal(i + 1);
+
+      expect(accumulateAndNullifyReturnedOffset[1]).to.deep.equal([
+        ethers.constants.HashZero,
+        ...transaction.commitments.map((commitment) => arrayToHexString(commitment, true)),
+      ]);
+
+      const matcherOffset = ciphertextMatcher([
+        {
+          ciphertext: [
+            new Uint8Array(32),
+            new Uint8Array(32),
+            new Uint8Array(32),
+            new Uint8Array(32),
+          ],
+          blindedReceiverViewingKey: new Uint8Array(32),
+          blindedSenderViewingKey: new Uint8Array(32),
+          memo: new Uint8Array(0),
+          annotationData: new Uint8Array(0),
+        },
+        ...transaction.boundParams.commitmentCiphertext,
+      ]);
+      expect(matcherOffset(accumulateAndNullifyReturnedOffset[2])).to.equal(true);
     }
   });
 });

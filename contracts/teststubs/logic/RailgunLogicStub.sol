@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 pragma abicoder v2;
 
-import { CommitmentPreimage } from "../../logic/Globals.sol";
+import { CommitmentPreimage, CommitmentCiphertext, Transaction } from "../../logic/Globals.sol";
 import { Commitments } from "../../logic/Commitments.sol";
 import { RailgunLogic } from "../../logic/RailgunLogic.sol";
 
@@ -50,5 +50,32 @@ contract RailgunLogicStub is RailgunLogic {
     bool _redirect
   ) external {
     RailgunLogic.transferTokenOut(_note, _expectedHash, _redirect);
+  }
+
+  function accumulateAndNullifyTransactionStub(
+    Transaction calldata _transaction,
+    uint256 _initialArrayLengths,
+    uint256 _commitmentsStartOffset
+  )
+    external
+    returns (
+      uint256,
+      bytes32[] memory,
+      CommitmentCiphertext[] memory
+    )
+  {
+    bytes32[] memory _commitments = new bytes32[](_initialArrayLengths); 
+    CommitmentCiphertext[] memory _ciphertext = new CommitmentCiphertext[](_initialArrayLengths); 
+
+    return (
+      accumulateAndNullifyTransaction(
+        _transaction,
+        _commitments,
+        _commitmentsStartOffset,
+        _ciphertext
+      ),
+      _commitments,
+      _ciphertext
+    );
   }
 }

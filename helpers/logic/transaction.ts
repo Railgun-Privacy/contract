@@ -161,8 +161,8 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
           element,
       );
 
-      // Return false if any randoms returned false
-      if (ciphertextMatched.includes(false)) return false;
+      // Return false if any ciphertext words didn't match
+      if (cipherMatched.includes(false)) return false;
 
       // Check blinded keys match
       if (
@@ -184,9 +184,6 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
         ciphertext.annotationData
       )
         return false;
-
-      // Return false if any ciphertext elements returned false
-      if (cipherMatched.includes(false)) return false;
 
       return true;
     });
