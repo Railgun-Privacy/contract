@@ -536,6 +536,20 @@ describe('Logic/RailgunLogic', () => {
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 10 }),
     ).to.equal(false);
 
+    // Should return false if adaptContract is set to non-0 and not the submitter's address
+    dummyTransaction.boundParams.adaptContract = await railgunLogicSnarkBypass.signer.getAddress();
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(true);
+    dummyTransaction.boundParams.adaptContract = arrayToHexString(randomBytes(20), true);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(false);
+    dummyTransaction.boundParams.adaptContract = ethers.constants.AddressZero;
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(true);
+
     // Should return false if invalid merkle root
     await railgunLogic.setMerkleRoot(0, tree.root, false);
     expect(
