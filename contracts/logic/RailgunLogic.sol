@@ -407,7 +407,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    */
   function validateTransaction(Transaction calldata _transaction) public view returns (bool) {
     // Gas price of eth transaction should be equal or greater than railgun transaction specified min gas price
-    if (_transaction.boundParams.minGasPrice < tx.gasprice) return false;
+    if (tx.gasprice < _transaction.boundParams.minGasPrice) return false;
 
     // Adapt contract must either equal 0 or msg.sender
     if (

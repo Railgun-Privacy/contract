@@ -6,10 +6,16 @@ import {
   impersonateAccount,
 } from '@nomicfoundation/hardhat-network-helpers';
 
-import { getFee } from '../../helpers/logic/transaction';
-import { Note, TokenType } from '../../helpers/logic/note';
+import {
+  dummyTransact,
+  getFee,
+  UnshieldType,
+} from '../../helpers/logic/transaction';
+import { Note, TokenType, UnshieldNote } from '../../helpers/logic/note';
 import { randomBytes } from 'crypto';
 import { arrayToHexString } from '../../helpers/global/bytes';
+import { MerkleTree } from '../../helpers/logic/merkletree';
+import { loadAllArtifacts } from '../../helpers/logic/artifacts';
 
 describe('Logic/RailgunLogic', () => {
   /**
@@ -61,6 +67,9 @@ describe('Logic/RailgunLogic', () => {
     // Get alternative signers
     const railgunLogicSnarkBypass = railgunLogic.connect(snarkBypassSigner);
     const railgunLogicAdmin = railgunLogic.connect(adminAccount);
+
+    // Load verification keys
+    await loadAllArtifacts(railgunLogicAdmin);
 
     // Deploy test ERC20 and approve for deposit
     const TestERC20 = await ethers.getContractFactory('TestERC20');
@@ -381,6 +390,124 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogic.validateCommitmentPreimage(await validNote.getCommitmentPreimage()),
+    ).to.equal(false);
+  });
+
+  it('Should sum commitments in a transaction', async () => {
+    const { railgunLogic } = await loadFixture(deploy);
+
+    const loops = 5;
+
+    // Create random viewing and spending keys
+    const spendingKey = randomBytes(32);
+    const viewingKey = randomBytes(32);
+    const tokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: ethers.constants.AddressZero,
+      tokenSubID: 0n,
+    };
+
+    for (let i = 1; i < loops; i += 1) {
+      // Create notes in and notes out
+      const notesIn = new Array(i * 2)
+        .fill(1)
+        .map(() => new Note(spendingKey, viewingKey, 50n, randomBytes(16), tokenData, ''));
+
+      const notesOut = new Array(i)
+        .fill(1)
+        .map(() => new Note(spendingKey, viewingKey, 100n, randomBytes(16), tokenData, ''));
+
+      const notesOutUnshield: (Note | UnshieldNote)[] = new Array(i)
+        .fill(1)
+        .map(() => new Note(spendingKey, viewingKey, 100n, randomBytes(16), tokenData, ''));
+
+      notesOutUnshield[notesOutUnshield.length - 1] = new UnshieldNote(
+        ethers.constants.AddressZero,
+        100n,
+        tokenData,
+      );
+
+      // Create merkle tree and insert notes
+      const tree = await MerkleTree.createTree();
+      await tree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), 0);
+
+      // Get transaction
+      const transaction = await dummyTransact(
+        tree,
+        0n,
+        UnshieldType.NONE,
+        ethers.constants.AddressZero,
+        new Uint8Array(32),
+        notesIn,
+        notesOut,
+      );
+
+      // Get unshield transaction
+      const unshieldTransaction = await dummyTransact(
+        tree,
+        0n,
+        UnshieldType.WITHDRAW,
+        ethers.constants.AddressZero,
+        new Uint8Array(32),
+        notesIn,
+        notesOut,
+      );
+
+      // Check transaction commitment count
+      for (let n = 1; n < loops; n += 1) {
+        // Build transaction array
+        const transactions = new Array(n).fill(1).map(() => transaction);
+        const unshieldTransactions = new Array(n).fill(1).map(() => unshieldTransaction);
+
+        expect(
+          await railgunLogic.sumCommitments([...transactions, ...unshieldTransactions]),
+        ).to.equal(i * n + (i - 1) * n);
+      }
+    }
+  });
+
+  it('Should validate transactions', async () => {
+    const { railgunLogic, railgunLogicSnarkBypass } = await loadFixture(deploy);
+
+    // Create random viewing and spending keys
+    const spendingKey = randomBytes(32);
+    const viewingKey = randomBytes(32);
+    const tokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: ethers.constants.AddressZero,
+      tokenSubID: 0n,
+    };
+
+    // Create notes in and notes out
+    const notesIn = new Array(2)
+      .fill(1)
+      .map(() => new Note(spendingKey, viewingKey, 100n, randomBytes(16), tokenData, ''));
+
+    const notesOut = new Array(3)
+      .fill(1)
+      .map(() => new Note(spendingKey, viewingKey, 100n, randomBytes(16), tokenData, ''));
+
+    // Create merkle tree and insert notes
+    const tree = await MerkleTree.createTree();
+    await tree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), 0);
+
+    // Set merkle root on contract
+    await railgunLogic.setMerkleRoot(0, tree.root);
+
+    // Create dummy transaction
+    const dummyTransaction = await dummyTransact(
+      tree,
+      100n,
+      UnshieldType.NONE,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      notesIn,
+      notesOut,
+    );
+
+    // Should return false if min gas price is too low
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 10 }),
     ).to.equal(false);
   });
 });
