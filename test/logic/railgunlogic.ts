@@ -6,13 +6,9 @@ import {
   impersonateAccount,
 } from '@nomicfoundation/hardhat-network-helpers';
 
-import {
-  dummyTransact,
-  getFee,
-  UnshieldType,
-} from '../../helpers/logic/transaction';
+import { dummyTransact, getFee, transact, UnshieldType } from '../../helpers/logic/transaction';
 import { Note, TokenType, UnshieldNote } from '../../helpers/logic/note';
-import { randomBytes } from 'crypto';
+import { randomBytes } from '../../helpers/global/crypto';
 import { arrayToHexString } from '../../helpers/global/bytes';
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import { loadAllArtifacts } from '../../helpers/logic/artifacts';
@@ -481,20 +477,30 @@ describe('Logic/RailgunLogic', () => {
     // Create notes in and notes out
     const notesIn = new Array(2)
       .fill(1)
-      .map(() => new Note(spendingKey, viewingKey, 100n, randomBytes(16), tokenData, ''));
+      .map(() => new Note(spendingKey, viewingKey, 300n, randomBytes(16), tokenData, ''));
 
     const notesOut = new Array(3)
       .fill(1)
-      .map(() => new Note(spendingKey, viewingKey, 100n, randomBytes(16), tokenData, ''));
+      .map(() => new Note(spendingKey, viewingKey, 200n, randomBytes(16), tokenData, ''));
+
+    const notesOutUnshield: (Note | UnshieldNote)[] = new Array(3)
+      .fill(1)
+      .map(() => new Note(spendingKey, viewingKey, 200n, randomBytes(16), tokenData, ''));
+
+    notesOutUnshield[notesOutUnshield.length - 1] = new UnshieldNote(
+      ethers.constants.AddressZero,
+      100n,
+      tokenData,
+    );
 
     // Create merkle tree and insert notes
     const tree = await MerkleTree.createTree();
     await tree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), 0);
 
     // Set merkle root on contract
-    await railgunLogic.setMerkleRoot(0, tree.root);
+    await railgunLogic.setMerkleRoot(0, tree.root, true);
 
-    // Create dummy transaction
+    // Create dummy transactions
     const dummyTransaction = await dummyTransact(
       tree,
       100n,
@@ -505,9 +511,104 @@ describe('Logic/RailgunLogic', () => {
       notesOut,
     );
 
+    const dummyTransactionUnshield = await dummyTransact(
+      tree,
+      100n,
+      UnshieldType.WITHDRAW,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      notesIn,
+      notesOutUnshield,
+    );
+
+    // Should return true for valid transactions
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(true);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
+        gasPrice: 100,
+      }),
+    ).to.equal(true);
+
     // Should return false if min gas price is too low
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 10 }),
     ).to.equal(false);
+
+    // Should return false if invalid merkle root
+    await railgunLogic.setMerkleRoot(0, tree.root, false);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(false);
+    await railgunLogic.setMerkleRoot(0, tree.root, true);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(true);
+
+    // Should return false if nullifier has been seen before
+    await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], true);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(false);
+    await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], false);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(true);
+
+    // Should return false if incorrect number of ciphertext
+    dummyTransaction.boundParams.commitmentCiphertext.push({
+      ciphertext: [randomBytes(32), randomBytes(32), randomBytes(32), randomBytes(32)],
+      blindedReceiverViewingKey: randomBytes(32),
+      blindedSenderViewingKey: randomBytes(32),
+      annotationData: randomBytes(48),
+      memo: randomBytes(123),
+    });
+    dummyTransactionUnshield.boundParams.commitmentCiphertext.push({
+      ciphertext: [randomBytes(32), randomBytes(32), randomBytes(32), randomBytes(32)],
+      blindedReceiverViewingKey: randomBytes(32),
+      blindedSenderViewingKey: randomBytes(32),
+      annotationData: randomBytes(48),
+      memo: randomBytes(123),
+    });
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(false);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
+        gasPrice: 100,
+      }),
+    ).to.equal(false);
+    dummyTransaction.boundParams.commitmentCiphertext.pop();
+    dummyTransactionUnshield.boundParams.commitmentCiphertext.pop();
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(true);
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
+        gasPrice: 100,
+      }),
+    ).to.equal(true);
+
+    if (process.env.LONG_TESTS === 'yes') {
+      // Generate SNARK proof
+      const transaction = await transact(
+        tree,
+        100n,
+        UnshieldType.NONE,
+        ethers.constants.AddressZero,
+        new Uint8Array(32),
+        notesIn,
+        notesOut,
+      );
+
+      // Should return true for transaction with valid snark proof
+      expect(await railgunLogic.validateTransaction(transaction, { gasPrice: 100 })).to.equal(true);
+
+      // Should return false for transaction without valid snark proof
+      expect(await railgunLogic.validateTransaction(dummyTransaction, { gasPrice: 100 })).to.equal(
+        false,
+      );
+    }
   });
 });
