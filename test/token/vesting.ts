@@ -17,6 +17,7 @@ describe('Token/Vesting', () => {
 
     // Deploy token
     const testERC20 = await TestERC20.deploy();
+    await testERC20.mint(await testERC20.signer.getAddress(), 2n ** 256n - 1n);
 
     // Deploy staking
     const staking = await Staking.deploy(testERC20.address);

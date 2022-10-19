@@ -20,6 +20,7 @@ describe('Treasury/GovernorRewards', () => {
 
     // Deploy contracts
     const rail = await ERC20.deploy();
+    await rail.mint(await rail.signer.getAddress(), 2n ** 256n - 1n);
     const staking = await Staking.deploy(rail.address);
     const treasury = await Treasury.deploy();
     const governorRewards = await GovernorRewards.deploy();
@@ -29,6 +30,12 @@ describe('Treasury/GovernorRewards', () => {
       Array(12)
         .fill(1)
         .map(() => ERC20.deploy()),
+    );
+
+    await Promise.all(
+      distributionTokens.map(async (token) =>
+        token.mint(await token.signer.getAddress(), 2n ** 256n - 1n),
+      ),
     );
 
     // Setup contract connections for each signer

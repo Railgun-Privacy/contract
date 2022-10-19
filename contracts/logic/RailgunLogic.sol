@@ -227,6 +227,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     // Note NPK must be in field
     if (uint256(_note.npk) >= SNARK_SCALAR_FIELD) return false;
 
+    // ERC721 notes should have a value of 1
+    if (_note.token.tokenType == TokenType.ERC721 && _note.value != 1) return false;
+
     return true;
   }
 
@@ -273,7 +276,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Transfer NFT to contract address
       token.transferFrom(address(msg.sender), address(this), _note.token.tokenSubID);
-    } else if (_note.token.tokenType == TokenType.ERC1155) {
+    } else {
       // ERC1155 token
       revert("RailgunLogic: ERC1155 not yet supported");
     }
@@ -343,7 +346,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Emit unshield event
       emit Unshield(address(uint160(uint256(_note.npk))), _note.token, 1, 0);
-    } else if (_note.token.tokenType == TokenType.ERC1155) {
+    } else {
       // ERC1155 token
       revert("RailgunLogic: ERC1155 not yet supported");
     }

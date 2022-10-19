@@ -19,6 +19,7 @@ describe('Treasury/Treasury', () => {
 
     // Deploy ERC20
     const erc20 = await ERC20.deploy();
+    await erc20.mint(await erc20.signer.getAddress(), 2n ** 256n - 1n);
 
     // Transfer ERC20 to treasury
     await erc20.transfer(

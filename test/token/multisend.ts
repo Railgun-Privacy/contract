@@ -14,6 +14,7 @@ describe('Token/Multisend', function () {
 
     // Deploy token
     const testERC20 = await TestERC20.deploy();
+    await testERC20.mint(await testERC20.signer.getAddress(), 2n ** 256n - 1n);
 
     // Deploy multisend
     const multisend = await Multisend.deploy();

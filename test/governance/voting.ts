@@ -34,17 +34,12 @@ describe('Governance/Voting', () => {
     // Transfer ownership of delegator to voting
     await delegator.transferOwnership(voting.address);
 
-    // Get total balance
-    let balance = (await testERC20.balanceOf((await ethers.getSigners())[0].address)).toBigInt();
-
-    // Transfer half of balance to second address to avoid overflows
-    await testERC20.transfer(users[1].address, balance / 2n);
-
-    // Update balance
-    balance /= 2n;
+    // Get mint balance
+    const balance = 2n ** 128n - 1n;
+    await testERC20.mint(users[0].address, balance);
 
     // Approve entire balance for staking
-    await testERC20.approve(staking.address, balance);
+    await testERC20.approve(staking.address, 2n ** 256n - 1n);
 
     // Stake entire balance
     await staking.stake(balance);
