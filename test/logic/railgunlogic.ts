@@ -515,7 +515,7 @@ describe('Logic/RailgunLogic', () => {
     }
   });
 
-  it('Should validate transactions', async () => {
+  it('Should validate transaction', async () => {
     const { railgunLogic, railgunLogicSnarkBypass } = await loadFixture(deploy);
 
     // Create random viewing and spending keys
@@ -541,7 +541,7 @@ describe('Logic/RailgunLogic', () => {
       .map(() => new Note(spendingKey, viewingKey, 200n, randomBytes(16), tokenData, ''));
 
     notesOutUnshield[notesOutUnshield.length - 1] = new UnshieldNote(
-      ethers.constants.AddressZero,
+      await railgunLogicSnarkBypass.signer.getAddress(),
       100n,
       tokenData,
     );
@@ -574,12 +574,29 @@ describe('Logic/RailgunLogic', () => {
       notesOutUnshield,
     );
 
+    let dummyTransactionUnshieldRedirect = await dummyTransact(
+      tree,
+      100n,
+      UnshieldType.REDIRECT,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      notesIn,
+      notesOutUnshield,
+    );
+
     // Should return true for valid transactions
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(true);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
+        gasPrice: 100,
+      }),
+    ).to.equal(true);
+
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
         gasPrice: 100,
       }),
     ).to.equal(true);
@@ -591,34 +608,45 @@ describe('Logic/RailgunLogic', () => {
 
     // Should return false if adaptContract is set to non-0 and not the submitter's address
     dummyTransaction.boundParams.adaptContract = await railgunLogicSnarkBypass.signer.getAddress();
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(true);
+
     dummyTransaction.boundParams.adaptContract = arrayToHexString(randomBytes(20), true);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(false);
+
     dummyTransaction.boundParams.adaptContract = ethers.constants.AddressZero;
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(true);
 
     // Should return false if invalid merkle root
     await railgunLogic.setMerkleRoot(0, tree.root, false);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(false);
+
     await railgunLogic.setMerkleRoot(0, tree.root, true);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(true);
 
     // Should return false if nullifier has been seen before
     await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], true);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(false);
+
     await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], false);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(true);
@@ -631,6 +659,7 @@ describe('Logic/RailgunLogic', () => {
       annotationData: randomBytes(48),
       memo: randomBytes(123),
     });
+
     dummyTransactionUnshield.boundParams.commitmentCiphertext.push({
       ciphertext: [randomBytes(32), randomBytes(32), randomBytes(32), randomBytes(32)],
       blindedReceiverViewingKey: randomBytes(32),
@@ -638,24 +667,72 @@ describe('Logic/RailgunLogic', () => {
       annotationData: randomBytes(48),
       memo: randomBytes(123),
     });
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(false);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
     ).to.equal(false);
+
     dummyTransaction.boundParams.commitmentCiphertext.pop();
+
     dummyTransactionUnshield.boundParams.commitmentCiphertext.pop();
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.equal(true);
+
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
     ).to.equal(true);
+
+    // Should return false for invalid withdraw preimage
+    dummyTransactionUnshield.unshieldPreimage.value += 100n;
+    dummyTransactionUnshieldRedirect.unshieldPreimage.value += 100n;
+
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
+        gasPrice: 100,
+      }),
+    ).to.equal(false);
+
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
+        gasPrice: 100,
+      }),
+    ).to.equal(false);
+
+    dummyTransactionUnshield.unshieldPreimage.value -= 100n;
+    dummyTransactionUnshieldRedirect.unshieldPreimage.value -= 100n;
+
+    // Should return false if redirect transaction is submitted from an address that isn't the original recipient
+    notesOutUnshield[notesOutUnshield.length - 1] = new UnshieldNote(
+      await railgunLogic.signer.getAddress(),
+      100n,
+      tokenData,
+    );
+
+    dummyTransactionUnshieldRedirect = await dummyTransact(
+      tree,
+      100n,
+      UnshieldType.REDIRECT,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      notesIn,
+      notesOutUnshield,
+    );
+
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
+        gasPrice: 100,
+      }),
+    ).to.equal(false);
 
     if (process.env.LONG_TESTS === 'yes') {
       // Generate SNARK proof
@@ -877,7 +954,7 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should transfer tokens out', async () => {
-    const { railgunLogic, railgunLogicSnarkBypass, testERC20, testERC721, treasuryAccount } = await loadFixture(deploy);
+    const { railgunLogic, testERC20, testERC721, treasuryAccount } = await loadFixture(deploy);
 
     const loops = 5;
 
@@ -904,11 +981,7 @@ describe('Logic/RailgunLogic', () => {
       );
 
       await expect(
-        railgunLogic.transferTokenOutStub(
-          erc20Note.getCommitmentPreimage(),
-          await erc20Note.getHash(),
-          false,
-        ),
+        railgunLogic.transferTokenOutStub(erc20Note.getCommitmentPreimage()),
       ).to.changeTokenBalances(
         testERC20,
         [await railgunLogic.signer.getAddress(), railgunLogic.address, treasuryAccount.address],
@@ -930,11 +1003,7 @@ describe('Logic/RailgunLogic', () => {
         tokenDataERC721,
       );
 
-      await railgunLogic.transferTokenOutStub(
-        erc721Note.getCommitmentPreimage(),
-        await erc721Note.getHash(),
-        false,
-      );
+      await railgunLogic.transferTokenOutStub(erc721Note.getCommitmentPreimage());
       expect(await testERC721.ownerOf(i)).to.equal(await railgunLogic.signer.getAddress());
 
       // Check ERC1155 is rejected
@@ -951,52 +1020,8 @@ describe('Logic/RailgunLogic', () => {
       );
 
       await expect(
-        railgunLogic.transferTokenOutStub(
-          erc1155Note.getCommitmentPreimage(),
-          await erc1155Note.getHash(),
-          false,
-        ),
+        railgunLogic.transferTokenOutStub(erc1155Note.getCommitmentPreimage()),
       ).to.be.revertedWith('RailgunLogic: ERC1155 not yet supported');
     }
-
-    // Should revert if hash doesn't manage
-    const erc20Note = new UnshieldNote(
-      await railgunLogic.signer.getAddress(),
-      100n,
-      tokenDataERC20,
-    );
-
-    const erc20Note2 = new UnshieldNote(
-      await railgunLogicSnarkBypass.signer.getAddress(),
-      100n,
-      tokenDataERC20,
-    );
-
-    await expect(
-      railgunLogic.transferTokenOutStub(
-        erc20Note.getCommitmentPreimage(),
-        await erc20Note2.getHash(),
-        false,
-      ),
-    ).to.be.revertedWith('RailgunLogic: Unshield preimage is invalid');
-
-    // Should redirect if by the original address
-    const { base, fee } = getFee(
-      erc20Note.value,
-      true,
-      (await railgunLogic.shieldFee()).toBigInt(),
-    );
-
-    await expect(
-      railgunLogicSnarkBypass.transferTokenOutStub(
-        erc20Note.getCommitmentPreimage(),
-        await erc20Note2.getHash(),
-        true,
-      ),
-    ).to.changeTokenBalances(
-      testERC20,
-      [await railgunLogic.signer.getAddress(), railgunLogic.address, treasuryAccount.address],
-      [base, -erc20Note.value, fee],
-    );
   });
 });

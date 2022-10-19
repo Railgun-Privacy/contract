@@ -287,32 +287,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Transfers tokens to contract and adjusts preimage with fee values
    * @param _note - note to process
-   * @param _expectedHash - expected hash of note
-   * @param _redirect - if output redirect is allowed
    */
-  function transferTokenOut(
-    CommitmentPreimage calldata _note,
-    bytes32 _expectedHash,
-    bool _redirect
-  ) internal {
-    // Hash commitment and check it matches the expected hash
-    bytes32 hash;
-
-    if (_redirect) {
-      // If redirect is allowed withdraw MUST be submitted by original recipient
-      hash = hashCommitment(
-        CommitmentPreimage({
-          npk: bytes32(uint256(uint160(msg.sender))),
-          token: _note.token,
-          value: _note.value
-        })
-      );
-    } else {
-      hash = hashCommitment(_note);
-    }
-
-    require(hash == _expectedHash, "RailgunLogic: Unshield preimage is invalid");
-
+  function transferTokenOut(CommitmentPreimage calldata _note) internal {
     // Process unshield request
     if (_note.token.tokenType == TokenType.ERC20) {
       // ERC20
@@ -436,12 +412,32 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       ) return false;
     }
 
-    // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
     if (_transaction.boundParams.unshield != UnshieldType.NONE) {
+      // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
       if (
         _transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length - 1
       ) return false;
+
+      // Check withdraw preimage hash is correct
+      bytes32 hash;
+
+      if (_transaction.boundParams.unshield == UnshieldType.REDIRECT) {
+        // If redirect is allowed withdraw MUST be submitted by original recipient
+        hash = hashCommitment(
+          CommitmentPreimage({
+            npk: bytes32(uint256(uint160(msg.sender))),
+            token: _transaction.unshieldPreimage.token,
+            value: _transaction.unshieldPreimage.value
+          })
+        );
+      } else {
+        hash = hashCommitment(_transaction.unshieldPreimage);
+      }
+
+      // Check hash equals the last commitment in array
+      if (hash != _transaction.commitments[_transaction.commitments.length - 1]) return false;
     } else {
+      // Ensure ciphertext length matches the commitments length
       if (_transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length)
         return false;
     }

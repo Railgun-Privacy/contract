@@ -87,13 +87,7 @@ contract RailgunSmartWallet is RailgunLogic {
       );
 
       // If unshield is specified, process
-      RailgunLogic.transferTokenOut(
-        _transactions[transactionIter].unshieldPreimage,
-        _transactions[transactionIter].commitments[
-          _transactions[transactionIter].commitments.length - 1
-        ],
-        _transactions[transactionIter].boundParams.unshield == UnshieldType.REDIRECT
-      );
+      RailgunLogic.transferTokenOut(_transactions[transactionIter].unshieldPreimage);
     }
 
     // Get insertion parameters

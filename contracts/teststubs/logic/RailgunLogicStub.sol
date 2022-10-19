@@ -45,11 +45,9 @@ contract RailgunLogicStub is RailgunLogic {
   }
 
   function transferTokenOutStub(
-    CommitmentPreimage calldata _note,
-    bytes32 _expectedHash,
-    bool _redirect
+    CommitmentPreimage calldata _note
   ) external {
-    RailgunLogic.transferTokenOut(_note, _expectedHash, _redirect);
+    RailgunLogic.transferTokenOut(_note);
   }
 
   function accumulateAndNullifyTransactionStub(
