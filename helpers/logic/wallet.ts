@@ -227,6 +227,21 @@ class Wallet {
       outputs: outputNotes,
     };
   }
+
+  /**
+   * Get balance for token
+   *
+   * @param merkletree - merkle tree to use as seen nullifiers source
+   * @param token - token to get balance of
+   * @returns balance
+   */
+  async getBalance(merkletree: MerkleTree, token: TokenData): Promise<bigint> {
+    // Get unspent notes
+    const unspentNotes = await this.getUnspentNotes(merkletree, token);
+
+    // Map reduce sum values
+    return unspentNotes.map((note) => note.value).reduce((left, right) => left + right);
+  }
 }
 
 export { Wallet };
