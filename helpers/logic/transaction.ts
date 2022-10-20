@@ -22,7 +22,7 @@ import {
 
 export enum UnshieldType {
   NONE = 0,
-  WITHDRAW = 1,
+  NORMAL = 1,
   REDIRECT = 2,
 }
 

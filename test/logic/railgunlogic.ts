@@ -62,8 +62,8 @@ describe('Logic/RailgunLogic', () => {
 
     await railgunLogic.initializeRailgunLogic(
       treasuryAccount.address,
-      25,
-      25,
+      40,
+      30,
       25,
       adminAccount.address,
     );
@@ -75,7 +75,7 @@ describe('Logic/RailgunLogic', () => {
     // Load verification keys
     await loadAllArtifacts(railgunLogicAdmin);
 
-    // Deploy test ERC20 and approve for deposit
+    // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');
     const testERC20 = await TestERC20.deploy();
     const testERC20BypassSigner = testERC20.connect(snarkBypassSigner);
@@ -84,7 +84,7 @@ describe('Logic/RailgunLogic', () => {
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
     await testERC20BypassSigner.approve(railgunLogic.address, 2n ** 256n - 1n);
 
-    // Deploy test ERC721
+    // Deploy test ERC721 and approve for shield
     const TestERC721 = await ethers.getContractFactory('TestERC721');
     const testERC721 = await TestERC721.deploy();
     const testERC721BypassSigner = testERC721.connect(snarkBypassSigner);
@@ -117,14 +117,14 @@ describe('Logic/RailgunLogic', () => {
     const { railgunLogic, railgunLogicAdmin } = await loadFixture(deploy);
 
     // Check initial fees
-    expect(await railgunLogicAdmin.shieldFee()).to.equal(25n);
-    expect(await railgunLogicAdmin.unshieldFee()).to.equal(25n);
+    expect(await railgunLogicAdmin.shieldFee()).to.equal(40n);
+    expect(await railgunLogicAdmin.unshieldFee()).to.equal(30n);
     expect(await railgunLogicAdmin.nftFee()).to.equal(25n);
 
     // Change fee
-    await expect(railgunLogicAdmin.changeFee(1n, 25n, 25n))
+    await expect(railgunLogicAdmin.changeFee(1n, 30n, 25n))
       .to.emit(railgunLogicAdmin, 'FeeChange')
-      .withArgs(1n, 25n, 25n);
+      .withArgs(1n, 30n, 25n);
     await expect(railgunLogicAdmin.changeFee(1n, 2n, 25n))
       .to.emit(railgunLogicAdmin, 'FeeChange')
       .withArgs(1n, 2n, 25n);
@@ -495,7 +495,7 @@ describe('Logic/RailgunLogic', () => {
       const unshieldTransaction = await dummyTransact(
         tree,
         0n,
-        UnshieldType.WITHDRAW,
+        UnshieldType.NORMAL,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         notesIn,
@@ -567,7 +567,7 @@ describe('Logic/RailgunLogic', () => {
     const dummyTransactionUnshield = await dummyTransact(
       tree,
       100n,
-      UnshieldType.WITHDRAW,
+      UnshieldType.NORMAL,
       ethers.constants.AddressZero,
       new Uint8Array(32),
       notesIn,
@@ -692,7 +692,7 @@ describe('Logic/RailgunLogic', () => {
       }),
     ).to.equal(true);
 
-    // Should return false for invalid withdraw preimage
+    // Should return false for invalid unshield preimage
     dummyTransactionUnshield.unshieldPreimage.value += 100n;
     dummyTransactionUnshieldRedirect.unshieldPreimage.value += 100n;
 
@@ -977,7 +977,7 @@ describe('Logic/RailgunLogic', () => {
       const { base, fee } = getFee(
         erc20Note.value,
         true,
-        (await railgunLogic.shieldFee()).toBigInt(),
+        (await railgunLogic.unshieldFee()).toBigInt(),
       );
 
       await expect(

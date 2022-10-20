@@ -413,16 +413,16 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     }
 
     if (_transaction.boundParams.unshield != UnshieldType.NONE) {
-      // Ensure ciphertext length matches the commitments length (minus 1 for withdrawn output)
+      // Ensure ciphertext length matches the commitments length (minus 1 for unshield output)
       if (
         _transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length - 1
       ) return false;
 
-      // Check withdraw preimage hash is correct
+      // Check unshield preimage hash is correct
       bytes32 hash;
 
       if (_transaction.boundParams.unshield == UnshieldType.REDIRECT) {
-        // If redirect is allowed withdraw MUST be submitted by original recipient
+        // If redirect is allowed unshield MUST be submitted by original recipient
         hash = hashCommitment(
           CommitmentPreimage({
             npk: bytes32(uint256(uint160(msg.sender))),
