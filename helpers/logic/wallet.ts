@@ -177,6 +177,8 @@ class Wallet {
    * @param outputs - number of outputs
    * @param includeUnshield - should include unshield
    * @param token - token to get notes for
+   * @param spendingKey - receiver spending key
+   * @param viewingKey - receiver viewing key
    * @returns inputs and outputs to use for test
    */
   async getTestTransactionInputs(
@@ -185,6 +187,8 @@ class Wallet {
     outputs: number,
     includeUnshield: string | false,
     token: TokenData,
+    spendingKey: Uint8Array,
+    viewingKey: Uint8Array,
   ): Promise<{ inputs: Note[]; outputs: (Note | UnshieldNote)[] }> {
     // Get unspent notes
     const unspentNotes = await this.getUnspentNotes(merkletree, token);
@@ -210,7 +214,7 @@ class Wallet {
 
     // Get output notes
     const outputNotes: (Note | UnshieldNote)[] = outputNoteValues.map(
-      (value) => new Note(this.spendingKey, this.viewingKey, value, randomBytes(16), token, ''),
+      (value) => new Note(spendingKey, viewingKey, value, randomBytes(16), token, ''),
     );
 
     // If include unshield, replace last note with unshield
@@ -239,8 +243,8 @@ class Wallet {
     // Get unspent notes
     const unspentNotes = await this.getUnspentNotes(merkletree, token);
 
-    // Map reduce sum values
-    return unspentNotes.map((note) => note.value).reduce((left, right) => left + right);
+    // Map reduce sum values, default to 0 in no notes
+    return unspentNotes.map((note) => note.value).reduce((left, right) => left + right, 0n);
   }
 }
 

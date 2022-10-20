@@ -257,7 +257,7 @@ class MerkleTree {
 
             // Get leaves
             const leaves = await Promise.all(
-              args.commitments.map(async (commitment) =>
+              args.commitments.map((commitment) =>
                 hash.poseidon([
                   hexStringToArray(commitment.npk),
                   getTokenID({

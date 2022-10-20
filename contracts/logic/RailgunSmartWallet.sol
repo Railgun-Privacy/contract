@@ -48,7 +48,7 @@ contract RailgunSmartWallet is RailgunLogic {
       commitments[notesIter] = RailgunLogic.transferTokenIn(_notes[notesIter]);
 
       // Hash note for merkle tree insertion
-      insertionLeaves[notesIter] = RailgunLogic.hashCommitment(_notes[notesIter]);
+      insertionLeaves[notesIter] = RailgunLogic.hashCommitment(commitments[notesIter]);
     }
 
     // Emit Shield events (for wallets) for the commitments
