@@ -256,16 +256,16 @@ class Note {
     // Generate a random key for testing
     // In the case of shielding from regular ETH address key should be generated as hash256(eth_sign(some_fixed_message))) from the ETH address of the shielder
     // In the case of shielding from a smart contract (eg. adapt module) a random 32 byte value should be used
-    const shieldKey = randomBytes(32);
+    const shieldPrivateKey = randomBytes(32);
 
     // Get shared key
-    const sharedKey = ed25519.getSharedKey(shieldKey, await this.getViewingPublicKey());
+    const sharedKey = ed25519.getSharedKey(shieldPrivateKey, await this.getViewingPublicKey());
 
     // Encrypt random
     const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey);
 
     // Encrypt receiver public key
-    const encryptedReceiver = aes.ctr.encrypt([await this.getViewingPublicKey()], shieldKey);
+    const encryptedReceiver = aes.ctr.encrypt([await this.getViewingPublicKey()], shieldPrivateKey);
 
     return {
       encryptedBundle: [
@@ -273,7 +273,7 @@ class Note {
         combine([encryptedRandom[1], encryptedReceiver[0]]),
         encryptedReceiver[1],
       ],
-      shieldKey: await ed25519.privateKeyToPublicKey(shieldKey),
+      shieldKey: await ed25519.privateKeyToPublicKey(shieldPrivateKey),
     };
   }
 
