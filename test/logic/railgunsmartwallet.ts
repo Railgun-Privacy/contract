@@ -103,7 +103,7 @@ describe('Logic/RailgunSmartWallet', () => {
     const wallet1 = new Wallet(randomBytes(32), randomBytes(32));
     const wallet2 = new Wallet(randomBytes(32), randomBytes(32));
 
-    // Shield a note
+    // Shield notes
     const tokenData: TokenData = {
       tokenType: TokenType.ERC20,
       tokenAddress: testERC20.address,
@@ -370,5 +370,117 @@ describe('Logic/RailgunSmartWallet', () => {
     // Check balances
     expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(0);
     expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(0);
+  });
+
+  it('Should ensure ciphertext and shielded notes length match', async () => {
+    const { railgunSmartWallet, testERC20 } = await loadFixture(deploy);
+
+    // Shield notes
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0n,
+    };
+
+    const shieldNotes = [
+      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
+    ];
+
+    await expect(
+      railgunSmartWallet.shield(
+        [...(await Promise.all(shieldNotes.map((note) => note.getCommitmentPreimage())))],
+        [...(await Promise.all(shieldNotes.map((note) => note.encryptForShield())))].slice(0, 2),
+      ),
+    ).to.be.revertedWith("RailgunSmartWallet: Notes and shield ciphertext length doesn't match");
+  });
+
+  it('Should ensure note preimages are valid', async () => {
+    const { railgunSmartWallet, testERC20 } = await loadFixture(deploy);
+
+    // Shield notes
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0n,
+    };
+
+    const shieldNotes = [
+      new Note(randomBytes(32), randomBytes(32), 0n, randomBytes(16), tokenData, ''),
+    ];
+
+    await expect(
+      railgunSmartWallet.shield(
+        [...(await Promise.all(shieldNotes.map((note) => note.getCommitmentPreimage())))],
+        [...(await Promise.all(shieldNotes.map((note) => note.encryptForShield())))],
+      ),
+    ).to.be.revertedWith('RailgunSmartWallet: Note preimage is invalid');
+  });
+
+  it('Should reject invalid transactions', async () => {
+    const { railgunSmartWallet, testERC20 } = await loadFixture(deploy);
+
+    // Create merkle tree and wallets
+    const merkletree = await MerkleTree.createTree();
+    const wallet1 = new Wallet(randomBytes(32), randomBytes(32));
+    const wallet2 = new Wallet(randomBytes(32), randomBytes(32));
+
+    // Shield notes
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0n,
+    };
+
+    wallet1.tokens.push(tokenData);
+
+    const shieldNotes = [
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+    ];
+
+    const shieldTransaction = await railgunSmartWallet.shield(
+      [...(await Promise.all(shieldNotes.map((note) => note.getCommitmentPreimage())))],
+      [...(await Promise.all(shieldNotes.map((note) => note.encryptForShield())))],
+    );
+
+    // Scan transaction
+    await merkletree.scanTX(shieldTransaction, railgunSmartWallet);
+    await wallet1.scanTX(shieldTransaction, railgunSmartWallet);
+    await wallet2.scanTX(shieldTransaction, railgunSmartWallet);
+
+    // Transfer tokens between shielded balances
+    const transferNotes = padWithDummyNotes(
+      await wallet1.getTestTransactionInputs(
+        merkletree,
+        1,
+        1,
+        false,
+        tokenData,
+        wallet2.spendingKey,
+        wallet2.viewingKey,
+      ),
+      2,
+    );
+
+    await expect(
+      railgunSmartWallet.transact([
+        await dummyTransact(
+          merkletree,
+          0n,
+          UnshieldType.NONE,
+          ethers.constants.AddressZero,
+          new Uint8Array(32),
+          transferNotes.inputs,
+          transferNotes.outputs,
+        ),
+      ]),
+    ).to.be.revertedWith("RailgunSmartWallet: Transaction isn't valid");
   });
 });

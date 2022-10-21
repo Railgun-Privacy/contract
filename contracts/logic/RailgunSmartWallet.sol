@@ -41,7 +41,7 @@ contract RailgunSmartWallet is RailgunLogic {
       // Check note is valid
       require(
         RailgunLogic.validateCommitmentPreimage(_notes[notesIter]),
-        "RailgunSmartWallet: Note is invalid"
+        "RailgunSmartWallet: Note preimage is invalid"
       );
 
       // Process shield request and store adjusted note
