@@ -12,6 +12,7 @@ import {
   dummyTransact,
   getFee,
   nullifiersMatcher,
+  tokenDataMatcher,
   transact,
   UnshieldType,
 } from '../../helpers/logic/transaction';
@@ -980,13 +981,24 @@ describe('Logic/RailgunLogic', () => {
         (await railgunLogic.unshieldFee()).toBigInt(),
       );
 
-      await expect(
-        railgunLogic.transferTokenOutStub(erc20Note.getCommitmentPreimage()),
-      ).to.changeTokenBalances(
+      const erc20UnshieldTX = await railgunLogic.transferTokenOutStub(
+        erc20Note.getCommitmentPreimage(),
+      );
+
+      await expect(erc20UnshieldTX).to.changeTokenBalances(
         testERC20,
         [await railgunLogic.signer.getAddress(), railgunLogic.address, treasuryAccount.address],
         [base, -erc20Note.value, fee],
       );
+
+      await expect(erc20UnshieldTX)
+        .to.emit(railgunLogic, 'Unshield')
+        .withArgs(
+          await railgunLogic.signer.getAddress(),
+          tokenDataMatcher(tokenDataERC20),
+          base,
+          fee,
+        );
 
       // Check ERC721 gets transferred
       await testERC721.mint(railgunLogic.address, i);
@@ -1003,7 +1015,14 @@ describe('Logic/RailgunLogic', () => {
         tokenDataERC721,
       );
 
-      await railgunLogic.transferTokenOutStub(erc721Note.getCommitmentPreimage());
+      const erc721UnshieldTX = await railgunLogic.transferTokenOutStub(
+        erc721Note.getCommitmentPreimage(),
+      );
+
+      await expect(erc721UnshieldTX)
+        .to.emit(railgunLogic, 'Unshield')
+        .withArgs(await railgunLogic.signer.getAddress(), tokenDataMatcher(tokenDataERC721), 1, 0);
+
       expect(await testERC721.ownerOf(i)).to.equal(await railgunLogic.signer.getAddress());
 
       // Check ERC1155 is rejected

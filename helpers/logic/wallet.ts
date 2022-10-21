@@ -8,6 +8,7 @@ import { arrayToHexString, hexStringToArray } from '../global/bytes';
 import { randomBytes } from '../global/crypto';
 import { MerkleTree } from './merkletree';
 import { getTokenID, Note, TokenData, UnshieldNote } from './note';
+import { InputOutputBundle } from './transaction';
 
 class Wallet {
   spendingKey: Uint8Array;
@@ -164,9 +165,10 @@ class Wallet {
     );
 
     // Return notes that haven't had their nullifiers seen and token IDs match
-    return this.notes
-      .filter((note, index) => !seenNullifiers.includes(noteNullifiers[index]))
-      .filter((note, index) => noteTokenIDs[index] === tokenID);
+    return this.notes.filter(
+      (note, index) =>
+        !seenNullifiers.includes(noteNullifiers[index]) && noteTokenIDs[index] === tokenID,
+    );
   }
 
   /**
@@ -189,7 +191,7 @@ class Wallet {
     token: TokenData,
     spendingKey: Uint8Array,
     viewingKey: Uint8Array,
-  ): Promise<{ inputs: Note[]; outputs: (Note | UnshieldNote)[] }> {
+  ): Promise<InputOutputBundle> {
     // Get unspent notes
     const unspentNotes = await this.getUnspentNotes(merkletree, token);
 

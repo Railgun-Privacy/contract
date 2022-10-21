@@ -11,7 +11,12 @@ import { Wallet } from '../../helpers/logic/wallet';
 import { loadAllArtifacts } from '../../helpers/logic/artifacts';
 import { randomBytes } from '../../helpers/global/crypto';
 import { Note, TokenData, TokenType } from '../../helpers/logic/note';
-import { dummyTransact, getFee, UnshieldType } from '../../helpers/logic/transaction';
+import {
+  dummyTransact,
+  getFee,
+  padWithDummyNotes,
+  UnshieldType,
+} from '../../helpers/logic/transaction';
 
 describe('Logic/RailgunSmartWallet', () => {
   /**
@@ -26,7 +31,8 @@ describe('Logic/RailgunSmartWallet', () => {
     const snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
     // Get primary and treasury accounts
-    const [primaryAccount, treasuryAccount, adminAccount] = await ethers.getSigners();
+    const [primaryAccount, treasuryAccount, adminAccount, secondaryAccount] =
+      await ethers.getSigners();
 
     // Deploy poseidon libraries
     const PoseidonT3 = await ethers.getContractFactory('PoseidonT3');
@@ -75,35 +81,27 @@ describe('Logic/RailgunSmartWallet', () => {
     await testERC721.setApprovalForAll(railgunSmartWallet.address, true);
     await testERC721BypassSigner.setApprovalForAll(railgunSmartWallet.address, true);
 
-    // Create merkle tree and wallets
-    const merkletree = await MerkleTree.createTree();
-    const wallet1 = new Wallet(randomBytes(32), randomBytes(32));
-    const wallet2 = new Wallet(randomBytes(32), randomBytes(32));
-
     return {
       primaryAccount,
       treasuryAccount,
       adminAccount,
+      secondaryAccount,
       railgunSmartWallet,
       railgunSmartWalletSnarkBypass,
       railgunSmartWalletAdmin,
       testERC20,
       testERC721,
-      merkletree,
-      wallet1,
-      wallet2,
     };
   }
 
   it('Should deposit, transfer, and withdraw ERC20', async () => {
-    const {
-      treasuryAccount,
-      railgunSmartWalletSnarkBypass,
-      testERC20,
-      merkletree,
-      wallet1,
-      wallet2,
-    } = await loadFixture(deploy);
+    const { treasuryAccount, secondaryAccount, railgunSmartWalletSnarkBypass, testERC20 } =
+      await loadFixture(deploy);
+
+    // Create merkle tree and wallets
+    const merkletree = await MerkleTree.createTree();
+    const wallet1 = new Wallet(randomBytes(32), randomBytes(32));
+    const wallet2 = new Wallet(randomBytes(32), randomBytes(32));
 
     // Shield a note
     const tokenData: TokenData = {
@@ -132,8 +130,8 @@ describe('Logic/RailgunSmartWallet', () => {
       .map((note) => note.value)
       .reduce((left, right) => left + right);
 
-    // Calculate fee
-    const shieldFee = getFee(
+    // Calculate shield amounts
+    const shieldAmounts = getFee(
       totalShielded,
       true,
       (await railgunSmartWalletSnarkBypass.shieldFee()).toBigInt(),
@@ -147,7 +145,7 @@ describe('Logic/RailgunSmartWallet', () => {
         railgunSmartWalletSnarkBypass.address,
         treasuryAccount.address,
       ],
-      [-totalShielded, shieldFee.base, shieldFee.fee],
+      [-totalShielded, shieldAmounts.base, shieldAmounts.fee],
     );
 
     // Scan transaction
@@ -156,7 +154,7 @@ describe('Logic/RailgunSmartWallet', () => {
     await wallet2.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
 
     // Check balances
-    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(shieldFee.base);
+    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(shieldAmounts.base);
     expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(0);
 
     // Transfer tokens between shielded balances
@@ -187,13 +185,190 @@ describe('Logic/RailgunSmartWallet', () => {
       .map((note) => note.value)
       .reduce((left, right) => left + right);
 
+    // Scan transaction
+    await merkletree.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
+    await wallet1.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
+    await wallet2.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
+
     // Check balances
-    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(shieldFee.base - totalTransferred);
-    expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(totalTransferred);    
+    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(
+      shieldAmounts.base - totalTransferred,
+    );
+    expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(totalTransferred);
+
+    // Unshield tokens between shielded balances
+    const unshieldNotes = await wallet2.getTestTransactionInputs(
+      merkletree,
+      2,
+      3,
+      secondaryAccount.address,
+      tokenData,
+      wallet2.spendingKey,
+      wallet2.viewingKey,
+    );
+
+    const unshieldTransaction = await railgunSmartWalletSnarkBypass.transact([
+      await dummyTransact(
+        merkletree,
+        0n,
+        UnshieldType.NORMAL,
+        ethers.constants.AddressZero,
+        new Uint8Array(32),
+        unshieldNotes.inputs,
+        unshieldNotes.outputs,
+      ),
+    ]);
+
+    // Get total unshielded
+    const totalUnshielded = unshieldNotes.outputs[unshieldNotes.outputs.length - 1].value;
+
+    // Calculate unshield amount
+    const unshieldAmounts = getFee(
+      totalUnshielded,
+      true,
+      (await railgunSmartWalletSnarkBypass.unshieldFee()).toBigInt(),
+    );
+
+    // Check tokens amounts moved correctly
+    await expect(unshieldTransaction).to.changeTokenBalances(
+      testERC20,
+      [railgunSmartWalletSnarkBypass.address, secondaryAccount.address, treasuryAccount.address],
+      [-totalUnshielded, unshieldAmounts.base, unshieldAmounts.fee],
+    );
+
+    // Scan transaction
+    await merkletree.scanTX(unshieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet1.scanTX(unshieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet2.scanTX(unshieldTransaction, railgunSmartWalletSnarkBypass);
+
+    // Check balances
+    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(
+      shieldAmounts.base - totalTransferred,
+    );
+    expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(
+      totalTransferred - totalUnshielded,
+    );
+  });
+
+  it('Should deposit, transfer, and withdraw ERC721', async () => {
+    const { secondaryAccount, railgunSmartWalletSnarkBypass, testERC721 } = await loadFixture(
+      deploy,
+    );
+
+    // Create merkle tree and wallets
+    const merkletree = await MerkleTree.createTree();
+    const wallet1 = new Wallet(randomBytes(32), randomBytes(32));
+    const wallet2 = new Wallet(randomBytes(32), randomBytes(32));
+
+    // Shield a note
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC721,
+      tokenAddress: testERC721.address,
+      tokenSubID: 10n,
+    };
+
+    await testERC721.mint(await railgunSmartWalletSnarkBypass.signer.getAddress(), 10);
+
+    wallet1.tokens.push(tokenData);
+    wallet2.tokens.push(tokenData);
+
+    const shieldNote = new Note(
+      wallet1.spendingKey,
+      wallet1.viewingKey,
+      1n,
+      randomBytes(16),
+      tokenData,
+      '',
+    );
+
+    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield(
+      [await shieldNote.getCommitmentPreimage()],
+      [await shieldNote.encryptForShield()],
+    );
+
+    // Check token moved correctly
+    expect(await testERC721.ownerOf(10)).to.equal(railgunSmartWalletSnarkBypass.address);
+
+    // Scan transaction
+    await merkletree.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet1.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet2.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+
+    // Check balances
+    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(1);
+    expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(0);
+
+    // Transfer tokens between shielded balances
+    const transferNotes = padWithDummyNotes(
+      await wallet1.getTestTransactionInputs(
+        merkletree,
+        1,
+        1,
+        false,
+        tokenData,
+        wallet2.spendingKey,
+        wallet2.viewingKey,
+      ),
+      2,
+    );
+
+    const transferTransaction = await railgunSmartWalletSnarkBypass.transact([
+      await dummyTransact(
+        merkletree,
+        0n,
+        UnshieldType.NONE,
+        ethers.constants.AddressZero,
+        new Uint8Array(32),
+        transferNotes.inputs,
+        transferNotes.outputs,
+      ),
+    ]);
 
     // Scan transaction
     await merkletree.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
     await wallet1.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
     await wallet2.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
+
+    // Check balances
+    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(0);
+    expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(1);
+
+    // Unshield tokens between shielded balances
+    const unshieldNotes = padWithDummyNotes(
+      await wallet2.getTestTransactionInputs(
+        merkletree,
+        1,
+        1,
+        secondaryAccount.address,
+        tokenData,
+        wallet2.spendingKey,
+        wallet2.viewingKey,
+      ),
+      2,
+    );
+
+    const unshieldTransaction = await railgunSmartWalletSnarkBypass.transact([
+      await dummyTransact(
+        merkletree,
+        0n,
+        UnshieldType.NORMAL,
+        ethers.constants.AddressZero,
+        new Uint8Array(32),
+        unshieldNotes.inputs,
+        unshieldNotes.outputs,
+      ),
+    ]);
+
+    // Check tokens amounts moved correctly
+    expect(await testERC721.ownerOf(10)).to.equal(secondaryAccount.address);
+
+    // Scan transaction
+    await merkletree.scanTX(unshieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet1.scanTX(unshieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet2.scanTX(unshieldTransaction, railgunSmartWalletSnarkBypass);
+
+    // Check balances
+    expect(await wallet1.getBalance(merkletree, tokenData)).to.equal(0);
+    expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(0);
   });
 });

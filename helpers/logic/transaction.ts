@@ -8,7 +8,7 @@ import {
   TokenData,
   UnshieldNote,
 } from './note';
-import { hash } from '../global/crypto';
+import { hash, randomBytes } from '../global/crypto';
 import { hexStringToArray, arrayToBigInt, bigIntToArray, arrayToHexString } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
 import { MerkleTree } from './merkletree';
@@ -24,6 +24,11 @@ export enum UnshieldType {
   NONE = 0,
   NORMAL = 1,
   REDIRECT = 2,
+}
+
+export interface InputOutputBundle {
+  inputs: Note[];
+  outputs: (Note | UnshieldNote)[];
 }
 
 export interface BoundParams {
@@ -270,6 +275,36 @@ function tokenDataMatcher(tokenData: TokenData) {
     if (contractTokenData.tokenType !== tokenData.tokenType) return false;
     if (contractTokenData.tokenSubID.toBigInt() !== tokenData.tokenSubID) return false;
     return true;
+  };
+}
+
+/**
+ * Pads inputs and outputs with dummy notes
+ *
+ * @param originalBundle - original bundle
+ * @param outputsLength - number of outputs to pad to
+ * @returns inputs and outputs to use for test
+ */
+function padWithDummyNotes(
+  originalBundle: InputOutputBundle,
+  outputsLength: number,
+) {
+  const dummyNote = new Note(
+    new Uint8Array(32),
+    new Uint8Array(32),
+    0n,
+    randomBytes(16),
+    originalBundle.inputs[0].tokenData,
+    '',
+  );
+
+  const outputPadding = new Array(outputsLength - originalBundle.outputs.length)
+    .fill(0)
+    .map(() => dummyNote);
+
+  return {
+    inputs: originalBundle.inputs,
+    outputs: [...outputPadding, ...originalBundle.outputs],
   };
 }
 
@@ -588,6 +623,7 @@ export {
   shieldCiphertextMatcher,
   commitmentPreimageMatcher,
   tokenDataMatcher,
+  padWithDummyNotes,
   formatPublicInputs,
   formatCircuitInputs,
   dummyTransact,

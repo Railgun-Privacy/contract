@@ -298,7 +298,7 @@ class Note {
     const senderViewingPublicKey = await ed25519.privateKeyToPublicKey(senderViewingPrivateKey);
 
     // Get sender random, set to 0 is not blinding
-    const senderRandom = blind ? randomBytes(16) : new Uint8Array(15);
+    const senderRandom = blind ? randomBytes(15) : new Uint8Array(15);
 
     // Blind keys
     const blindedKeys = ed25519.railgunKeyExchange.blindKeys(
