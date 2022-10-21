@@ -34,7 +34,7 @@ export interface CommitmentCiphertext {
 export interface ShieldCiphertext {
   // IV shared (16 bytes), tag (16 bytes), random (16 bytes), IV sender (16 bytes), receiver viewing public key (32 bytes)
   encryptedBundle: [Uint8Array, Uint8Array, Uint8Array];
-  ephemeralKey: Uint8Array;
+  shieldKey: Uint8Array;
 }
 
 export interface CommitmentPreimage {
@@ -253,22 +253,27 @@ class Note {
    * @returns encrypted random bundle
    */
   async encryptForShield(): Promise<ShieldCiphertext> {
-    // Generate a throwaway key
-    const ephemeralPrivateKey = randomBytes(32);
-    const ephemeralPublicKey = await ed25519.privateKeyToPublicKey(ephemeralPrivateKey);
+    // Generate a random key for testing
+    // In the case of shielding from regular ETH address key should be generated as hash256(eth_sign(some_fixed_message))) from the ETH address of the shielder
+    // In the case of shielding from a smart contract (eg. adapt module) a random 32 byte value should be used
+    const shieldKey = randomBytes(32);
 
     // Get shared key
-    const sharedKey = ed25519.getSharedKey(ephemeralPrivateKey, await this.getViewingPublicKey());
+    const sharedKey = ed25519.getSharedKey(shieldKey, await this.getViewingPublicKey());
 
     // Encrypt random
     const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey);
 
     // Encrypt receiver public key
-    const encryptedReceiver = aes.ctr.encrypt([await this.getViewingPublicKey()], ephemeralPrivateKey);
+    const encryptedReceiver = aes.ctr.encrypt([await this.getViewingPublicKey()], shieldKey);
 
     return {
-      encryptedBundle: [encryptedRandom[0], combine([encryptedRandom[1], encryptedReceiver[0]]), encryptedReceiver[1]],
-      ephemeralKey: ephemeralPublicKey,
+      encryptedBundle: [
+        encryptedRandom[0],
+        combine([encryptedRandom[1], encryptedReceiver[0]]),
+        encryptedReceiver[1],
+      ],
+      shieldKey: await ed25519.privateKeyToPublicKey(shieldKey),
     };
   }
 
@@ -347,7 +352,7 @@ class Note {
   /**
    * Decrypts shielded note
    *
-   * @param ephemeralKey - ephemeral key to us ein decryption
+   * @param shieldKey - ephemeral key to us ein decryption
    * @param encryptedBundle - encrypted bundle to decrypt
    * @param token - token data
    * @param value - note value
@@ -356,7 +361,7 @@ class Note {
    * @returns decrypted note or undefined if decryption failed
    */
   static decryptShield(
-    ephemeralKey: Uint8Array,
+    shieldKey: Uint8Array,
     encryptedBundle: [Uint8Array, Uint8Array, Uint8Array],
     token: TokenData,
     value: bigint,
@@ -366,7 +371,7 @@ class Note {
     // Try to decrypt encrypted random
     try {
       // Get shared key
-      const sharedKey = ed25519.getSharedKey(viewingKey, ephemeralKey);
+      const sharedKey = ed25519.getSharedKey(viewingKey, shieldKey);
 
       // Decrypt random
       const random = aes.gcm.decrypt(

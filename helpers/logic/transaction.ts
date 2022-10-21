@@ -227,8 +227,8 @@ function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
 
         // Return false if ephemeral key doesn't match
         return (
-          ciphertext.ephemeralKey ===
-          arrayToHexString(shieldCiphertext[shieldCiphertextIndex].ephemeralKey, true)
+          ciphertext.shieldKey ===
+          arrayToHexString(shieldCiphertext[shieldCiphertextIndex].shieldKey, true)
         );
       },
     );
