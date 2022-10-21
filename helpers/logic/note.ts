@@ -32,7 +32,8 @@ export interface CommitmentCiphertext {
 }
 
 export interface ShieldCiphertext {
-  encryptedRandom: [Uint8Array, Uint8Array];
+  // IV shared (16 bytes), tag (16 bytes), random (16 bytes), IV sender (16 bytes), receiver viewing public key (32 bytes)
+  encryptedBundle: [Uint8Array, Uint8Array, Uint8Array];
   ephemeralKey: Uint8Array;
 }
 
@@ -234,15 +235,6 @@ class Note {
   }
 
   /**
-   * Encrypts random value
-   *
-   * @returns Encrypted random value
-   */
-  get encryptedRandom(): [Uint8Array, Uint8Array] {
-    return aes.gcm.encrypt([this.random], this.viewingKey) as [Uint8Array, Uint8Array];
-  }
-
-  /**
    * Gets commitment preimage
    *
    * @returns Commitment preimage
@@ -271,8 +263,11 @@ class Note {
     // Encrypt random
     const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey);
 
+    // Encrypt receiver public key
+    const encryptedReceiver = aes.ctr.encrypt([await this.getViewingPublicKey()], ephemeralPrivateKey);
+
     return {
-      encryptedRandom: [encryptedRandom[0], padToLength(encryptedRandom[1], 32, 'left')],
+      encryptedBundle: [encryptedRandom[0], combine([encryptedRandom[1], encryptedReceiver[0]]), encryptedReceiver[1]],
       ephemeralKey: ephemeralPublicKey,
     };
   }
@@ -353,7 +348,7 @@ class Note {
    * Decrypts shielded note
    *
    * @param ephemeralKey - ephemeral key to us ein decryption
-   * @param encryptedRandom - encrypted random to decrypt
+   * @param encryptedBundle - encrypted bundle to decrypt
    * @param token - token data
    * @param value - note value
    * @param viewingKey - viewing private key to try decrypting for
@@ -362,7 +357,7 @@ class Note {
    */
   static decryptShield(
     ephemeralKey: Uint8Array,
-    encryptedRandom: [Uint8Array, Uint8Array],
+    encryptedBundle: [Uint8Array, Uint8Array, Uint8Array],
     token: TokenData,
     value: bigint,
     viewingKey: Uint8Array,
@@ -373,9 +368,9 @@ class Note {
       // Get shared key
       const sharedKey = ed25519.getSharedKey(viewingKey, ephemeralKey);
 
-      // Decrypt
+      // Decrypt random
       const random = aes.gcm.decrypt(
-        [encryptedRandom[0], encryptedRandom[1].slice(16, 32)],
+        [encryptedBundle[0], encryptedBundle[1].slice(0, 16)],
         sharedKey,
       )[0];
 

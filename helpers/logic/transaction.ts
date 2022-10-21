@@ -214,16 +214,16 @@ function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
     const shieldCiphertextMatched = contractShieldCiphertext.map(
       (ciphertext, shieldCiphertextIndex): boolean => {
         // Check ciphertext words match
-        const encryptedRandomMatched = ciphertext.encryptedRandom.map(
+        const encryptedBundleMatched = ciphertext.encryptedBundle.map(
           (element, elementIndex) =>
             arrayToHexString(
-              shieldCiphertext[shieldCiphertextIndex].encryptedRandom[elementIndex],
+              shieldCiphertext[shieldCiphertextIndex].encryptedBundle[elementIndex],
               true,
             ) === element,
         );
 
         // Return false if any elements returned false
-        if (encryptedRandomMatched.includes(false)) return false;
+        if (encryptedBundleMatched.includes(false)) return false;
 
         // Return false if ephemeral key doesn't match
         return (

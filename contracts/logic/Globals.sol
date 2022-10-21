@@ -26,8 +26,8 @@ struct CommitmentCiphertext {
 }
 
 struct ShieldCiphertext {
-  bytes32[2] encryptedRandom; // IV & tag (16 bytes each), unused & random (16 bytes each)
-  bytes32 ephemeralKey; // Throwaway key to generate shared key from
+  bytes32[3] encryptedBundle; // IV shared (16 bytes), tag (16 bytes), random (16 bytes), IV sender (16 bytes), receiver viewing public key (32 bytes)
+  bytes32 ephemeralKey; // Throwaway public key to generate shared key from
 }
 
 enum UnshieldType {
