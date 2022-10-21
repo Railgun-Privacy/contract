@@ -16,7 +16,7 @@ contract TestERC20 is ERC20 {
 contract TestERC721 is ERC721 {
   constructor() ERC721("testERC721", "testERC721") {}
 
-  function mint(address _account, uint256 tokenId) external {
-    _mint(_account, tokenId);
+  function mint(address _account, uint256 _tokenId) external {
+    _mint(_account, _tokenId);
   }
 }
