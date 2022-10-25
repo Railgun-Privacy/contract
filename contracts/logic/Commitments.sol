@@ -83,7 +83,7 @@ contract Commitments is Initializable {
     bytes32 currentZero = ZERO_VALUE;
 
     // Loop through each level
-    for (uint256 i = 0; i < TREE_DEPTH; i++) {
+    for (uint256 i = 0; i < TREE_DEPTH; i+= 1) {
       // Push it to zeros array
       zeros[i] = currentZero;
 
@@ -153,7 +153,7 @@ contract Commitments is Initializable {
     uint256 nextLevelStartIndex;
 
     // Loop through each level of the merkle tree and update
-    for (uint256 level = 0; level < TREE_DEPTH; level++) {
+    for (uint256 level = 0; level < TREE_DEPTH; level+= 1) {
       // Calculate the index to start at for the next level
       // >> is equivalent to / 2 rounded down
       nextLevelStartIndex = levelInsertionIndex >> 1;
@@ -229,7 +229,7 @@ contract Commitments is Initializable {
     nextLeafIndex = 0;
 
     // Increment tree number
-    treeNumber++;
+    treeNumber+= 1;
   }
 
   /**

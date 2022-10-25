@@ -153,7 +153,7 @@ library Snark {
     G1Point memory vkX = G1Point(0, 0);
 
     // Loop through every input
-    for (uint256 i = 0; i < _inputs.length; i++) {
+    for (uint256 i = 0; i < _inputs.length; i+= 1) {
       // Make sure inputs are less than SNARK_SCALAR_FIELD
       require(_inputs[i] < SNARK_SCALAR_FIELD, "Snark: Input > SNARK_SCALAR_FIELD");
 

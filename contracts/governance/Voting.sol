@@ -201,7 +201,7 @@ contract Voting {
     proposal.sponsorInterval = STAKING_CONTRACT.currentInterval();
 
     // Loop over actions and copy manually as solidity doesn't support copying structs
-    for (uint256 i = 0; i < _actions.length; i++) {
+    for (uint256 i = 0; i < _actions.length; i+= 1) {
       proposal.actions.push(Call(_actions[i].callContract, _actions[i].data, _actions[i].value));
     }
 
@@ -443,7 +443,7 @@ contract Voting {
     Call[] memory actions = proposal.actions;
 
     // Loop over actions and execute
-    for (uint256 i = 0; i < actions.length; i++) {
+    for (uint256 i = 0; i < actions.length; i+= 1) {
       // Execute action
       (bool successful, bytes memory returnData) = DELEGATOR_CONTRACT.callContract(
         actions[i].callContract,

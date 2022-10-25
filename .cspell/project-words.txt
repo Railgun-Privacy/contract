@@ -16,6 +16,7 @@ eddsa
 ethersproject
 fastforward
 forktoken
+gasleft
 groth
 IERC
 Initializable
@@ -31,6 +32,7 @@ mixedcase
 mocharc
 mstore
 mulmod
+Multicall
 multihash
 Multisend
 nomicfoundation

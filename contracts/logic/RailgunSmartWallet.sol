@@ -37,7 +37,7 @@ contract RailgunSmartWallet is RailgunLogic {
     );
 
     // Loop through each note and process
-    for (uint256 notesIter = 0; notesIter < notesLength; notesIter++) {
+    for (uint256 notesIter = 0; notesIter < notesLength; notesIter+= 1) {
       // Check note is valid
       require(
         RailgunLogic.validateCommitmentPreimage(_notes[notesIter]),
@@ -71,7 +71,7 @@ contract RailgunSmartWallet is RailgunLogic {
     CommitmentCiphertext[] memory ciphertext = new CommitmentCiphertext[](commitmentsCount);
 
     // Loop through each transaction
-    for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter++) {
+    for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter+= 1) {
       // Validate transaction
       require(
         RailgunLogic.validateTransaction(_transactions[transactionIter]),
