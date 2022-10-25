@@ -285,10 +285,7 @@ function tokenDataMatcher(tokenData: TokenData) {
  * @param outputsLength - number of outputs to pad to
  * @returns inputs and outputs to use for test
  */
-function padWithDummyNotes(
-  originalBundle: InputOutputBundle,
-  outputsLength: number,
-) {
+function padWithDummyNotes(originalBundle: InputOutputBundle, outputsLength: number) {
   const dummyNote = new Note(
     new Uint8Array(32),
     new Uint8Array(32),
@@ -493,7 +490,7 @@ async function dummyTransact(
   adaptParams: Uint8Array,
   notesIn: Note[],
   notesOut: (Note | UnshieldNote)[],
-) {
+): Promise<PublicInputs> {
   // Get required ciphertext length
   const ciphertextLength = unshield === 0 ? notesOut.length : notesOut.length - 1;
 
@@ -540,7 +537,7 @@ async function transact(
   adaptParams: Uint8Array,
   notesIn: Note[],
   notesOut: (Note | UnshieldNote)[],
-) {
+): Promise<PublicInputs> {
   // Get artifact
   const artifact = getKeys(notesIn.length, notesOut.length);
 

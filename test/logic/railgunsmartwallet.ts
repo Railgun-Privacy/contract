@@ -94,7 +94,7 @@ describe('Logic/RailgunSmartWallet', () => {
     };
   }
 
-  it('Should deposit, transfer, and withdraw ERC20', async () => {
+  it('Should shield, transfer, and withdraw ERC20', async () => {
     const { treasuryAccount, secondaryAccount, railgunSmartWalletSnarkBypass, testERC20 } =
       await loadFixture(deploy);
 
@@ -121,10 +121,9 @@ describe('Logic/RailgunSmartWallet', () => {
       new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
     ];
 
-    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield(
-      [...(await Promise.all(shieldNotes.map((note) => note.getCommitmentPreimage())))],
-      [...(await Promise.all(shieldNotes.map((note) => note.encryptForShield())))],
-    );
+    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield([
+      ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
+    ]);
 
     const totalShielded = shieldNotes
       .map((note) => note.value)
@@ -250,7 +249,7 @@ describe('Logic/RailgunSmartWallet', () => {
     );
   });
 
-  it('Should deposit, transfer, and withdraw ERC721', async () => {
+  it('Should shield, transfer, and withdraw ERC721', async () => {
     const { secondaryAccount, railgunSmartWalletSnarkBypass, testERC721 } = await loadFixture(
       deploy,
     );
@@ -281,10 +280,9 @@ describe('Logic/RailgunSmartWallet', () => {
       '',
     );
 
-    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield(
-      [await shieldNote.getCommitmentPreimage()],
-      [await shieldNote.encryptForShield()],
-    );
+    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield([
+      await shieldNote.encryptForShield(),
+    ]);
 
     // Check token moved correctly
     expect(await testERC721.ownerOf(10)).to.equal(railgunSmartWalletSnarkBypass.address);
@@ -372,32 +370,6 @@ describe('Logic/RailgunSmartWallet', () => {
     expect(await wallet2.getBalance(merkletree, tokenData)).to.equal(0);
   });
 
-  it('Should ensure ciphertext and shielded notes length match', async () => {
-    const { railgunSmartWallet, testERC20 } = await loadFixture(deploy);
-
-    // Shield notes
-    const tokenData: TokenData = {
-      tokenType: TokenType.ERC20,
-      tokenAddress: testERC20.address,
-      tokenSubID: 0n,
-    };
-
-    const shieldNotes = [
-      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
-      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
-      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
-      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
-      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
-    ];
-
-    await expect(
-      railgunSmartWallet.shield(
-        [...(await Promise.all(shieldNotes.map((note) => note.getCommitmentPreimage())))],
-        [...(await Promise.all(shieldNotes.map((note) => note.encryptForShield())))].slice(0, 2),
-      ),
-    ).to.be.revertedWith("RailgunSmartWallet: Notes and shield ciphertext length doesn't match");
-  });
-
   it('Should ensure note preimages are valid', async () => {
     const { railgunSmartWallet, testERC20 } = await loadFixture(deploy);
 
@@ -413,10 +385,9 @@ describe('Logic/RailgunSmartWallet', () => {
     ];
 
     await expect(
-      railgunSmartWallet.shield(
-        [...(await Promise.all(shieldNotes.map((note) => note.getCommitmentPreimage())))],
-        [...(await Promise.all(shieldNotes.map((note) => note.encryptForShield())))],
-      ),
+      railgunSmartWallet.shield([
+        ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
+      ]),
     ).to.be.revertedWith('RailgunSmartWallet: Note preimage is invalid');
   });
 
@@ -445,10 +416,9 @@ describe('Logic/RailgunSmartWallet', () => {
       new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
     ];
 
-    const shieldTransaction = await railgunSmartWallet.shield(
-      [...(await Promise.all(shieldNotes.map((note) => note.getCommitmentPreimage())))],
-      [...(await Promise.all(shieldNotes.map((note) => note.encryptForShield())))],
-    );
+    const shieldTransaction = await railgunSmartWallet.shield([
+      ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
+    ]);
 
     // Scan transaction
     await merkletree.scanTX(shieldTransaction, railgunSmartWallet);

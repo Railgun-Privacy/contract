@@ -35,7 +35,7 @@ contract TokenBlocklist is OwnableUpgradeable {
    */
   function addToBlocklist(address[] calldata _tokens) external onlyOwner {
     // Loop through token array
-    for (uint256 i = 0; i < _tokens.length; i+= 1) {
+    for (uint256 i = 0; i < _tokens.length; i += 1) {
       // Don't do anything if the token is already blocklisted
       if (!tokenBlocklist[_tokens[i]]) {
         // Set token address in blocklist map to true
@@ -55,7 +55,7 @@ contract TokenBlocklist is OwnableUpgradeable {
    */
   function removeFromBlocklist(address[] calldata _tokens) external onlyOwner {
     // Loop through token array
-    for (uint256 i = 0; i < _tokens.length; i+= 1) {
+    for (uint256 i = 0; i < _tokens.length; i += 1) {
       // Don't do anything if the token isn't blocklisted
       if (tokenBlocklist[_tokens[i]]) {
         // Set token address in blocklisted map to false (default value)

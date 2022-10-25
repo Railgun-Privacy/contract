@@ -43,6 +43,11 @@ export interface CommitmentPreimage {
   value: bigint;
 }
 
+export interface ShieldRequest {
+  preimage: CommitmentPreimage;
+  ciphertext: ShieldCiphertext;
+}
+
 /**
  * Gets token ID from token data
  *
@@ -252,7 +257,7 @@ class Note {
    *
    * @returns encrypted random bundle
    */
-  async encryptForShield(): Promise<ShieldCiphertext> {
+  async encryptForShield(): Promise<ShieldRequest> {
     // Generate a random key for testing
     // In the case of shielding from regular ETH address key should be generated as hash256(eth_sign(some_fixed_message))) from the ETH address of the shielder
     // In the case of shielding from a smart contract (eg. adapt module) a random 32 byte value should be used
@@ -267,13 +272,20 @@ class Note {
     // Encrypt receiver public key
     const encryptedReceiver = aes.ctr.encrypt([await this.getViewingPublicKey()], shieldPrivateKey);
 
-    return {
+    // Construct ciphertext
+    const ciphertext: ShieldCiphertext = {
       encryptedBundle: [
         encryptedRandom[0],
         combine([encryptedRandom[1], encryptedReceiver[0]]),
         encryptedReceiver[1],
       ],
       shieldKey: await ed25519.privateKeyToPublicKey(shieldPrivateKey),
+    };
+
+    // Return shield request
+    return {
+      ciphertext,
+      preimage: await this.getCommitmentPreimage(),
     };
   }
 

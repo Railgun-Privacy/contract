@@ -107,12 +107,12 @@ contract Verifier is OwnableUpgradeable {
     inputs[1] = hashBoundParams(_transaction.boundParams);
 
     // Loop through nullifiers and add to inputs
-    for (uint256 i = 0; i < nullifiersLength; i+= 1) {
+    for (uint256 i = 0; i < nullifiersLength; i += 1) {
       inputs[2 + i] = uint256(_transaction.nullifiers[i]);
     }
 
     // Loop through commitments and add to inputs
-    for (uint256 i = 0; i < commitmentsLength; i+= 1) {
+    for (uint256 i = 0; i < commitmentsLength; i += 1) {
       inputs[2 + nullifiersLength + i] = uint256(_transaction.commitments[i]);
     }
 

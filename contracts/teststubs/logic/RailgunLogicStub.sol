@@ -44,9 +44,7 @@ contract RailgunLogicStub is RailgunLogic {
     return RailgunLogic.transferTokenIn(_note);
   }
 
-  function transferTokenOutStub(
-    CommitmentPreimage calldata _note
-  ) external {
+  function transferTokenOutStub(CommitmentPreimage calldata _note) external {
     RailgunLogic.transferTokenOut(_note);
   }
 
@@ -62,8 +60,8 @@ contract RailgunLogicStub is RailgunLogic {
       CommitmentCiphertext[] memory
     )
   {
-    bytes32[] memory _commitments = new bytes32[](_initialArrayLengths); 
-    CommitmentCiphertext[] memory _ciphertext = new CommitmentCiphertext[](_initialArrayLengths); 
+    bytes32[] memory _commitments = new bytes32[](_initialArrayLengths);
+    CommitmentCiphertext[] memory _ciphertext = new CommitmentCiphertext[](_initialArrayLengths);
 
     return (
       accumulateAndNullifyTransaction(

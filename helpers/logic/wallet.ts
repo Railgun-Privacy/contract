@@ -73,7 +73,11 @@ class Wallet {
               // Try to decrypt
               const decrypted = Note.decryptShield(
                 hexStringToArray(shieldCiphertext.shieldKey),
-                shieldCiphertext.encryptedBundle.map(hexStringToArray) as [Uint8Array, Uint8Array, Uint8Array],
+                shieldCiphertext.encryptedBundle.map(hexStringToArray) as [
+                  Uint8Array,
+                  Uint8Array,
+                  Uint8Array,
+                ],
                 {
                   tokenType: args.commitments[index].token.tokenType,
                   tokenAddress: args.commitments[index].token.tokenAddress,

@@ -265,21 +265,21 @@ const ed25519 = {
     return sha256(keyPreimage);
   },
 
+  /**
+   * Converts seed to curve scalar
+   *
+   * @param seed - seed to convert
+   * @returns scalar
+   */
+  seedToScalar(seed: Uint8Array): Uint8Array {
+    // Hash to 512 bit value as per FIPS-186
+    const seedHash = hash.sha512(seed);
+
+    // Return (seedHash mod (n - 1)) + 1 to fit to range 0 < scalar < n
+    return bigIntToArray((arrayToBigInt(seedHash) % nobleED25519.CURVE.n) - 1n + 1n, 32);
+  },
+
   railgunKeyExchange: {
-    /**
-     * Converts seed to curve scalar
-     *
-     * @param seed - seed to convert
-     * @returns scalar
-     */
-    seedToScalar(seed: Uint8Array): Uint8Array {
-      // Hash to 512 bit value as per FIPS-186
-      const seedHash = hash.sha512(seed);
-
-      // Return (seedHash mod (n - 1)) + 1 to fit to range 0 < scalar < n
-      return bigIntToArray((arrayToBigInt(seedHash) % nobleED25519.CURVE.n) - 1n + 1n, 32);
-    },
-
     /**
      * Blinds sender and receiver public keys
      *
@@ -305,7 +305,7 @@ const ed25519 = {
       );
 
       // Get blinding scalar from random
-      const blindingScalar = ed25519.railgunKeyExchange.seedToScalar(finalRandom);
+      const blindingScalar = ed25519.seedToScalar(finalRandom);
 
       // Get public key points
       const senderPublicKeyPoint = nobleED25519.Point.fromHex(senderViewingPublicKey);

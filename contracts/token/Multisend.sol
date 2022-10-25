@@ -26,7 +26,7 @@ contract Multisend {
    */
 
   function multisend(IERC20 token, Transfer[] calldata transfers) public {
-    for (uint256 i = 0; i < transfers.length; i+= 1) {
+    for (uint256 i = 0; i < transfers.length; i += 1) {
       token.safeTransferFrom(msg.sender, transfers[i].to, transfers[i].amount);
     }
   }

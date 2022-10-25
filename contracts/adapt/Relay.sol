@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import { IWBase } from "./IWBase.sol";
-import { Transaction, ShieldCiphertext, CommitmentPreimage, TokenData, TokenType } from "../logic/Globals.sol";
+import { Transaction, ShieldRequest, ShieldCiphertext, CommitmentPreimage, TokenData, TokenType } from "../logic/Globals.sol";
 import { RailgunSmartWallet } from "../logic/RailgunSmartWallet.sol";
 
 /**
@@ -23,6 +23,9 @@ contract RelayAdapt {
   // Snark bypass address, can't be address(0) as many burn prevention mechanisms will disallow transfers to 0
   // Use 0x000000000000000000000000000000000000dEaD as an alternative
   address public constant VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEaD;
+
+  // Set to true if contract is executing
+  bool private isExecuting = false;
 
   struct Call {
     address to;
@@ -39,6 +42,12 @@ contract RelayAdapt {
     Call[] calls; // Array of calls to execute during transaction
   }
 
+  struct TokenTransfer {
+    TokenData token;
+    address to;
+    uint256 value; // 0 to send entire balance
+  }
+
   // Custom errors
   error CallFailed(uint256 callIndex, bytes revertReason);
 
@@ -47,14 +56,17 @@ contract RelayAdapt {
   IWBase public wBase;
 
   /**
-   * @notice only allows self calls to these contracts
+   * @notice only allows self calls to these contracts if contract is executing
    */
-  modifier onlySelf() {
+  modifier onlySelfIfExecuting() {
     require(
-      msg.sender == address(this) || tx.origin == VERIFICATION_BYPASS,
+      // solhint-disable-next-line avoid-tx-origin
+      !isExecuting || msg.sender == address(this) || tx.origin == VERIFICATION_BYPASS,
       "RelayAdapt: External call to onlySelf function"
     );
+    isExecuting = true;
     _;
+    isExecuting = false;
   }
 
   /**
@@ -115,14 +127,10 @@ contract RelayAdapt {
   }
 
   /**
-   * @notice Executes a batch of Railgun deposits
-   * @param _shields - Token preimages to shield
-   * @param _noteCiphertext - Encrypted random values for deposits
+   * @notice Executes a batch of Railgun shields
+   * @param _shieldRequests - Tokens to shield
    */
-  function shield(
-    CommitmentPreimage[] calldata _shields,
-    ShieldCiphertext[] calldata _noteCiphertext
-  ) external onlySelf {
+  function shield(ShieldRequest[] calldata _shieldRequests) external onlySelfIfExecuting {
     // Loop through each token specified for shield and shield requested balance
 
     // Due to a quirk with the USDT token contract this will fail if it's approval is
@@ -131,59 +139,64 @@ contract RelayAdapt {
     // call in your calls is a call to the token contract with an approval of 0
 
     uint256 numValidTokens = 0;
-    uint120[] memory values = new uint120[](_shields.length);
+    uint120[] memory values = new uint120[](_shieldRequests.length);
 
-    for (uint256 i = 0; i < _shields.length; i += 1) {
-      if (_shields[i].token.tokenType == TokenType.ERC20) {
+    for (uint256 i = 0; i < _shieldRequests.length; i += 1) {
+      if (_shieldRequests[i].preimage.token.tokenType == TokenType.ERC20) {
         // ERC20
-        IERC20 token = IERC20(_shields[i].token.tokenAddress);
+        IERC20 token = IERC20(_shieldRequests[i].preimage.token.tokenAddress);
 
-        if (_shields[i].value == 0) {
-          // If balance is 0 then deposit the entire token balance
+        if (_shieldRequests[i].preimage.value == 0) {
+          // If balance is 0 then shield the entire token balance
           // Set values to balance of this contract, capped at
           // type(uint120).max to fit Railgun's note max value
           values[i] = uint120(token.balanceOf(address(this)));
         } else {
-          values[i] = _shields[i].value;
+          values[i] = _shieldRequests[i].preimage.value;
         }
 
-        // Approve the balance for deposit
-        token.safeApprove(address(railgun), _shields[i].value);
+        // Approve the balance for shield
+        token.safeApprove(address(railgun), _shieldRequests[i].preimage.value);
 
         // Increment number of valid tokens
         numValidTokens += 1;
-      } else if (_shields[i].token.tokenType == TokenType.ERC721) {
+      } else if (_shieldRequests[i].preimage.token.tokenType == TokenType.ERC721) {
         // ERC721 token
-        revert("RelayAdapt: ERC721 not yet supported");
-      } else if (_shields[i].token.tokenType == TokenType.ERC1155) {
+        IERC721 token = IERC721(_shieldRequests[i].preimage.token.tokenAddress);
+
+        // Approve NFT for shield
+        token.approve(address(railgun), _shieldRequests[i].preimage.token.tokenSubID);
+
+        // Set value to 1
+        values[i] = 1;
+
+        // Increment number of valid tokens
+        numValidTokens += 1;
+      } else if (_shieldRequests[i].preimage.token.tokenType == TokenType.ERC1155) {
         // ERC1155 token
         revert("RelayAdapt: ERC1155 not yet supported");
       }
     }
 
-    // Noop if all tokens requested to deposit are 0 balance
+    // Noop if all tokens requested to shield are 0 balance
     if (numValidTokens == 0) {
       return;
     }
 
     // Filter commitmentPreImages for != 0 (remove 0 balance tokens).
 
-    // Initialize filtered arrays for length valid tokens
-    CommitmentPreimage[] memory filteredCommitmentPreimages = new CommitmentPreimage[](
-      numValidTokens
-    );
-    ShieldCiphertext[] memory filteredNoteCiphertext = new ShieldCiphertext[](numValidTokens);
+    // Initialize filtered array for length valid tokens
+    ShieldRequest[] memory filteredShieldRequests = new ShieldRequest[](numValidTokens);
     uint256 filteredIndex = 0;
 
-    // Loop through deposits and push non-0 values to filtered array
-    for (uint256 i = 0; i < _shields.length; i += 1) {
+    // Loop through shields and push non-0 values to filtered array
+    for (uint256 i = 0; i < _shieldRequests.length; i += 1) {
       if (values[i] != 0) {
         // Push to filtered array
-        filteredCommitmentPreimages[filteredIndex] = _shields[i];
-        filteredNoteCiphertext[filteredIndex] = _noteCiphertext[i];
+        filteredShieldRequests[filteredIndex] = _shieldRequests[i];
 
         // Set value to adjusted value (if adjusted)
-        filteredCommitmentPreimages[filteredIndex].value = values[i];
+        filteredShieldRequests[filteredIndex].preimage.value = values[i];
 
         // Increment index of filtered arrays
         filteredIndex += 1;
@@ -191,38 +204,64 @@ contract RelayAdapt {
     }
 
     // Shield to railgun
-    railgun.shield(filteredCommitmentPreimages, filteredNoteCiphertext);
+    railgun.shield(filteredShieldRequests);
   }
 
   /**
    * @notice Sends tokens to particular address
-   * @param _tokens - tokens to send (0x0 - ERC20 is eth)
-   * @param _to - ETH address to send to
-   * @param _amount - Amount of tokens to send (0 to send all)
+   * @param _transfers - tokens to send (0x0 - ERC20 is base)
    */
-  function send(
-    TokenData[] calldata _tokens,
-    address _to,
-    uint256 _amount
-  ) external onlySelf {}
+  function send(TokenTransfer[] calldata _transfers) external onlySelfIfExecuting {
+    for (uint256 i = 0; i < _transfers.length; i += 1) {
+      if (_transfers[i].token.tokenType == TokenType.ERC20 && _transfers[i].to == address(0)) {
+        // BASE
+        // Fetch balance
+        uint256 amount = _transfers[i].value == 0 ? address(this).balance : _transfers[i].value;
+
+        // Transfer base tokens
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, ) = _transfers[i].to.call{ value: amount }("");
+
+        // Check transfer succeeded
+        require(success, "RelayAdapt: ETH transfer failed");
+      } else if (_transfers[i].token.tokenType == TokenType.ERC20) {
+        // ERC20
+        IERC20 token = IERC20(_transfers[i].token.tokenAddress);
+
+        // Fetch balance
+        uint256 amount = _transfers[i].value == 0
+          ? token.balanceOf(address(this))
+          : _transfers[i].value;
+
+        // Transfer token
+        token.safeTransfer(_transfers[i].to, amount);
+      } else if (_transfers[i].token.tokenType == TokenType.ERC721) {
+        // ERC721 token
+        revert("RelayAdapt: ERC721 not yet supported");
+      } else if (_transfers[i].token.tokenType == TokenType.ERC1155) {
+        // ERC1155 token
+        revert("RelayAdapt: ERC1155 not yet supported");
+      }
+    }
+  }
 
   /**
    * @notice Wraps base tokens in contract
    * @param _amount - amount to wrap (0 = wrap all)
    */
-  function wrapBase(uint256 _amount) external onlySelf {
+  function wrapBase(uint256 _amount) external onlySelfIfExecuting {
     // Fetch balance
     uint256 balance = _amount == 0 ? address(this).balance : _amount;
 
     // Wrap
-    wBase.deposit{ value: balance }();
+    wBase.shield{ value: balance }();
   }
 
   /**
    * @notice Unwraps wrapped base tokens in contract
    * @param _amount - amount to unwrap (0 = unwrap all)
    */
-  function unwrapBase(uint256 _amount) external onlySelf {
+  function unwrapBase(uint256 _amount) external onlySelfIfExecuting {
     // Fetch balance
     uint256 balance = _amount == 0 ? wBase.balanceOf(address(this)) : _amount;
 
@@ -243,9 +282,7 @@ contract RelayAdapt {
 
       // Execute call
       // solhint-disable-next-line avoid-low-level-calls
-      (bool success, bytes memory returned) = call.to.call{ value: call.value, gas: gasleft() }(
-        call.data
-      );
+      (bool success, bytes memory returned) = call.to.call{ value: call.value }(call.data);
 
       if (success) {
         continue;
@@ -269,6 +306,7 @@ contract RelayAdapt {
   function relay(Transaction[] calldata _transactions, ActionData calldata _actionData)
     external
     payable
+    onlySelfIfExecuting
   {
     require(gasleft() > _actionData.minGasLimit, "RelayAdapt: Not enough gas supplied");
 
@@ -280,11 +318,11 @@ contract RelayAdapt {
     // Execute multicall
     multicall(_actionData.requireSuccess, _actionData.calls);
 
-    // To execute a multicall and deposit or send the resulting tokens, encode a call to the relevant function on this
+    // To execute a multicall and shield or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.
   }
 
   // Allow wBase contract unwrapping to pay us
-  // solhint-disable-next-line avoid-tx-origin no-empty-blocks
+  // solhint-disable-next-line no-empty-blocks
   receive() external payable {}
 }

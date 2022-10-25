@@ -4,6 +4,4 @@ pragma abicoder v2;
 
 import { RailgunSmartWallet } from "../../logic/RailgunSmartWallet.sol";
 
-contract RailgunSmartWalletStub is RailgunSmartWallet {
-  
-}
+contract RailgunSmartWalletStub is RailgunSmartWallet {}

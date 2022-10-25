@@ -5,7 +5,7 @@ pragma abicoder v2;
 import { TokenBlocklist } from "./TokenBlocklist.sol";
 import { Commitments } from "./Commitments.sol";
 import { RailgunLogic } from "./RailgunLogic.sol";
-import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCiphertext, TokenType, UnshieldType, Transaction } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCiphertext, TokenType, UnshieldType, Transaction, ShieldRequest } from "./Globals.sol";
 
 /**
  * @title Railgun Smart Wallet
@@ -16,43 +16,34 @@ import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCip
 contract RailgunSmartWallet is RailgunLogic {
   /**
    * @notice Shields requested amount and token, creates a commitment hash from supplied values and adds to tree
-   * @param _notes - list of commitments to shield
-   * @param _shieldCiphertext - ciphertext of notes
+   * @param _shieldRequests - list of commitments to shield
    */
-  function shield(
-    CommitmentPreimage[] calldata _notes,
-    ShieldCiphertext[] calldata _shieldCiphertext
-  ) external payable {
-    // Get notes length
-    uint256 notesLength = _notes.length;
-
+  function shield(ShieldRequest[] calldata _shieldRequests) external payable {
     // Insertion and event arrays
-    bytes32[] memory insertionLeaves = new bytes32[](notesLength);
-    CommitmentPreimage[] memory commitments = new CommitmentPreimage[](notesLength);
-
-    // Notes and ciphertext arrays must match
-    require(
-      _notes.length == _shieldCiphertext.length,
-      "RailgunSmartWallet: Notes and shield ciphertext length doesn't match"
-    );
+    bytes32[] memory insertionLeaves = new bytes32[](_shieldRequests.length);
+    CommitmentPreimage[] memory commitments = new CommitmentPreimage[](_shieldRequests.length);
+    ShieldCiphertext[] memory shieldCiphertext = new ShieldCiphertext[](_shieldRequests.length);
 
     // Loop through each note and process
-    for (uint256 notesIter = 0; notesIter < notesLength; notesIter+= 1) {
+    for (uint256 notesIter = 0; notesIter < _shieldRequests.length; notesIter += 1) {
       // Check note is valid
       require(
-        RailgunLogic.validateCommitmentPreimage(_notes[notesIter]),
+        RailgunLogic.validateCommitmentPreimage(_shieldRequests[notesIter].preimage),
         "RailgunSmartWallet: Note preimage is invalid"
       );
 
       // Process shield request and store adjusted note
-      commitments[notesIter] = RailgunLogic.transferTokenIn(_notes[notesIter]);
+      commitments[notesIter] = RailgunLogic.transferTokenIn(_shieldRequests[notesIter].preimage);
 
       // Hash note for merkle tree insertion
       insertionLeaves[notesIter] = RailgunLogic.hashCommitment(commitments[notesIter]);
+
+      // Push shield ciphertext
+      shieldCiphertext[notesIter] = _shieldRequests[notesIter].ciphertext;
     }
 
     // Emit Shield events (for wallets) for the commitments
-    emit Shield(Commitments.treeNumber, Commitments.nextLeafIndex, commitments, _shieldCiphertext);
+    emit Shield(Commitments.treeNumber, Commitments.nextLeafIndex, commitments, shieldCiphertext);
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
@@ -71,7 +62,11 @@ contract RailgunSmartWallet is RailgunLogic {
     CommitmentCiphertext[] memory ciphertext = new CommitmentCiphertext[](commitmentsCount);
 
     // Loop through each transaction
-    for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter+= 1) {
+    for (
+      uint256 transactionIter = 0;
+      transactionIter < _transactions.length;
+      transactionIter += 1
+    ) {
       // Validate transaction
       require(
         RailgunLogic.validateTransaction(_transactions[transactionIter]),

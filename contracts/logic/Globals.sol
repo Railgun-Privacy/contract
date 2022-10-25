@@ -5,6 +5,11 @@ pragma abicoder v2;
 // Constants
 uint256 constant SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
+struct ShieldRequest {
+  CommitmentPreimage preimage;
+  ShieldCiphertext ciphertext;
+}
+
 enum TokenType {
   ERC20,
   ERC721,
@@ -18,7 +23,7 @@ struct TokenData {
 }
 
 struct CommitmentCiphertext {
-  bytes32[4] ciphertext; // Ciphertext order: IV & tag (16 bytes each), MPK, random & amount (16 bytes each), token
+  bytes32[4] ciphertext; // Ciphertext order: IV & tag (16 bytes each), encodedMPK (senderMPK XOR receiverMPK), random & amount (16 bytes each), token
   bytes32 blindedSenderViewingKey;
   bytes32 blindedReceiverViewingKey;
   bytes annotationData; // Only for sender to decrypt

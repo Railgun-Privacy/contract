@@ -372,7 +372,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   function sumCommitments(Transaction[] calldata _transactions) public pure returns (uint256) {
     uint256 commitments = 0;
 
-    for (uint256 transactionIter = 0; transactionIter < _transactions.length; transactionIter+= 1) {
+    for (
+      uint256 transactionIter = 0;
+      transactionIter < _transactions.length;
+      transactionIter += 1
+    ) {
       // The last commitment should NOT be counted if transaction includes unshield
       // The ciphertext length is validated in the transaction validity function to reflect this
       commitments += _transactions[transactionIter].boundParams.commitmentCiphertext.length;
@@ -402,7 +406,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     for (
       uint256 nullifierIter = 0;
       nullifierIter < _transaction.nullifiers.length;
-      nullifierIter+= 1
+      nullifierIter += 1
     ) {
       // If nullifier has been seen before return false
       if (
@@ -464,7 +468,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     for (
       uint256 nullifierIter = 0;
       nullifierIter < _transaction.nullifiers.length;
-      nullifierIter+= 1
+      nullifierIter += 1
     ) {
       // Set nullifier to seen
       Commitments.nullifiers[_transaction.boundParams.treeNumber][
@@ -481,7 +485,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // The last commitment should NOT be accumulated if transaction includes unshield
       // The ciphertext length is validated in the transaction validity function to reflect this
       commitmentsIter < _transaction.boundParams.commitmentCiphertext.length;
-      commitmentsIter+= 1
+      commitmentsIter += 1
     ) {
       // Push commitment to commitments accumulator
       _commitments[_commitmentsStartOffset + commitmentsIter] = _transaction.commitments[
