@@ -87,6 +87,9 @@ contract Commitments is Initializable {
       // Push it to zeros array
       zeros[i] = currentZero;
 
+      // Set filled subtrees to a value so users don't pay storage allocation costs
+      filledSubTrees[i] = currentZero;
+
       // Calculate the zero value for this level
       currentZero = hashLeftRight(currentZero, currentZero);
     }

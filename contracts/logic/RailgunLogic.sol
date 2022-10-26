@@ -49,6 +49,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   // Token ID mapping
   mapping(bytes32 => TokenData) public tokenIDMapping;
 
+  // Last event block - to assist with scanning
+  uint256 public lastEventBlock;
+
   // Treasury events
   event TreasuryChange(address treasury);
   event FeeChange(uint256 shieldFee, uint256 unshieldFee, uint256 nftFee);
@@ -502,5 +505,5 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     return _commitmentsStartOffset + _transaction.boundParams.commitmentCiphertext.length;
   }
 
-  uint256[44] private __gap;
+  uint256[43] private __gap;
 }

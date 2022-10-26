@@ -7,6 +7,7 @@ module.exports = {
     'teststubs/governance/StakingStub.sol',
     'teststubs/logic/CommitmentsStub.sol',
     'teststubs/logic/RailgunLogicStub.sol',
+    'teststubs/logic/RailgunSmartWalletStub.sol',
     'teststubs/logic/SnarkStub.sol',
     'teststubs/logic/TokenBlocklistStub.sol',
     'teststubs/logic/VerifierStub.sol',

@@ -47,6 +47,9 @@ contract RailgunSmartWallet is RailgunLogic {
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
+
+    // Store block number of last event for easier sync
+    RailgunLogic.lastEventBlock = block.number;
   }
 
   /**
@@ -98,5 +101,8 @@ contract RailgunSmartWallet is RailgunLogic {
 
     // Push commitments to tree after events due to insertLeaves causing side effects
     Commitments.insertLeaves(commitments);
+
+    // Store block number of last event for easier sync
+    RailgunLogic.lastEventBlock = block.number;
   }
 }

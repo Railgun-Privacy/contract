@@ -125,6 +125,9 @@ describe('Logic/RailgunSmartWallet', () => {
       ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
     ]);
 
+    // Check lastEventBlock updated
+    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(shieldTransaction.blockNumber);
+
     const totalShielded = shieldNotes
       .map((note) => note.value)
       .reduce((left, right) => left + right);
@@ -179,6 +182,9 @@ describe('Logic/RailgunSmartWallet', () => {
       ),
     ]);
 
+    // Check lastEventBlock updated
+    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(transferTransaction.blockNumber);
+
     // Calculate total transferred
     const totalTransferred = transferNotes.outputs
       .map((note) => note.value)
@@ -217,6 +223,9 @@ describe('Logic/RailgunSmartWallet', () => {
         unshieldNotes.outputs,
       ),
     ]);
+
+    // Check lastEventBlock updated
+    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(unshieldTransaction.blockNumber);
 
     // Get total unshielded
     const totalUnshielded = unshieldNotes.outputs[unshieldNotes.outputs.length - 1].value;
