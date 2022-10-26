@@ -14,6 +14,7 @@
     "analyze": "npm run clean; hardhat compile; npm run lint; ./slither.sh"
   },
   "devDependencies": {
+    "@ethereum-artifacts/weth9": "^1.1.0",
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/bytes": "^5.7.0",
     "@ethersproject/providers": "^5.7.1",
