@@ -91,7 +91,7 @@ task('accounts', 'Prints the list of accounts', async (taskArguments, hre) => {
 });
 
 task('deploy:test', 'Deploy full deployment for testing purposes', async (taskArguments, hre) => {
-  await hre.run('run', { script: 'scripts/deploy_test.js' });
+  await hre.run('run', { script: 'scripts/deploy_test.ts' });
 });
 
 task(
