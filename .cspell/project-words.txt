@@ -58,6 +58,7 @@ statelessly
 staticcall
 struct
 structs
+teststubs
 typechain
 unclaimable
 undelegate

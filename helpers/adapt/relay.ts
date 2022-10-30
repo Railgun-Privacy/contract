@@ -6,11 +6,11 @@ import { PublicInputs } from '../logic/transaction';
 export interface Call {
   to: string;
   data: Uint8Array;
-  amount: bigint;
+  value: bigint;
 }
 
 export interface ActionData {
-  random: bigint;
+  random: Uint8Array;
   requireSuccess: boolean;
   minGasLimit: bigint;
   calls: Call[];
@@ -23,18 +23,21 @@ export interface ActionData {
  * @param actionData - action data to include
  * @returns adapt params
  */
-function getAdaptParams(
-  transactions: PublicInputs[],
-  actionData: ActionData,
-): Uint8Array {
+function getAdaptParams(transactions: PublicInputs[], actionData: ActionData): Uint8Array {
   // Get first nullifiers
-  const firstNullifiers = transactions.map((transaction) => transaction.nullifiers[0]);
+  const nullifiers = transactions.map((transaction) => transaction.nullifiers);
 
   // Get hash preimage
-  const preimage = hexStringToArray(ethers.utils.defaultAbiCoder.encode(
-    ['bytes32[] nullifiers', 'uint256 transactionsLength', 'tuple(uint248 random, bool requireSuccess, uint256 minGasLimit, tuple(address to, bytes data, uint256 value) calls) actionData'],
-    [firstNullifiers, transactions.length, actionData],
-  ));
+  const preimage = hexStringToArray(
+    ethers.utils.defaultAbiCoder.encode(
+      [
+        'bytes32[][] nullifiers',
+        'uint256 transactionsLength',
+        'tuple(bytes31 random, bool requireSuccess, uint256 minGasLimit, tuple(address to, bytes data, uint256 value)[] calls) actionData',
+      ],
+      [nullifiers, transactions.length, actionData],
+    ),
+  );
 
   // Return hash of preimage
   return hash.keccak256(preimage);

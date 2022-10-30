@@ -13,7 +13,11 @@ import { Contract } from 'ethers';
  * @param constructorArguments - constructor arguments
  * @returns promise resolved on deploy deployed
  */
-function logVerify(name: string, contract: Contract, constructorArguments: unknown[]): Promise<null> {
+function logVerify(
+  name: string,
+  contract: Contract,
+  constructorArguments: unknown[],
+): Promise<null> {
   console.log(`\nDeploying ${name}`);
   console.log({
     address: contract.address,

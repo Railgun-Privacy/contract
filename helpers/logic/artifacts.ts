@@ -239,11 +239,13 @@ function availableArtifacts() {
 async function loadAllArtifacts(verifierContract: Verifier) {
   for (const artifactConfig of availableArtifacts()) {
     const artifact = getKeys(artifactConfig.nullifiers, artifactConfig.commitments);
-    await (await verifierContract.setVerificationKey(
-      artifactConfig.nullifiers,
-      artifactConfig.commitments,
-      artifact.solidityVKey,
-    )).wait();
+    await (
+      await verifierContract.setVerificationKey(
+        artifactConfig.nullifiers,
+        artifactConfig.commitments,
+        artifact.solidityVKey,
+      )
+    ).wait();
   }
 }
 

@@ -34,9 +34,9 @@ contract RelayAdapt {
   }
 
   struct ActionData {
-    uint248 random; // Random value (shouldn't be reused if resubmitting the same transaction
-    // through another relayer or resubmitting on failed transaction - the same
-    // nullifier:random should never be reused)
+    bytes31 random; // Random value (shouldn't be reused if resubmitting the same transaction
+    // through another relayer or resubmitting on failed transaction - i.e. the same
+    // nullifier:random combination should never be reused)
     bool requireSuccess; // If the transaction should require success on all sub calls
     uint256 minGasLimit; // Minimum gas that should be supplied to this transaction
     Call[] calls; // Array of calls to execute during transaction
@@ -88,16 +88,19 @@ contract RelayAdapt {
     pure
     returns (bytes32)
   {
-    // Get first nullifiers of transaction
-    bytes32[] memory firstNullifiers = new bytes32[](_transactions.length);
+    // Get 2D array of nullifiers of transaction
+    bytes32[][] memory nullifiers = new bytes32[][](_transactions.length);
 
-    for (uint256 i = 0; i < _transactions.length; i += 1) {
-      // Only need first nullifier
-      firstNullifiers[i] = _transactions[i].nullifiers[0];
+    for (
+      uint256 transactionIter = 0;
+      transactionIter < _transactions.length;
+      transactionIter += 1
+    ) {
+      nullifiers[transactionIter] = _transactions[transactionIter].nullifiers;
     }
 
     // Return keccak hash of parameters
-    return keccak256(abi.encode(firstNullifiers, _transactions.length, _actionData));
+    return keccak256(abi.encode(nullifiers, _transactions.length, _actionData));
   }
 
   /**

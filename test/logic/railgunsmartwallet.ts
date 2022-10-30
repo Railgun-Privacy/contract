@@ -126,7 +126,9 @@ describe('Logic/RailgunSmartWallet', () => {
     ]);
 
     // Check lastEventBlock updated
-    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(shieldTransaction.blockNumber);
+    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(
+      shieldTransaction.blockNumber,
+    );
 
     const totalShielded = shieldNotes
       .map((note) => note.value)
@@ -183,7 +185,9 @@ describe('Logic/RailgunSmartWallet', () => {
     ]);
 
     // Check lastEventBlock updated
-    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(transferTransaction.blockNumber);
+    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(
+      transferTransaction.blockNumber,
+    );
 
     // Calculate total transferred
     const totalTransferred = transferNotes.outputs
@@ -225,7 +229,9 @@ describe('Logic/RailgunSmartWallet', () => {
     ]);
 
     // Check lastEventBlock updated
-    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(unshieldTransaction.blockNumber);
+    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(
+      unshieldTransaction.blockNumber,
+    );
 
     // Get total unshielded
     const totalUnshielded = unshieldNotes.outputs[unshieldNotes.outputs.length - 1].value;
