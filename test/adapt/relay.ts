@@ -50,9 +50,9 @@ describe('Adapt/Relay', () => {
     // Initialize RailgunSmartWallet
     await railgunSmartWallet.initializeRailgunLogic(
       treasuryAccount.address,
-      40,
-      30,
-      25,
+      0,
+      0,
+      0,
       adminAccount.address,
     );
 
@@ -194,5 +194,77 @@ describe('Adapt/Relay', () => {
         arrayToHexString(getAdaptParams(transactions, actionData), true),
       );
     }
+  });
+
+  it('Should deposit ERC20', async () => {
+    const { relayAdapt, railgunSmartWallet, testERC20 } = await loadFixture(deploy);
+
+    // Check shielding specific amounts works
+
+    // Transfer test tokens to relayAdapt
+    await testERC20.transfer(relayAdapt.address, 10n ** 18n);
+
+    // Create deposit note
+    const depositNote = new Note(
+      randomBytes(32),
+      randomBytes(32),
+      10n ** 18n,
+      randomBytes(16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0n,
+      },
+      '',
+    );
+
+    // Get shield request
+    const shieldRequest = await depositNote.encryptForShield();
+
+    // Shield
+    const shieldTransaction = await relayAdapt.shield([shieldRequest]);
+
+    // Check tokens moved
+    await expect(shieldTransaction).to.changeTokenBalances(testERC20, [
+      relayAdapt.address,
+      railgunSmartWallet.address,
+    ], [
+      -(10n ** 18n),
+      10n ** 18n,
+    ]);
+
+    // Transfer test tokens to relayAdapt
+    await testERC20.transfer(relayAdapt.address, 2n * 10n ** 18n);
+
+    // Check shielding entire balance works
+
+    // Create deposit note with 0 value
+    const depositNoteAll = new Note(
+      randomBytes(32),
+      randomBytes(32),
+      0n,
+      randomBytes(16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0n,
+      },
+      '',
+    );
+
+    // Get shield request
+    const shieldRequestAll = await depositNoteAll.encryptForShield();
+
+    // Shield
+    const shieldTransactionAll = await relayAdapt.shield([shieldRequestAll]);
+
+    // Check tokens moved
+    await expect(shieldTransactionAll).to.changeTokenBalances(testERC20, [
+      relayAdapt.address,
+      railgunSmartWallet.address,
+    ], [
+      -(2n * 10n ** 18n),
+      2n * 10n ** 18n,
+    ]);
   });
 });

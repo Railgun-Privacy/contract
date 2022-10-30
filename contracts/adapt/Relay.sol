@@ -159,7 +159,7 @@ contract RelayAdapt {
         }
 
         // Approve the balance for shield
-        token.safeApprove(address(railgun), _shieldRequests[i].preimage.value);
+        token.safeApprove(address(railgun), values[i]);
 
         // Increment number of valid tokens
         numValidTokens += 1;
