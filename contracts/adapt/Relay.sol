@@ -136,11 +136,6 @@ contract RelayAdapt {
   function shield(ShieldRequest[] calldata _shieldRequests) external onlySelfIfExecuting {
     // Loop through each token specified for shield and shield requested balance
 
-    // Due to a quirk with the USDT token contract this will fail if it's approval is
-    // non-0 (https://github.com/Uniswap/interface/issues/1034), to ensure that your
-    // transaction always succeeds when dealing with USDT/similar tokens make sure the last
-    // call in your calls is a call to the token contract with an approval of 0
-
     uint256 numValidTokens = 0;
     uint120[] memory values = new uint120[](_shieldRequests.length);
 
@@ -159,10 +154,16 @@ contract RelayAdapt {
         }
 
         // Approve the balance for shield
+        // Set to 0 first for the following reasons:
+        // https://github.com/Uniswap/interface/issues/1034
+        // https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+        token.safeApprove(address(railgun), 0);
         token.safeApprove(address(railgun), values[i]);
 
-        // Increment number of valid tokens
-        numValidTokens += 1;
+        // Increment number of valid tokens if we have a balance to deposit
+        if (values[i] > 0) {
+          numValidTokens += 1;
+        }
       } else if (_shieldRequests[i].preimage.token.tokenType == TokenType.ERC721) {
         // ERC721 token
         IERC721 token = IERC721(_shieldRequests[i].preimage.token.tokenAddress);

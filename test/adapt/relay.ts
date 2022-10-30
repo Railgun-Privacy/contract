@@ -275,7 +275,7 @@ describe('Adapt/Relay', () => {
     const depositNote = new Note(
       randomBytes(32),
       randomBytes(32),
-      10n ** 18n,
+      0n,
       randomBytes(16),
       {
         tokenType: TokenType.ERC20,
