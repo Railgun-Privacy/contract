@@ -267,4 +267,37 @@ describe('Adapt/Relay', () => {
       2n * 10n ** 18n,
     ]);
   });
+
+  it('Should no-op if no tokens to shield', async () => {
+    const { relayAdapt, railgunSmartWallet, testERC20 } = await loadFixture(deploy);
+
+    // Create deposit note
+    const depositNote = new Note(
+      randomBytes(32),
+      randomBytes(32),
+      10n ** 18n,
+      randomBytes(16),
+      {
+        tokenType: TokenType.ERC20,
+        tokenAddress: testERC20.address,
+        tokenSubID: 0n,
+      },
+      '',
+    );
+
+    // Get shield request
+    const shieldRequest = await depositNote.encryptForShield();
+
+    // Get pre-transaction merkle root
+    const merkleRootBefore = await railgunSmartWallet.merkleRoot();
+
+    // Shield
+    await relayAdapt.shield([shieldRequest, shieldRequest, shieldRequest]);
+
+    // Get post-transaction merkle root
+    const merkleRootAfter = await railgunSmartWallet.merkleRoot();
+
+    // No additions to the merkle tree should have been made
+    expect(merkleRootBefore).to.equal(merkleRootAfter);
+  });
 });
