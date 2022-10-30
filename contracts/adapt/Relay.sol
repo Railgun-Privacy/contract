@@ -60,8 +60,7 @@ contract RelayAdapt {
    */
   modifier onlySelfIfExecuting() {
     require(
-      // solhint-disable-next-line avoid-tx-origin
-      !isExecuting || msg.sender == address(this) || tx.origin == VERIFICATION_BYPASS,
+      !isExecuting || msg.sender == address(this),
       "RelayAdapt: External call to onlySelf function"
     );
     isExecuting = true;
@@ -281,7 +280,7 @@ contract RelayAdapt {
    * @param _requireSuccess - Whether transaction should throw on call failure
    * @param _calls - multicall array
    */
-  function multicall(bool _requireSuccess, Call[] calldata _calls) internal {
+  function multicall(bool _requireSuccess, Call[] calldata _calls) public onlySelfIfExecuting {
     // Loop through each call
     for (uint256 i = 0; i < _calls.length; i += 1) {
       // Retrieve call
