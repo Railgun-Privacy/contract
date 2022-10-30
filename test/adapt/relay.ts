@@ -127,6 +127,7 @@ describe('Adapt/Relay', () => {
       testERC20Tokens,
       testERC20TokensBypassSigner,
       testERC721,
+      testERC721BypassSigner,
     };
   }
 
@@ -344,5 +345,59 @@ describe('Adapt/Relay', () => {
     // Check only non no-op tokens were added to tree
     expect(await railgunSmartWallet.nextLeafIndex()).to.equal(1);
     expect(await railgunSmartWallet.merkleRoot()).to.equal(arrayToHexString(merkletree.root, true));
+  });
+
+  it('Should deposit ERC721', async () => {
+    const { relayAdapt, railgunSmartWallet, testERC721 } = await loadFixture(deploy);
+
+    // Mint ERC721 to relay adapt
+    await testERC721.mint(relayAdapt.address, 10n);
+
+    // Create deposit note
+    const depositNote = new Note(
+      randomBytes(32),
+      randomBytes(32),
+      10n ** 18n,
+      randomBytes(16),
+      {
+        tokenType: TokenType.ERC721,
+        tokenAddress: testERC721.address,
+        tokenSubID: 10n,
+      },
+      '',
+    );
+
+    // Get shield request
+    const shieldRequest = await depositNote.encryptForShield();
+
+    // Shield
+    await relayAdapt.shield([shieldRequest]);
+
+    // Check tokens moved
+    expect(await testERC721.ownerOf(10n)).to.equal(railgunSmartWallet.address);
+  });
+
+  it('Should fail on ERC1155', async () => {
+    const { relayAdapt } = await loadFixture(deploy);
+
+    // Create deposit note
+    const depositNote = new Note(
+      randomBytes(32),
+      randomBytes(32),
+      10n ** 18n,
+      randomBytes(16),
+      {
+        tokenType: TokenType.ERC1155,
+        tokenAddress: arrayToHexString(randomBytes(20), true),
+        tokenSubID: 10n,
+      },
+      '',
+    );
+
+    // Get shield request
+    const shieldRequest = await depositNote.encryptForShield();
+
+    // Shield
+    await expect(relayAdapt.shield([shieldRequest])).to.be.revertedWith('RelayAdapt: ERC1155 not yet supported');
   });
 });

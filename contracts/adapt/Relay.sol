@@ -176,7 +176,7 @@ contract RelayAdapt {
 
         // Increment number of valid tokens
         numValidTokens += 1;
-      } else if (_shieldRequests[i].preimage.token.tokenType == TokenType.ERC1155) {
+      } else {
         // ERC1155 token
         revert("RelayAdapt: ERC1155 not yet supported");
       }
@@ -241,8 +241,11 @@ contract RelayAdapt {
         token.safeTransfer(_transfers[i].to, amount);
       } else if (_transfers[i].token.tokenType == TokenType.ERC721) {
         // ERC721 token
-        revert("RelayAdapt: ERC721 not yet supported");
-      } else if (_transfers[i].token.tokenType == TokenType.ERC1155) {
+        IERC721 token = IERC721(_transfers[i].token.tokenAddress);
+
+        // Transfer token
+        token.transferFrom(address(this), _transfers[i].to, _transfers[i].token.tokenSubID);
+      } else {
         // ERC1155 token
         revert("RelayAdapt: ERC1155 not yet supported");
       }
