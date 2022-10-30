@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import { IWBase } from "./IWBase.sol";
-import { Transaction, ShieldRequest, ShieldCiphertext, CommitmentPreimage, TokenData, TokenType } from "../logic/Globals.sol";
+import { VERIFICATION_BYPASS, Transaction, ShieldRequest, ShieldCiphertext, CommitmentPreimage, TokenData, TokenType } from "../logic/Globals.sol";
 import { RailgunSmartWallet } from "../logic/RailgunSmartWallet.sol";
 
 /**
@@ -19,10 +19,6 @@ import { RailgunSmartWallet } from "../logic/RailgunSmartWallet.sol";
 
 contract RelayAdapt {
   using SafeERC20 for IERC20;
-
-  // Snark bypass address, can't be address(0) as many burn prevention mechanisms will disallow transfers to 0
-  // Use 0x000000000000000000000000000000000000dEaD as an alternative
-  address public constant VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEaD;
 
   // Set to true if contract is executing
   bool private isExecuting = false;
