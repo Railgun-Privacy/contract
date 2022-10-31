@@ -21,6 +21,7 @@ export interface ActionData {
 export interface ProverRelayAdaptNonSharedInputs {
   minGasPrice: bigint;
   unshield: UnshieldType;
+  chainID: bigint,
   adaptContract: string;
   notesIn: Note[];
   notesOut: (Note | UnshieldNote)[];
@@ -73,6 +74,7 @@ async function transactWithAdaptParams(
         merkletree,
         txInputs.minGasPrice,
         txInputs.unshield,
+        txInputs.chainID,
         txInputs.adaptContract,
         new Uint8Array(32),
         txInputs.notesIn,
@@ -91,6 +93,7 @@ async function transactWithAdaptParams(
         merkletree,
         txInputs.minGasPrice,
         txInputs.unshield,
+        txInputs.chainID,
         txInputs.adaptContract,
         adaptParams,
         txInputs.notesIn,

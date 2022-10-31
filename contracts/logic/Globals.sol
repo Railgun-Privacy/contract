@@ -49,6 +49,7 @@ struct BoundParams {
   uint16 treeNumber;
   uint72 minGasPrice;
   UnshieldType unshield;
+  uint64 chainID;
   address adaptContract;
   bytes32 adaptParams;
   // For unshields do not include an element in ciphertext array

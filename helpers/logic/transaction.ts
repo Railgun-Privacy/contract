@@ -35,6 +35,7 @@ export interface BoundParams {
   treeNumber: number;
   minGasPrice: bigint;
   unshield: UnshieldType;
+  chainID: bigint;
   adaptContract: string;
   adaptParams: Uint8Array;
   commitmentCiphertext: CommitmentCiphertext[];
@@ -101,7 +102,7 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
   const encodedBytes = hexStringToArray(
     ethers.utils.defaultAbiCoder.encode(
       [
-        'tuple(uint16 treeNumber, uint48 minGasPrice, uint8 unshield, address adaptContract, bytes32 adaptParams, tuple(bytes32[4] ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey, bytes annotationData, bytes memo)[] commitmentCiphertext) boundParams',
+        'tuple(uint16 treeNumber, uint48 minGasPrice, uint8 unshield, uint64 chainID, address adaptContract, bytes32 adaptParams, tuple(bytes32[4] ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey, bytes annotationData, bytes memo)[] commitmentCiphertext) boundParams',
       ],
       [boundParams],
     ),
@@ -313,6 +314,7 @@ function padWithDummyNotes(originalBundle: InputOutputBundle, outputsLength: num
  * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
  * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
+ * @param chainID - chain ID to lock proof to
  * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param notesIn - transaction inputs
@@ -325,6 +327,7 @@ async function formatPublicInputs(
   merkletree: MerkleTree,
   minGasPrice: bigint,
   unshield: UnshieldType,
+  chainID: bigint,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
@@ -360,6 +363,7 @@ async function formatPublicInputs(
       treeNumber,
       minGasPrice,
       unshield,
+      chainID,
       adaptContract,
       adaptParams,
       commitmentCiphertext,
@@ -378,6 +382,7 @@ async function formatPublicInputs(
  * @param merkletree - merkle tree to get inclusion proofs from
  * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
+ * @param chainID - chain ID to lock proof to
  * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param notesIn - transaction inputs
@@ -389,6 +394,7 @@ async function formatCircuitInputs(
   merkletree: MerkleTree,
   minGasPrice: bigint,
   unshield: UnshieldType,
+  chainID: bigint,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
@@ -407,6 +413,7 @@ async function formatCircuitInputs(
     treeNumber,
     minGasPrice,
     unshield,
+    chainID,
     adaptContract,
     adaptParams,
     commitmentCiphertext,
@@ -476,6 +483,7 @@ async function formatCircuitInputs(
  * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
  * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
+ * @param chainID - chain ID to lock proof to
  * @param adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param notesIn - transaction inputs
@@ -486,6 +494,7 @@ async function dummyTransact(
   merkletree: MerkleTree,
   minGasPrice: bigint,
   unshield: UnshieldType,
+  chainID: bigint,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
@@ -508,6 +517,7 @@ async function dummyTransact(
     merkletree,
     minGasPrice,
     unshield,
+    chainID,
     adaptContract,
     adaptParams,
     notesIn,
@@ -523,6 +533,7 @@ async function dummyTransact(
  * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
  * (0 for no unshield, 1 for unshield, 2 for unshield with override allowed)
+ * @param chainID - chain ID to lock proof to
  * @param  adaptContract - adapt contract to lock transaction to (0 if no lock)
  * @param adaptParams - parameter field for use by adapt module
  * @param  notesIn - transaction inputs
@@ -533,6 +544,7 @@ async function transact(
   merkletree: MerkleTree,
   minGasPrice: bigint,
   unshield: UnshieldType,
+  chainID: bigint,
   adaptContract: string,
   adaptParams: Uint8Array,
   notesIn: Note[],
@@ -557,6 +569,7 @@ async function transact(
     merkletree,
     minGasPrice,
     unshield,
+    chainID,
     adaptContract,
     adaptParams,
     notesIn,
@@ -573,6 +586,7 @@ async function transact(
     merkletree,
     minGasPrice,
     unshield,
+    chainID,
     adaptContract,
     adaptParams,
     notesIn,

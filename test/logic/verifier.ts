@@ -26,6 +26,9 @@ describe('Logic/Verifier', () => {
       '0x000000000000000000000000000000000000dEaD',
     );
 
+    // Get chainID
+    const chainID = BigInt(await ethers.provider.send('eth_chainId', []) as string); // Hex string returned
+
     const [, signer1] = await ethers.getSigners();
 
     const VerifierStub = await ethers.getContractFactory('VerifierStub');
@@ -34,6 +37,7 @@ describe('Logic/Verifier', () => {
     const verifier1 = verifier.connect(signer1);
 
     return {
+      chainID,
       snarkBypassSigner,
       verifier,
       verifierBypassSigner,
@@ -62,7 +66,7 @@ describe('Logic/Verifier', () => {
   });
 
   it('Should hash bound parameters', async function () {
-    const { verifier } = await loadFixture(deploy);
+    const { chainID, verifier } = await loadFixture(deploy);
 
     let loops = 2;
 
@@ -76,6 +80,7 @@ describe('Logic/Verifier', () => {
         treeNumber: i,
         minGasPrice: BigInt(i * 2),
         unshield: i % 3,
+        chainID,
         adaptContract: arrayToHexString(randomBytes(20), true),
         adaptParams: randomBytes(32),
         commitmentCiphertext: new Array(i).fill({
@@ -96,7 +101,7 @@ describe('Logic/Verifier', () => {
   });
 
   it('Should verify dummy proofs', async () => {
-    const { verifier, verifierBypassSigner } = await loadFixture(deploy);
+    const { chainID, verifier, verifierBypassSigner } = await loadFixture(deploy);
 
     await loadAllArtifacts(verifier);
 
@@ -155,6 +160,7 @@ describe('Logic/Verifier', () => {
         merkletree,
         0n,
         UnshieldType.NONE,
+        chainID,
         ethers.constants.AddressZero,
         hexStringToArray(ethers.constants.HashZero),
         notesIn,
@@ -173,7 +179,7 @@ describe('Logic/Verifier', () => {
     this.timeout(5 * 60 * 60 * 1000);
     if (process.env.LONG_TESTS === 'no') this.skip();
 
-    const { verifier } = await loadFixture(deploy);
+    const { chainID, verifier } = await loadFixture(deploy);
 
     await loadAllArtifacts(verifier);
 
@@ -232,6 +238,7 @@ describe('Logic/Verifier', () => {
         merkletree,
         0n,
         UnshieldType.NONE,
+        chainID,
         ethers.constants.AddressZero,
         hexStringToArray(ethers.constants.HashZero),
         notesIn,
@@ -247,7 +254,7 @@ describe('Logic/Verifier', () => {
     this.timeout(5 * 60 * 60 * 1000);
     if (process.env.LONG_TESTS === 'no') this.skip();
 
-    const { verifierBypassSigner } = await loadFixture(deploy);
+    const { chainID, verifierBypassSigner } = await loadFixture(deploy);
 
     const limit = 3;
 
@@ -306,6 +313,7 @@ describe('Logic/Verifier', () => {
           merkletree,
           0n,
           UnshieldType.NONE,
+          chainID,
           ethers.constants.AddressZero,
           hexStringToArray(ethers.constants.HashZero),
           notesIn,

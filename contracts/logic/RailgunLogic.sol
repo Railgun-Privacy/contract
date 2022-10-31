@@ -401,6 +401,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       _transaction.boundParams.adaptContract != msg.sender
     ) return false;
 
+    // ChainID should match the current EVM chainID
+    if (_transaction.boundParams.chainID != block.chainid) return false;
+
     // Merkle root must be a seen historical root
     if (!Commitments.rootHistory[_transaction.boundParams.treeNumber][_transaction.merkleRoot])
       return false;

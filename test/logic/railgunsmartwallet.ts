@@ -30,6 +30,9 @@ describe('Logic/RailgunSmartWallet', () => {
     await impersonateAccount('0x000000000000000000000000000000000000dEaD');
     const snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
+    // Get chainID
+    const chainID = BigInt(await ethers.provider.send('eth_chainId', []) as string); // Hex string returned
+
     // Get primary and treasury accounts
     const [primaryAccount, treasuryAccount, adminAccount, secondaryAccount] =
       await ethers.getSigners();
@@ -82,6 +85,7 @@ describe('Logic/RailgunSmartWallet', () => {
     await testERC721BypassSigner.setApprovalForAll(railgunSmartWallet.address, true);
 
     return {
+      chainID,
       primaryAccount,
       treasuryAccount,
       adminAccount,
@@ -95,7 +99,7 @@ describe('Logic/RailgunSmartWallet', () => {
   }
 
   it('Should shield, transfer, and withdraw ERC20', async () => {
-    const { treasuryAccount, secondaryAccount, railgunSmartWalletSnarkBypass, testERC20 } =
+    const { chainID, treasuryAccount, secondaryAccount, railgunSmartWalletSnarkBypass, testERC20 } =
       await loadFixture(deploy);
 
     // Create merkle tree and wallets
@@ -177,6 +181,7 @@ describe('Logic/RailgunSmartWallet', () => {
         merkletree,
         0n,
         UnshieldType.NONE,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         transferNotes.inputs,
@@ -221,6 +226,7 @@ describe('Logic/RailgunSmartWallet', () => {
         merkletree,
         0n,
         UnshieldType.NORMAL,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         unshieldNotes.inputs,
@@ -265,7 +271,7 @@ describe('Logic/RailgunSmartWallet', () => {
   });
 
   it('Should shield, transfer, and withdraw ERC721', async () => {
-    const { secondaryAccount, railgunSmartWalletSnarkBypass, testERC721 } = await loadFixture(
+    const { chainID, secondaryAccount, railgunSmartWalletSnarkBypass, testERC721 } = await loadFixture(
       deploy,
     );
 
@@ -330,6 +336,7 @@ describe('Logic/RailgunSmartWallet', () => {
         merkletree,
         0n,
         UnshieldType.NONE,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         transferNotes.inputs,
@@ -365,6 +372,7 @@ describe('Logic/RailgunSmartWallet', () => {
         merkletree,
         0n,
         UnshieldType.NORMAL,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         unshieldNotes.inputs,
@@ -407,7 +415,7 @@ describe('Logic/RailgunSmartWallet', () => {
   });
 
   it('Should reject invalid transactions', async () => {
-    const { railgunSmartWallet, testERC20 } = await loadFixture(deploy);
+    const { chainID, railgunSmartWallet, testERC20 } = await loadFixture(deploy);
 
     // Create merkle tree and wallets
     const merkletree = await MerkleTree.createTree();
@@ -460,6 +468,7 @@ describe('Logic/RailgunSmartWallet', () => {
           merkletree,
           0n,
           UnshieldType.NONE,
+          chainID,
           ethers.constants.AddressZero,
           new Uint8Array(32),
           transferNotes.inputs,

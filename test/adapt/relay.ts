@@ -34,6 +34,9 @@ describe('Adapt/Relay', () => {
     await impersonateAccount('0x000000000000000000000000000000000000dEaD');
     const snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
+    // Get chainID
+    const chainID = BigInt(await ethers.provider.send('eth_chainId', []) as string); // Hex string returned
+
     // Get primary and treasury accounts
     const [primaryAccount, treasuryAccount, adminAccount, secondaryAccount] =
       await ethers.getSigners();
@@ -120,6 +123,7 @@ describe('Adapt/Relay', () => {
     await testERC721BypassSigner.setApprovalForAll(railgunSmartWallet.address, true);
 
     return {
+      chainID,
       primaryAccount,
       treasuryAccount,
       adminAccount,
@@ -146,7 +150,7 @@ describe('Adapt/Relay', () => {
       loops = 10n;
     }
 
-    const { relayAdapt } = await loadFixture(deploy);
+    const { chainID, relayAdapt } = await loadFixture(deploy);
 
     for (let i = 1; i < loops; i += 1) {
       // Get test transactions
@@ -196,6 +200,7 @@ describe('Adapt/Relay', () => {
               merkletree,
               arrayToBigInt(randomBytes(5)),
               UnshieldType.NONE,
+              chainID,
               relayAdapt.address,
               randomBytes(32),
               notesIn,
@@ -698,7 +703,7 @@ describe('Adapt/Relay', () => {
   });
 
   it('Should submit relay bundle', async () => {
-    const { relayAdapt, relayAdaptSnarkBypass, railgunSmartWallet, testERC20Tokens } =
+    const { chainID, relayAdapt, relayAdaptSnarkBypass, railgunSmartWallet, testERC20Tokens } =
       await loadFixture(deploy);
 
     // Deploy multicall target
@@ -770,6 +775,7 @@ describe('Adapt/Relay', () => {
         merkletree,
         0n,
         UnshieldType.NONE,
+        chainID,
         relayAdapt.address,
         new Uint8Array(32),
         notesInOut.inputs,
@@ -781,6 +787,7 @@ describe('Adapt/Relay', () => {
       {
         minGasPrice: 0n,
         unshield: UnshieldType.NONE,
+        chainID,
         adaptContract: relayAdapt.address,
         notesIn: notesInOut.inputs,
         notesOut: notesInOut.outputs,
@@ -830,6 +837,7 @@ describe('Adapt/Relay', () => {
         merkletree,
         0n,
         UnshieldType.NONE,
+        chainID,
         relayAdapt.address,
         new Uint8Array(32),
         notesInOutSnarkBypass.inputs,

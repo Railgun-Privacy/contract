@@ -34,6 +34,9 @@ describe('Logic/RailgunLogic', () => {
     await impersonateAccount('0x000000000000000000000000000000000000dEaD');
     const snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
+    // Get chainID
+    const chainID = BigInt(await ethers.provider.send('eth_chainId', []) as string); // Hex string returned
+
     // Get primary and treasury accounts
     const [primaryAccount, treasuryAccount, adminAccount, proxyAdminAccount] =
       await ethers.getSigners();
@@ -93,6 +96,7 @@ describe('Logic/RailgunLogic', () => {
     await testERC721BypassSigner.setApprovalForAll(railgunLogic.address, true);
 
     return {
+      chainID,
       primaryAccount,
       adminAccount,
       treasuryAccount,
@@ -444,7 +448,7 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should sum commitments in a transaction', async () => {
-    const { railgunLogic } = await loadFixture(deploy);
+    const { chainID, railgunLogic } = await loadFixture(deploy);
 
     const loops = 5;
 
@@ -486,6 +490,7 @@ describe('Logic/RailgunLogic', () => {
         tree,
         0n,
         UnshieldType.NONE,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         notesIn,
@@ -497,6 +502,7 @@ describe('Logic/RailgunLogic', () => {
         tree,
         0n,
         UnshieldType.NORMAL,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         notesIn,
@@ -517,7 +523,7 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should validate transaction', async () => {
-    const { railgunLogic, railgunLogicSnarkBypass } = await loadFixture(deploy);
+    const { chainID, railgunLogic, railgunLogicSnarkBypass } = await loadFixture(deploy);
 
     // Create random viewing and spending keys
     const spendingKey = randomBytes(32);
@@ -559,6 +565,7 @@ describe('Logic/RailgunLogic', () => {
       tree,
       100n,
       UnshieldType.NONE,
+      chainID,
       ethers.constants.AddressZero,
       new Uint8Array(32),
       notesIn,
@@ -569,6 +576,7 @@ describe('Logic/RailgunLogic', () => {
       tree,
       100n,
       UnshieldType.NORMAL,
+      chainID,
       ethers.constants.AddressZero,
       new Uint8Array(32),
       notesIn,
@@ -579,6 +587,7 @@ describe('Logic/RailgunLogic', () => {
       tree,
       100n,
       UnshieldType.REDIRECT,
+      chainID,
       ethers.constants.AddressZero,
       new Uint8Array(32),
       notesIn,
@@ -647,6 +656,19 @@ describe('Logic/RailgunLogic', () => {
     ).to.equal(false);
 
     await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], false);
+
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(true);
+
+    // Should return false if chainID is invalid
+    dummyTransaction.boundParams.chainID += 1n;
+
+    expect(
+      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
+    ).to.equal(false);
+
+    dummyTransaction.boundParams.chainID -= 1n;
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
@@ -723,6 +745,7 @@ describe('Logic/RailgunLogic', () => {
       tree,
       100n,
       UnshieldType.REDIRECT,
+      chainID,
       ethers.constants.AddressZero,
       new Uint8Array(32),
       notesIn,
@@ -741,6 +764,7 @@ describe('Logic/RailgunLogic', () => {
         tree,
         100n,
         UnshieldType.NONE,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         notesIn,
@@ -758,7 +782,7 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should accumulate and nullify transaction', async () => {
-    const { railgunLogic } = await loadFixture(deploy);
+    const { chainID, railgunLogic } = await loadFixture(deploy);
 
     const loops = 5;
 
@@ -790,6 +814,7 @@ describe('Logic/RailgunLogic', () => {
         tree,
         0n,
         UnshieldType.NONE,
+        chainID,
         ethers.constants.AddressZero,
         new Uint8Array(32),
         notesIn,
