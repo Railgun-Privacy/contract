@@ -473,9 +473,17 @@ describe('Governance/Voting', () => {
       },
     ]);
 
-    // Sponsor without permission should fail
+    // Sponsor, unsponsor, and vote without permission should fail
     await expect(
       voting2.sponsorProposal(0, proposalSponsorThreshold, users[0].address, 0n),
+    ).to.be.revertedWith('Voting: Caller not authorized');
+
+    await expect(
+      voting2.unsponsorProposal(0, proposalSponsorThreshold, users[0].address),
+    ).to.be.revertedWith('Voting: Caller not authorized');
+
+    await expect(
+      voting2.vote(0, proposalSponsorThreshold, true, users[0].address, 0n),
     ).to.be.revertedWith('Voting: Caller not authorized');
 
     // Set voting key
