@@ -143,13 +143,7 @@ describe('Governance/Delegator', () => {
       ),
     )
       .to.emit(delegatorAdmin, 'GrantPermission')
-      .withArgs(
-        (
-          await ethers.getSigners()
-        )[0].address,
-        ethers.constants.AddressZero,
-        '0x00000000',
-      );
+      .withArgs((await ethers.getSigners())[0].address, ethers.constants.AddressZero, '0x00000000');
 
     // Permission should now be true again
     expect(
