@@ -224,6 +224,27 @@ const railgunBase37 = {
   },
 };
 
+/**
+ * Converts utf8 bytes to string
+ *
+ * @param data - bytes to decode
+ * @returns decoded string
+ */
+function toUTF8String(data: Uint8Array): string {
+  const string = new TextDecoder().decode(data);
+  return string;
+}
+
+/**
+ * Converts string to bytes
+ *
+ * @param string - string to convert to bytes
+ * @returns encoded bytes
+ */
+function fromUTF8String(string: string): Uint8Array {
+  return new TextEncoder().encode(string);
+}
+
 export {
   arrayToByteLength,
   arrayToBigInt,
@@ -234,4 +255,6 @@ export {
   combine,
   padToLength,
   railgunBase37,
+  toUTF8String,
+  fromUTF8String,
 };

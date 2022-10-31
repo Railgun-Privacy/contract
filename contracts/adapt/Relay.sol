@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
+import "hardhat/console.sol";
+
 // OpenZeppelin v4
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -70,58 +72,6 @@ contract RelayAdapt {
   constructor(RailgunSmartWallet _railgun, IWBase _wBase) {
     railgun = _railgun;
     wBase = _wBase;
-  }
-
-  /**
-   * @notice Get adapt params value for a given set of transactions
-   * and action data
-   * @param _transactions - Batch of Railgun transactions to execute
-   * @param _actionData - Actions to take in transaction
-   */
-  function getAdaptParams(Transaction[] calldata _transactions, ActionData calldata _actionData)
-    public
-    pure
-    returns (bytes32)
-  {
-    // Get 2D array of nullifiers of transaction
-    bytes32[][] memory nullifiers = new bytes32[][](_transactions.length);
-
-    for (
-      uint256 transactionIter = 0;
-      transactionIter < _transactions.length;
-      transactionIter += 1
-    ) {
-      nullifiers[transactionIter] = _transactions[transactionIter].nullifiers;
-    }
-
-    // Return keccak hash of parameters
-    return keccak256(abi.encode(nullifiers, _transactions.length, _actionData));
-  }
-
-  /**
-   * @notice Executes a batch of Railgun transactions
-   * @param _transactions - Batch of Railgun transactions to execute
-   * @param _additionalData - Additional data
-   * Should be random value
-   */
-  function railgunBatch(Transaction[] calldata _transactions, ActionData calldata _additionalData)
-    internal
-  {
-    // Get expected adapt parameters
-    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _additionalData);
-
-    // Loop through each transaction and ensure adapt parameters match
-    for (uint256 i = 0; i < _transactions.length; i += 1) {
-      require(
-        _transactions[i].boundParams.adaptParams == expectedAdaptParameters ||
-          // solhint-disable-next-line avoid-tx-origin
-          tx.origin == VERIFICATION_BYPASS,
-        "RelayAdapt: AdaptID Parameters Mismatch"
-      );
-    }
-
-    // Execute railgun transactions
-    railgun.transact(_transactions);
   }
 
   /**
@@ -212,7 +162,10 @@ contract RelayAdapt {
    */
   function transfer(TokenTransfer[] calldata _transfers) external onlySelfIfExecuting {
     for (uint256 i = 0; i < _transfers.length; i += 1) {
-      if (_transfers[i].token.tokenType == TokenType.ERC20 && _transfers[i].token.tokenAddress == address(0)) {
+      if (
+        _transfers[i].token.tokenType == TokenType.ERC20 &&
+        _transfers[i].token.tokenAddress == address(0)
+      ) {
         // BASE
         // Fetch balance
         uint256 amount = _transfers[i].value == 0 ? address(this).balance : _transfers[i].value;
@@ -276,7 +229,7 @@ contract RelayAdapt {
    * @param _requireSuccess - Whether transaction should throw on call failure
    * @param _calls - multicall array
    */
-  function multicall(bool _requireSuccess, Call[] calldata _calls) public onlySelfIfExecuting {
+  function _multicall(bool _requireSuccess, Call[] calldata _calls) internal {
     // Loop through each call
     for (uint256 i = 0; i < _calls.length; i += 1) {
       // Retrieve call
@@ -301,6 +254,41 @@ contract RelayAdapt {
   }
 
   /**
+   * @notice Executes multicall batch
+   * @param _requireSuccess - Whether transaction should throw on call failure
+   * @param _calls - multicall array
+   */
+  function multicall(bool _requireSuccess, Call[] calldata _calls) external onlySelfIfExecuting {
+    _multicall(_requireSuccess, _calls);
+  }
+
+  /**
+   * @notice Get adapt params value for a given set of transactions
+   * and action data
+   * @param _transactions - Batch of Railgun transactions to execute
+   * @param _actionData - Actions to take in transaction
+   */
+  function getAdaptParams(Transaction[] calldata _transactions, ActionData calldata _actionData)
+    public
+    pure
+    returns (bytes32)
+  {
+    // Get 2D array of nullifiers of transaction
+    bytes32[][] memory nullifiers = new bytes32[][](_transactions.length);
+
+    for (
+      uint256 transactionIter = 0;
+      transactionIter < _transactions.length;
+      transactionIter += 1
+    ) {
+      nullifiers[transactionIter] = _transactions[transactionIter].nullifiers;
+    }
+
+    // Return keccak hash of parameters
+    return keccak256(abi.encode(nullifiers, _transactions.length, _actionData));
+  }
+
+  /**
    * @notice Executes a batch of Railgun transactions followed by a multicall
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _actionData - Actions to take in transaction
@@ -310,15 +298,28 @@ contract RelayAdapt {
     payable
     onlySelfIfExecuting
   {
+    // ~55000 gas needs to be added above the minGasLimit value as this amount will be
+    // consumed by the time we reach this check
     require(gasleft() > _actionData.minGasLimit, "RelayAdapt: Not enough gas supplied");
 
-    if (_transactions.length > 0) {
-      // Executes railgun batch
-      railgunBatch(_transactions, _actionData);
+    // Get expected adapt parameters
+    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _actionData);
+
+    // Loop through each transaction and ensure adapt parameters match
+    for (uint256 i = 0; i < _transactions.length; i += 1) {
+      require(
+        _transactions[i].boundParams.adaptParams == expectedAdaptParameters ||
+          // solhint-disable-next-line avoid-tx-origin
+          tx.origin == VERIFICATION_BYPASS,
+        "RelayAdapt: AdaptID Parameters Mismatch"
+      );
     }
 
+    // Execute railgun transactions
+    railgun.transact(_transactions);
+
     // Execute multicall
-    multicall(_actionData.requireSuccess, _actionData.calls);
+    _multicall(_actionData.requireSuccess, _actionData.calls);
 
     // To execute a multicall and shield or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.

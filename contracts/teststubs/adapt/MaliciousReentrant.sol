@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 pragma abicoder v2;
 
-import { TokenType, TokenData, CommitmentPreimage, ShieldCiphertext, ShieldRequest } from "../../logic/Globals.sol";
+import { TokenType, TokenData, CommitmentPreimage, ShieldCiphertext, ShieldRequest, Transaction } from "../../logic/Globals.sol";
 import { RelayAdapt } from "../../adapt/Relay.sol";
 
 contract MaliciousReentrant {
@@ -25,20 +25,20 @@ contract MaliciousReentrant {
 
     // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
-      abi.encodeWithSelector(relayAdapt.shield.selector, shieldRequest)
+      abi.encodeWithSelector(relayAdapt.shield.selector, [shieldRequest])
     );
 
     require(!success, "Reentry was successful");
 
-    TokenData memory tokenData = TokenData({
-      tokenType: TokenType.ERC20,
-      tokenAddress: address(0),
-      tokenSubID: 0
+    RelayAdapt.TokenTransfer memory tokenTransfer = RelayAdapt.TokenTransfer({
+      to: address(this),
+      token: TokenData({ tokenType: TokenType.ERC20, tokenAddress: address(0), tokenSubID: 0 }),
+      value: 100
     });
 
     // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
-      abi.encodeWithSelector(relayAdapt.transfer.selector, tokenData)
+      abi.encodeWithSelector(relayAdapt.transfer.selector, [tokenTransfer])
     );
 
     require(!success, "Reentry was successful");
@@ -62,6 +62,22 @@ contract MaliciousReentrant {
     // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
       abi.encodeWithSelector(relayAdapt.multicall.selector, false, calls)
+    );
+
+    require(!success, "Reentry was successful");
+
+    Transaction[] memory transactions = new Transaction[](0);
+
+    RelayAdapt.ActionData memory actionData = RelayAdapt.ActionData({
+      random: bytes31(0),
+      requireSuccess: false,
+      minGasLimit: 0,
+      calls: new RelayAdapt.Call[](0)
+    });
+
+    // solhint-disable-next-line avoid-low-level-calls
+    (success, ) = address(relayAdapt).call(
+      abi.encodeWithSelector(relayAdapt.relay.selector, transactions, actionData)
     );
 
     require(!success, "Reentry was successful");

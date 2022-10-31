@@ -8,13 +8,19 @@ import {
 
 import * as weth9artifact from '@ethereum-artifacts/weth9';
 
-import { getAdaptParams } from '../../helpers/adapt/relay';
+import { getAdaptParams, transactWithAdaptParams } from '../../helpers/adapt/relay';
 import { loadAllArtifacts } from '../../helpers/logic/artifacts';
 import { dummyTransact, UnshieldType } from '../../helpers/logic/transaction';
 import { MerkleTree } from '../../helpers/logic/merkletree';
+import { Wallet } from '../../helpers/logic/wallet';
 import { Note, TokenType } from '../../helpers/logic/note';
 import { randomBytes } from '../../helpers/global/crypto';
-import { arrayToBigInt, arrayToHexString } from '../../helpers/global/bytes';
+import {
+  arrayToBigInt,
+  arrayToHexString,
+  fromUTF8String,
+  hexStringToArray,
+} from '../../helpers/global/bytes';
 
 describe('Adapt/Relay', () => {
   /**
@@ -128,6 +134,7 @@ describe('Adapt/Relay', () => {
       testERC20TokensBypassSigner,
       testERC721,
       testERC721BypassSigner,
+      weth9,
     };
   }
 
@@ -500,8 +507,9 @@ describe('Adapt/Relay', () => {
       ]),
     ).to.be.revertedWith('RelayAdapt: ERC1155 not yet supported');
 
-    const RevertOnReceive = await ethers.getContractFactory('RevertOnReceive');
-    const revertOnReceive = await RevertOnReceive.deploy();
+    // Deploy contract that will revert on ETH received
+    const GovernanceTargetAlphaStub = await ethers.getContractFactory('GovernanceTargetAlphaStub');
+    const governanceTargetAlphaStub = await GovernanceTargetAlphaStub.deploy();
 
     // Mint ETH to relayAdapt
     await setBalance(relayAdapt.address, '0x01F4');
@@ -510,7 +518,7 @@ describe('Adapt/Relay', () => {
     await expect(
       relayAdapt.transfer([
         {
-          to: revertOnReceive.address,
+          to: governanceTargetAlphaStub.address,
           value: 0n,
           token: {
             tokenType: TokenType.ERC20,
@@ -520,5 +528,316 @@ describe('Adapt/Relay', () => {
         },
       ]),
     ).to.be.revertedWith('RelayAdapt: ETH transfer failed');
+  });
+
+  it('Should wrap and unwrap ETH', async () => {
+    const { relayAdapt, weth9 } = await loadFixture(deploy);
+
+    // Mint ETH to relayAdapt
+    await setBalance(relayAdapt.address, '0x01F4');
+
+    // Wrap
+    const wrapTX = relayAdapt.wrapBase(100);
+
+    await expect(wrapTX).to.changeEtherBalances([relayAdapt.address, weth9.address], [-100, 100]);
+    await expect(wrapTX).to.changeTokenBalance(weth9, relayAdapt.address, 100);
+
+    // Unwrap
+    const unwrapTX = relayAdapt.unwrapBase(100);
+
+    await expect(unwrapTX).to.changeEtherBalances([relayAdapt.address, weth9.address], [100, -100]);
+    await expect(unwrapTX).to.changeTokenBalance(weth9, relayAdapt.address, -100);
+
+    // Wrap all
+    const wrapAllTX = relayAdapt.wrapBase(0);
+
+    await expect(wrapAllTX).to.changeEtherBalances(
+      [relayAdapt.address, weth9.address],
+      [-500, 500],
+    );
+    await expect(wrapAllTX).to.changeTokenBalance(weth9, relayAdapt.address, 500);
+
+    // Unwrap all
+    const unwrapAllTX = relayAdapt.unwrapBase(0);
+
+    await expect(unwrapAllTX).to.changeEtherBalances(
+      [relayAdapt.address, weth9.address],
+      [500, -500],
+    );
+    await expect(unwrapAllTX).to.changeTokenBalance(weth9, relayAdapt.address, -500);
+  });
+
+  it('Should multicall', async () => {
+    const { primaryAccount, relayAdapt, testERC20Tokens } = await loadFixture(deploy);
+
+    // Deploy multicall target
+    const GovernanceStateChangeTargetStub = await ethers.getContractFactory(
+      'GovernanceStateChangeTargetStub',
+    );
+    const governanceStateChangeTargetStub = await GovernanceStateChangeTargetStub.deploy('hello');
+
+    // Deploy contract that will revert on ETH received
+    const GovernanceTargetAlphaStub = await ethers.getContractFactory('GovernanceTargetAlphaStub');
+    const governanceTargetAlphaStub = await GovernanceTargetAlphaStub.deploy();
+
+    // Should call external contract
+    await relayAdapt.multicall(false, [
+      {
+        to: governanceStateChangeTargetStub.address,
+        data: governanceStateChangeTargetStub.interface.encodeFunctionData('changeGreeting', [
+          'hi',
+        ]),
+        value: 0n,
+      },
+    ]);
+
+    expect(await governanceStateChangeTargetStub.greeting()).to.equal('hi');
+
+    // Mint ERC20 tokens
+    await testERC20Tokens[0].mint(relayAdapt.address, 10n ** 18n);
+
+    // Should call internal contract
+    await expect(
+      relayAdapt.multicall(true, [
+        {
+          to: relayAdapt.address,
+          data: relayAdapt.interface.encodeFunctionData('transfer', [
+            [
+              {
+                to: primaryAccount.address,
+                value: 10n ** 18n,
+                token: {
+                  tokenType: TokenType.ERC20,
+                  tokenAddress: testERC20Tokens[0].address,
+                  tokenSubID: 0n,
+                },
+              },
+            ],
+          ]),
+          value: 0n,
+        },
+      ]),
+    ).to.changeTokenBalances(
+      testERC20Tokens[0],
+      [relayAdapt.address, primaryAccount.address],
+      [-(10n ** 18n), 10n ** 18n],
+    );
+
+    // Should throw on external contract failure
+    await expect(
+      relayAdapt.multicall(true, [
+        {
+          to: governanceTargetAlphaStub.address,
+          data: governanceTargetAlphaStub.interface.encodeFunctionData('willRevert'),
+          value: 0n,
+        },
+      ]),
+    )
+      .to.be.revertedWithCustomError(relayAdapt, 'CallFailed')
+      .withArgs(
+        0,
+        `0x08c379a0${ethers.utils.defaultAbiCoder
+          .encode(['bytes'], [fromUTF8String('1 is not equal to 2')])
+          .slice(2)}`,
+      );
+
+    // Should not throw on external contract failure if require success is false
+    await expect(
+      relayAdapt.multicall(false, [
+        {
+          to: governanceTargetAlphaStub.address,
+          data: governanceTargetAlphaStub.interface.encodeFunctionData('willRevert'),
+          value: 0n,
+        },
+      ]),
+    ).to.eventually.be.fulfilled;
+
+    // Should throw on internal contract failure regardless of require success
+    await expect(
+      relayAdapt.multicall(false, [
+        {
+          to: relayAdapt.address,
+          data: relayAdapt.interface.encodeFunctionData('transfer', [
+            [
+              {
+                to: primaryAccount.address,
+                value: 10n ** 18n,
+                token: {
+                  tokenType: TokenType.ERC1155,
+                  tokenAddress: testERC20Tokens[0].address,
+                  tokenSubID: 0n,
+                },
+              },
+            ],
+          ]),
+          value: 0n,
+        },
+      ]),
+    )
+      .to.be.revertedWithCustomError(relayAdapt, 'CallFailed')
+      .withArgs(
+        0,
+        `0x08c379a0${ethers.utils.defaultAbiCoder
+          .encode(['bytes'], [fromUTF8String('RelayAdapt: ERC1155 not yet supported')])
+          .slice(2)}`,
+      );
+
+    const MaliciousReentrant = await ethers.getContractFactory('MaliciousReentrant');
+    const maliciousReentrant = await MaliciousReentrant.deploy();
+
+    // Should prevent reentrancy
+    await expect(
+      relayAdapt.multicall(true, [
+        {
+          to: maliciousReentrant.address,
+          data: maliciousReentrant.interface.encodeFunctionData('attack'),
+          value: 0n,
+        },
+      ]),
+    ).to.eventually.be.fulfilled;
+  });
+
+  it('Should submit relay bundle', async () => {
+    const { relayAdapt, relayAdaptSnarkBypass, railgunSmartWallet, testERC20Tokens } =
+      await loadFixture(deploy);
+
+    // Deploy multicall target
+    const GovernanceStateChangeTargetStub = await ethers.getContractFactory(
+      'GovernanceStateChangeTargetStub',
+    );
+    const governanceStateChangeTargetStub = await GovernanceStateChangeTargetStub.deploy('hello');
+
+    // Create merkletree, wallet, and token data
+    const merkletree = await MerkleTree.createTree();
+    const wallet = new Wallet(randomBytes(32), randomBytes(32));
+
+    const tokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20Tokens[0].address,
+      tokenSubID: 0n,
+    };
+
+    // Shield tokens
+    const shieldNotes = new Array(16)
+      .fill(1)
+      .map(
+        () =>
+          new Note(
+            wallet.spendingKey,
+            wallet.viewingKey,
+            10n ** 18n,
+            randomBytes(16),
+            tokenData,
+            '',
+          ),
+      );
+
+    const depositTX = await railgunSmartWallet.shield(
+      await Promise.all(shieldNotes.map((note) => note.encryptForShield())),
+    );
+
+    await merkletree.scanTX(depositTX, railgunSmartWallet);
+    await wallet.scanTX(depositTX, railgunSmartWallet);
+
+    // Generate transaction bundle and actions
+    const notesInOut = await wallet.getTestTransactionInputs(
+      merkletree,
+      2,
+      3,
+      false,
+      tokenData,
+      wallet.spendingKey,
+      wallet.viewingKey,
+    );
+
+    const actionData = {
+      random: randomBytes(31),
+      requireSuccess: false,
+      minGasLimit: 10000000n,
+      calls: [
+        {
+          to: governanceStateChangeTargetStub.address,
+          data: hexStringToArray(
+            governanceStateChangeTargetStub.interface.encodeFunctionData('changeGreeting', ['hi']),
+          ),
+          value: 0n,
+        },
+      ],
+    };
+
+    const transactionsWrongAdaptID = [
+      await dummyTransact(
+        merkletree,
+        0n,
+        UnshieldType.NONE,
+        relayAdapt.address,
+        new Uint8Array(32),
+        notesInOut.inputs,
+        notesInOut.outputs,
+      ),
+    ];
+
+    const transactions = await transactWithAdaptParams(merkletree, actionData, [
+      {
+        minGasPrice: 0n,
+        unshield: UnshieldType.NONE,
+        adaptContract: relayAdapt.address,
+        notesIn: notesInOut.inputs,
+        notesOut: notesInOut.outputs,
+      },
+    ]);
+
+    // Should reject if not enough gas is supplied
+    await expect(
+      relayAdapt.relay(transactions, actionData, { gasLimit: 5000000n }),
+    ).to.be.revertedWith('RelayAdapt: Not enough gas supplied');
+
+    // Should reject if wrong adapt params is supplied
+    await expect(
+      relayAdapt.relay(transactionsWrongAdaptID, actionData, { gasLimit: 11000000n }),
+    ).to.be.revertedWith('RelayAdapt: AdaptID Parameters Mismatch');
+
+    // Submit transaction
+    const relayTX = await relayAdapt.relay(transactions, actionData, { gasLimit: 11000000n });
+
+    // Check effects have been applied
+    expect(await governanceStateChangeTargetStub.greeting()).to.equal('hi');
+
+    await merkletree.scanTX(relayTX, railgunSmartWallet);
+    await wallet.scanTX(relayTX, railgunSmartWallet);
+
+    // Verification bypass address shouldn't revert
+    // Generate transaction bundle and actions
+    const notesInOutSnarkBypass = await wallet.getTestTransactionInputs(
+      merkletree,
+      2,
+      3,
+      false,
+      tokenData,
+      wallet.spendingKey,
+      wallet.viewingKey,
+    );
+
+    const actionDataNoOp = {
+      random: randomBytes(31),
+      requireSuccess: false,
+      minGasLimit: 0n,
+      calls: [],
+    };
+
+    const transactionsSnarkBypass = [
+      await dummyTransact(
+        merkletree,
+        0n,
+        UnshieldType.NONE,
+        relayAdapt.address,
+        new Uint8Array(32),
+        notesInOutSnarkBypass.inputs,
+        notesInOutSnarkBypass.outputs,
+      ),
+    ];
+
+    await expect(relayAdaptSnarkBypass.relay(transactionsSnarkBypass, actionDataNoOp)).to.eventually
+      .be.fulfilled;
   });
 });
