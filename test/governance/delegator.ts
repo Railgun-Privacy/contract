@@ -130,6 +130,37 @@ describe('Governance/Delegator', () => {
         targetAlpha.interface.getSighash('a'),
       ),
     ).to.equal(false);
+
+    // Set wildcard permission to true
+    await expect(
+      delegatorAdmin.setPermission(
+        (
+          await ethers.getSigners()
+        )[0].address,
+        ethers.constants.AddressZero,
+        '0x00000000',
+        true,
+      ),
+    )
+      .to.emit(delegatorAdmin, 'GrantPermission')
+      .withArgs(
+        (
+          await ethers.getSigners()
+        )[0].address,
+        ethers.constants.AddressZero,
+        '0x00000000',
+      );
+
+    // Permission should now be true again
+    expect(
+      await delegator.checkPermission(
+        (
+          await ethers.getSigners()
+        )[0].address,
+        targetAlpha.address,
+        targetAlpha.interface.getSighash('a'),
+      ),
+    ).to.equal(true);
   });
 
   it('Should be able to call function with permission', async () => {
