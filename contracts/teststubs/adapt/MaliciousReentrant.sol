@@ -23,26 +23,34 @@ contract SimpleSwap {
 
     bool success = false;
 
+    // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
       abi.encodeWithSelector(relayAdapt.shield.selector, shieldRequest)
     );
 
     require(!success, "Reentry was successful");
 
-    TokenData memory tokenData = TokenData({ tokenType: TokenType.ERC20, tokenAddress: address(0), tokenSubID: 0 });
+    TokenData memory tokenData = TokenData({
+      tokenType: TokenType.ERC20,
+      tokenAddress: address(0),
+      tokenSubID: 0
+    });
 
+    // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
-      abi.encodeWithSelector(relayAdapt.send.selector, tokenData)
+      abi.encodeWithSelector(relayAdapt.transfer.selector, tokenData)
     );
 
     require(!success, "Reentry was successful");
 
+    // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
       abi.encodeWithSelector(relayAdapt.wrapBase.selector, uint256(0))
     );
 
     require(!success, "Reentry was successful");
 
+    // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
       abi.encodeWithSelector(relayAdapt.unwrapBase.selector, uint256(0))
     );
@@ -51,6 +59,7 @@ contract SimpleSwap {
 
     RelayAdapt.Call[] memory calls = new RelayAdapt.Call[](0);
 
+    // solhint-disable-next-line avoid-low-level-calls
     (success, ) = address(relayAdapt).call(
       abi.encodeWithSelector(relayAdapt.multicall.selector, false, calls)
     );

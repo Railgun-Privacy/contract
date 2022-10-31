@@ -223,8 +223,8 @@ describe('Adapt/Relay', () => {
 
     // Check shielding specific amounts works
 
-    // Transfer test tokens to relayAdapt
-    await testERC20Tokens[0].transfer(relayAdapt.address, 10n ** 18n);
+    // Mint test tokens to relayAdapt
+    await testERC20Tokens[0].mint(relayAdapt.address, 10n ** 18n);
 
     // Create deposit note
     const depositNote = new Note(
@@ -253,8 +253,8 @@ describe('Adapt/Relay', () => {
       [-(10n ** 18n), 10n ** 18n],
     );
 
-    // Transfer test tokens to relayAdapt
-    await testERC20Tokens[0].transfer(relayAdapt.address, 2n * 10n ** 18n);
+    // Mint test tokens to relayAdapt
+    await testERC20Tokens[0].mint(relayAdapt.address, 2n * 10n ** 18n);
 
     // Check shielding entire balance works
 
@@ -317,7 +317,7 @@ describe('Adapt/Relay', () => {
     expect(await railgunSmartWallet.merkleRoot()).to.equal(arrayToHexString(merkletree.root, true));
 
     // Transfer tokens to contract
-    await testERC20Tokens[1].transfer(relayAdapt.address, 10n ** 18n);
+    await testERC20Tokens[1].mint(relayAdapt.address, 10n ** 18n);
 
     // Create deposit note for second token
     const depositNote2 = new Note(
@@ -398,6 +398,106 @@ describe('Adapt/Relay', () => {
     const shieldRequest = await depositNote.encryptForShield();
 
     // Shield
-    await expect(relayAdapt.shield([shieldRequest])).to.be.revertedWith('RelayAdapt: ERC1155 not yet supported');
+    await expect(relayAdapt.shield([shieldRequest])).to.be.revertedWith(
+      'RelayAdapt: ERC1155 not yet supported',
+    );
+  });
+
+  it('Should transfer tokens', async () => {
+    const { primaryAccount, relayAdapt, testERC20Tokens, testERC721 } = await loadFixture(deploy);
+
+    // Mint ETH to relayAdapt
+    await setBalance(relayAdapt.address, '0x01F4');
+
+    // Mint test ERC20 tokens to relayAdapt
+    await testERC20Tokens[0].mint(relayAdapt.address, 2n * 10n ** 18n);
+    await testERC20Tokens[1].mint(relayAdapt.address, 2n * 10n ** 18n);
+
+    // Mint test ERC721 tokens to relayAdapt
+    await testERC721.mint(relayAdapt.address, 10n);
+
+    // Transfer tokens
+    const transferTX = await relayAdapt.transfer([
+      {
+        to: primaryAccount.address,
+        value: 100n,
+        token: {
+          tokenType: TokenType.ERC20,
+          tokenAddress: ethers.constants.AddressZero,
+          tokenSubID: 0n,
+        },
+      },
+      {
+        to: primaryAccount.address,
+        value: 0n,
+        token: {
+          tokenType: TokenType.ERC20,
+          tokenAddress: ethers.constants.AddressZero,
+          tokenSubID: 0n,
+        },
+      },
+      {
+        to: primaryAccount.address,
+        value: 10n ** 18n,
+        token: {
+          tokenType: TokenType.ERC20,
+          tokenAddress: testERC20Tokens[0].address,
+          tokenSubID: 0n,
+        },
+      },
+      {
+        to: primaryAccount.address,
+        value: 0n,
+        token: {
+          tokenType: TokenType.ERC20,
+          tokenAddress: testERC20Tokens[1].address,
+          tokenSubID: 0n,
+        },
+      },
+      {
+        to: primaryAccount.address,
+        value: 0n,
+        token: {
+          tokenType: TokenType.ERC721,
+          tokenAddress: testERC721.address,
+          tokenSubID: 10n,
+        },
+      },
+    ]);
+
+    // Check tokens transferred
+    await expect(transferTX).to.changeEtherBalances(
+      [relayAdapt.address, primaryAccount.address],
+      [-(500), 500],
+    );
+
+    await expect(transferTX).to.changeTokenBalances(
+      testERC20Tokens[0],
+      [relayAdapt.address, primaryAccount.address],
+      [-(10n ** 18n), 10n ** 18n],
+    );
+
+    await expect(transferTX).to.changeTokenBalances(
+      testERC20Tokens[1],
+      [relayAdapt.address, primaryAccount.address],
+      [-(2n * 10n ** 18n), 2n * 10n ** 18n],
+    );
+
+    expect(await testERC721.ownerOf(10n)).to.equal(primaryAccount.address);
+
+    // ERC1155 should revert
+    await expect(
+      relayAdapt.transfer([
+        {
+          to: primaryAccount.address,
+          value: 10n ** 18n,
+          token: {
+            tokenType: TokenType.ERC1155,
+            tokenAddress: testERC20Tokens[0].address,
+            tokenSubID: 0n,
+          },
+        },
+      ]),
+    ).to.be.revertedWith('RelayAdapt: ERC1155 not yet supported');
   });
 });

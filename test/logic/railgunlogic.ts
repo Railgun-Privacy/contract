@@ -149,12 +149,12 @@ describe('Logic/RailgunLogic', () => {
       'Ownable: caller is not the owner',
     );
 
-    // Fees shouldn't be able to be set to more than 100%
-    await expect(railgunLogicAdmin.changeFee(10001n, 5n, 6n)).to.be.revertedWith(
-      'RailgunLogic: Shield Fee exceeds 100%',
+    // Fees shouldn't be able to be set to more than 50%
+    await expect(railgunLogicAdmin.changeFee(5001n, 5n, 6n)).to.be.revertedWith(
+      'RailgunLogic: Shield Fee exceeds 50%',
     );
-    await expect(railgunLogicAdmin.changeFee(3n, 10001n, 6n)).to.be.revertedWith(
-      'RailgunLogic: Unshield Fee exceeds 100%',
+    await expect(railgunLogicAdmin.changeFee(3n, 5001n, 6n)).to.be.revertedWith(
+      'RailgunLogic: Unshield Fee exceeds 50%',
     );
   });
 

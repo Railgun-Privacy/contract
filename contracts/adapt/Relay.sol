@@ -210,9 +210,9 @@ contract RelayAdapt {
    * @notice Sends tokens to particular address
    * @param _transfers - tokens to send (0x0 - ERC20 is base)
    */
-  function send(TokenTransfer[] calldata _transfers) external onlySelfIfExecuting {
+  function transfer(TokenTransfer[] calldata _transfers) external onlySelfIfExecuting {
     for (uint256 i = 0; i < _transfers.length; i += 1) {
-      if (_transfers[i].token.tokenType == TokenType.ERC20 && _transfers[i].to == address(0)) {
+      if (_transfers[i].token.tokenType == TokenType.ERC20 && _transfers[i].token.tokenAddress == address(0)) {
         // BASE
         // Fetch balance
         uint256 amount = _transfers[i].value == 0 ? address(this).balance : _transfers[i].value;

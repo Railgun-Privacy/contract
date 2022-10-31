@@ -138,8 +138,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256 _nftFee
   ) public onlyOwner {
     if (_shieldFee != shieldFee || _unshieldFee != unshieldFee || _nftFee != nftFee) {
-      require(_shieldFee <= BASIS_POINTS, "RailgunLogic: Shield Fee exceeds 100%");
-      require(_unshieldFee <= BASIS_POINTS, "RailgunLogic: Unshield Fee exceeds 100%");
+      require(_shieldFee <= BASIS_POINTS / 2, "RailgunLogic: Shield Fee exceeds 50%");
+      require(_unshieldFee <= BASIS_POINTS / 2, "RailgunLogic: Unshield Fee exceeds 50%");
 
       // Change fee
       shieldFee = _shieldFee;

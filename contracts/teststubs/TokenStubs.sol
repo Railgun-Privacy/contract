@@ -5,6 +5,7 @@ pragma abicoder v2;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 contract TestERC20 is ERC20 {
   constructor() ERC20("testERC20", "testERC20") {}
@@ -21,6 +22,15 @@ contract TestERC721 is ERC721 {
     _mint(_account, _tokenId);
   }
 }
+
+contract TestERC1155 is ERC1155 {
+  constructor() ERC1155("testERC1155") {}
+
+  function mint(address _account, uint256 _tokenId, uint256 _amount, bytes calldata _data) external {
+    _mint(_account, _tokenId, _amount, _data);
+  }
+}
+
 
 contract AdminERC20 is ERC20, Ownable {
   constructor(string memory name, string memory symbol) ERC20(name, symbol) {
