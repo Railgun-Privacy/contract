@@ -5,7 +5,7 @@ pragma abicoder v2;
 import { TokenType, TokenData, CommitmentPreimage, ShieldCiphertext, ShieldRequest } from "../../logic/Globals.sol";
 import { RelayAdapt } from "../../adapt/Relay.sol";
 
-contract SimpleSwap {
+contract MaliciousReentrant {
   function attack() external {
     RelayAdapt relayAdapt = RelayAdapt(payable(msg.sender));
 

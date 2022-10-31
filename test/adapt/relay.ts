@@ -468,7 +468,7 @@ describe('Adapt/Relay', () => {
     // Check tokens transferred
     await expect(transferTX).to.changeEtherBalances(
       [relayAdapt.address, primaryAccount.address],
-      [-(500), 500],
+      [-500, 500],
     );
 
     await expect(transferTX).to.changeTokenBalances(
@@ -499,5 +499,26 @@ describe('Adapt/Relay', () => {
         },
       ]),
     ).to.be.revertedWith('RelayAdapt: ERC1155 not yet supported');
+
+    const RevertOnReceive = await ethers.getContractFactory('RevertOnReceive');
+    const revertOnReceive = await RevertOnReceive.deploy();
+
+    // Mint ETH to relayAdapt
+    await setBalance(relayAdapt.address, '0x01F4');
+
+    // Should throw if ETH transfer fails
+    await expect(
+      relayAdapt.transfer([
+        {
+          to: revertOnReceive.address,
+          value: 0n,
+          token: {
+            tokenType: TokenType.ERC20,
+            tokenAddress: ethers.constants.AddressZero,
+            tokenSubID: 0n,
+          },
+        },
+      ]),
+    ).to.be.revertedWith('RelayAdapt: ETH transfer failed');
   });
 });
