@@ -27,7 +27,7 @@ describe('Logic/Verifier', () => {
     );
 
     // Get chainID
-    const chainID = BigInt(await ethers.provider.send('eth_chainId', []) as string); // Hex string returned
+    const chainID = BigInt((await ethers.provider.send('eth_chainId', [])) as string); // Hex string returned
 
     const [, signer1] = await ethers.getSigners();
 

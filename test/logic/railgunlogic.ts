@@ -35,7 +35,7 @@ describe('Logic/RailgunLogic', () => {
     const snarkBypassSigner = await ethers.getSigner('0x000000000000000000000000000000000000dEaD');
 
     // Get chainID
-    const chainID = BigInt(await ethers.provider.send('eth_chainId', []) as string); // Hex string returned
+    const chainID = BigInt((await ethers.provider.send('eth_chainId', [])) as string); // Hex string returned
 
     // Get primary and treasury accounts
     const [primaryAccount, treasuryAccount, adminAccount, proxyAdminAccount] =

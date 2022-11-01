@@ -21,7 +21,7 @@ export interface ActionData {
 export interface ProverRelayAdaptNonSharedInputs {
   minGasPrice: bigint;
   unshield: UnshieldType;
-  chainID: bigint,
+  chainID: bigint;
   adaptContract: string;
   notesIn: Note[];
   notesOut: (Note | UnshieldNote)[];
