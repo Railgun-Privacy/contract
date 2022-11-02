@@ -26,6 +26,7 @@ coverage.json
 report.md
 typechain
 typechain-types
+abi-exports
 
 # Temporary Files
 scripts/ephemeral

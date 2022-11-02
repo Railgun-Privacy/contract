@@ -54,6 +54,7 @@ async function main() {
   // Deploy RailToken
   const rail = await RailToken.deploy('RailTest', 'RAILTEST');
   await logVerify('AdminERC20', rail, ['RailTest', 'RAILTEST']);
+  await rail.adminMint((await ethers.getSigners())[0].address, 50000000n * 10n ** 18n);
 
   // Deploy Staking
   const staking = await Staking.deploy(rail.address);
