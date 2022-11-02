@@ -7,10 +7,12 @@ import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-local-networks-config-plugin';
 import { time } from '@nomicfoundation/hardhat-network-helpers';
+import { TASK_COMPILE } from 'hardhat/builtin-tasks/task-names';
 
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { poseidonContract } from 'circomlibjs';
+import * as railgunSmartWalletLegacy from './legacy-abi/railgunsmartwallet.json';
 import mocharc from './.mocharc.json';
 
 const config: HardhatUserConfig = {
@@ -53,21 +55,35 @@ async function overwriteArtifact(
   bytecode: string,
 ): Promise<void> {
   const artifact = await hre.artifacts.readArtifact(contractName);
-  await hre.artifacts.saveArtifactAndDebugFile({
-    ...artifact,
-    bytecode,
-  });
+  artifact.bytecode = bytecode;
+  await hre.artifacts.saveArtifactAndDebugFile(artifact);
 }
 
-task(
-  'compile',
-  'Compiles the entire project, building all artifacts and injecting precompiled artifacts',
-  async (taskArguments, hre, runSuper) => {
-    await runSuper();
-    await overwriteArtifact(hre, 'PoseidonT3', poseidonContract.createCode(2));
-    await overwriteArtifact(hre, 'PoseidonT4', poseidonContract.createCode(3));
-  },
-);
+/**
+ * Overwrites build artifacts to add ABI fragments
+ *
+ * @param hre - hardhat runtime environment
+ * @param contractName - contract name to overwrite
+ * @param abi - abi fragments to inject
+ * @returns promise for completion
+ */
+async function mergeABIs(
+  hre: HardhatRuntimeEnvironment,
+  contractName: string,
+  abi: unknown[],
+): Promise<void> {
+  const artifact = await hre.artifacts.readArtifact(contractName);
+  console.log('Here');
+  artifact.abi = artifact.abi.concat(abi);
+  await hre.artifacts.saveArtifactAndDebugFile(artifact);
+}
+
+task(TASK_COMPILE).setAction(async (taskArguments, hre, runSuper) => {
+  await runSuper();
+  await mergeABIs(hre, 'contracts/logic/RailgunSmartWallet.sol:RailgunSmartWallet', railgunSmartWalletLegacy);
+  await overwriteArtifact(hre, 'contracts/logic/Poseidon.sol:PoseidonT3', poseidonContract.createCode(2));
+  await overwriteArtifact(hre, 'contracts/logic/Poseidon.sol:PoseidonT4', poseidonContract.createCode(3));
+});
 
 task('test', 'Runs test suite')
   .addOptionalParam(
