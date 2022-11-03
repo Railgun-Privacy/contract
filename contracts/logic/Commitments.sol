@@ -246,7 +246,7 @@ contract Commitments is Initializable {
     returns (uint256, uint256)
   {
     // New tree will be created if current one can't contain new leaves
-    if ((nextLeafIndex + _newCommitments - 1) >= (2**TREE_DEPTH)) return (treeNumber + 1, 0);
+    if ((nextLeafIndex + _newCommitments) > (2**TREE_DEPTH)) return (treeNumber + 1, 0);
 
     // Else return current state
     return (treeNumber, nextLeafIndex);
