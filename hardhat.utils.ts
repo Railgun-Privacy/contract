@@ -48,7 +48,7 @@ async function exportABIs(hre: HardhatRuntimeEnvironment, contracts: string[]): 
       }
 
       if (Array.isArray(additions[`${artifact.sourceName}:${artifact.contractName}`])) {
-        abi = additions[`${artifact.sourceName}:${artifact.contractName}`];
+        abi = abi.concat(additions[`${artifact.sourceName}:${artifact.contractName}`]);
       }
 
       // Write to destination

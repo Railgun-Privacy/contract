@@ -7,7 +7,7 @@ import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-local-networks-config-plugin';
 import { time } from '@nomicfoundation/hardhat-network-helpers';
-import { TASK_COMPILE, TASK_CLEAN } from 'hardhat/builtin-tasks/task-names';
+import { TASK_COMPILE, TASK_CLEAN, TASK_TEST } from 'hardhat/builtin-tasks/task-names';
 
 import { poseidonContract } from 'circomlibjs';
 import { overwriteArtifact, exportABIs, cleanExportedAbis } from './hardhat.utils';
@@ -56,15 +56,26 @@ task(TASK_COMPILE).setAction(async (taskArguments, hre, runSuper) => {
     'contracts/logic/Poseidon.sol:PoseidonT4',
     poseidonContract.createCode(3),
   );
-  await exportABIs(hre, exportContractABIs);
+  await hre.run('abi-export');
 });
 
 task(TASK_CLEAN).setAction(async (taskArguments, hre, runSuper) => {
   await runSuper();
-  cleanExportedAbis(hre);
+  await hre.run('abi-clean');
 });
 
-task('test', 'Runs test suite')
+task('abi-clean').setAction((taskArguments, hre) => {
+  return new Promise((resolve) => {
+    cleanExportedAbis(hre);
+    resolve(null);
+  });
+});
+
+task('abi-export').setAction(async (taskArguments, hre) => {
+  await exportABIs(hre, exportContractABIs);
+});
+
+task(TASK_TEST, 'Runs test suite')
   .addOptionalParam(
     'longtests',
     'no = execute shorter tests; no = full test suite enabled (default: yes)',
