@@ -49,6 +49,9 @@ contract RelayAdapt {
   // Custom errors
   error CallFailed(uint256 callIndex, bytes revertReason);
 
+  // Events
+  event CallError(uint256 callIndex, bytes revertReason);
+
   // External contract addresses
   RailgunSmartWallet public railgun;
   IWBase public wBase;
@@ -258,7 +261,7 @@ contract RelayAdapt {
    * @param _requireSuccess - Whether transaction should throw on call failure
    * @param _calls - multicall array
    */
-  function multicall(bool _requireSuccess, Call[] calldata _calls) external onlySelfIfExecuting {
+  function multicall(bool _requireSuccess, Call[] calldata _calls) external payable onlySelfIfExecuting {
     _multicall(_requireSuccess, _calls);
   }
 
