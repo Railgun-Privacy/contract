@@ -139,9 +139,14 @@ contract Commitments is Initializable {
     // Get initial count
     uint256 count = _leafHashes.length;
 
+    // If 0 leaves are passed in no-op
+    if (count == 0) {
+      return;
+    }
+
     // Create new tree if current one can't contain new leaves
     // We insert all new commitment into a new tree to ensure they can be spent in the same transaction
-    if ((nextLeafIndex + count - 1) >= (2**TREE_DEPTH)) {
+    if ((nextLeafIndex + count) > (2**TREE_DEPTH)) {
       newTree();
     }
 

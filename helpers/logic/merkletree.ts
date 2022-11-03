@@ -151,6 +151,10 @@ class MerkleTree {
    * @returns complete
    */
   async insertLeaves(leaves: Uint8Array[], startPosition: number) {
+    if (leaves.length === 0) {
+      return;
+    }
+
     // Add leaves to tree
     leaves.forEach((leaf, index) => (this.tree[0][startPosition + index] = leaf));
 

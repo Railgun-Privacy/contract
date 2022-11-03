@@ -17,6 +17,7 @@ import {
   padWithDummyNotes,
   UnshieldType,
 } from '../../helpers/logic/transaction';
+import { arrayToHexString } from '../../helpers/global/bytes';
 
 describe('Logic/RailgunSmartWallet', () => {
   /**
@@ -475,5 +476,23 @@ describe('Logic/RailgunSmartWallet', () => {
         ),
       ]),
     ).to.be.revertedWith("RailgunSmartWallet: Transaction isn't valid");
+  });
+
+  it('Should no-op on empty calls', async () => {
+    const { railgunSmartWallet } = await loadFixture(deploy);
+
+    // Create merkle tree and wallets
+    const merkletree = await MerkleTree.createTree();
+
+    // Transactions should succeed
+    await expect(railgunSmartWallet.shield([])).to.eventually.be.fulfilled;
+    await expect(railgunSmartWallet.transact([])).to.eventually.be.fulfilled;
+
+    // Merkle root shouldn't have changed
+    expect(await railgunSmartWallet.merkleRoot()).to.equal(arrayToHexString(merkletree.root, true));
+
+    // Tree number and next insertion index should still be 0
+    expect(await railgunSmartWallet.treeNumber()).to.equal(0);
+    expect(await railgunSmartWallet.nextLeafIndex()).to.equal(0);
   });
 });

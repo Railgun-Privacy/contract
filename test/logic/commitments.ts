@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-import { arrayToBigInt } from '../../helpers/global/bytes';
+import { arrayToBigInt, arrayToHexString } from '../../helpers/global/bytes';
 import { hash } from '../../helpers/global/crypto';
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import { randomBytes } from 'crypto';
@@ -24,11 +24,8 @@ describe('Logic/Commitments', () => {
     });
     const commitments = await CommitmentsStub.deploy();
 
-    const merkletree = await MerkleTree.createTree();
-
     return {
       commitments,
-      merkletree,
     };
   }
 
@@ -41,7 +38,9 @@ describe('Logic/Commitments', () => {
   });
 
   it('Should calculate zero values', async () => {
-    const { commitments, merkletree } = await loadFixture(deploy);
+    const { commitments } = await loadFixture(deploy);
+
+    const merkletree = await MerkleTree.createTree();
 
     // Each value in the zero values array should be the same
     await Promise.all(
@@ -55,7 +54,9 @@ describe('Logic/Commitments', () => {
   });
 
   it('Should calculate empty root', async () => {
-    const { commitments, merkletree } = await loadFixture(deploy);
+    const { commitments } = await loadFixture(deploy);
+
+    const merkletree = await MerkleTree.createTree();
 
     // Should initialize empty root correctly
     expect(await commitments.merkleRoot()).to.equal(arrayToBigInt(merkletree.root));
@@ -91,13 +92,12 @@ describe('Logic/Commitments', () => {
       loops = 10;
     }
 
-    const { commitments, merkletree } = await loadFixture(deploy);
+    const { commitments } = await loadFixture(deploy);
+
+    const merkletree = await MerkleTree.createTree();
 
     const insertList = [];
     for (let i = 0; i < loops; i += 1) {
-      // Add another element to insert list
-      insertList.push(randomBytes(32));
-
       // Check the insertion numbers
       expect(
         await commitments.getInsertionTreeNumberAndStartingIndex(insertList.length),
@@ -108,10 +108,13 @@ describe('Logic/Commitments', () => {
       await merkletree.insertLeaves(insertList, merkletree.length);
 
       // Check roots match
-      expect(await commitments.merkleRoot()).to.equal(arrayToBigInt(merkletree.root));
+      expect(await commitments.merkleRoot()).to.equal(arrayToHexString(merkletree.root, true));
 
       // Check tree length matches
       expect(await commitments.nextLeafIndex()).to.equal(merkletree.length);
+
+      // Add another element to insert list
+      insertList.push(randomBytes(32));
     }
   });
 
