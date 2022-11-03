@@ -628,7 +628,7 @@ describe('Adapt/Relay', () => {
       [-(10n ** 18n), 10n ** 18n],
     );
 
-    // Should throw on external contract failure
+    // Should throw on external contract failure if require success is true
     await expect(
       relayAdapt.multicall(true, [
         {
@@ -655,7 +655,14 @@ describe('Adapt/Relay', () => {
           value: 0n,
         },
       ]),
-    ).to.eventually.be.fulfilled;
+    )
+      .to.emit(relayAdapt, 'CallError')
+      .withArgs(
+        0,
+        `0x08c379a0${ethers.utils.defaultAbiCoder
+          .encode(['bytes'], [fromUTF8String('1 is not equal to 2')])
+          .slice(2)}`,
+      );
 
     // Should throw on internal contract failure regardless of require success
     await expect(

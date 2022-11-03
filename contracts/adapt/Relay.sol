@@ -252,6 +252,8 @@ contract RelayAdapt {
       // If requireSuccess is true, throw on failure
       if (requireSuccess) {
         revert CallFailed(i, returned);
+      } else {
+        emit CallError(i, returned);
       }
     }
   }
