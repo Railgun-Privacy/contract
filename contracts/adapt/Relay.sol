@@ -212,7 +212,7 @@ contract RelayAdapt {
     uint256 balance = _amount == 0 ? address(this).balance : _amount;
 
     // Wrap
-    wBase.shield{ value: balance }();
+    wBase.deposit{ value: balance }();
   }
 
   /**
