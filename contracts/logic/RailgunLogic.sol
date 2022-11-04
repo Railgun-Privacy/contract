@@ -73,7 +73,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   event Unshield(address to, TokenData token, uint256 amount, uint256 fee);
 
-  event Nullifiers(uint256 treeNumber, bytes32[] nullifier);
+  event Nullified(uint16 treeNumber, bytes32[] nullifier);
 
   /**
    * @notice Initialize Railgun contract
@@ -483,7 +483,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     }
 
     // Emit nullifier event
-    emit Nullifiers(_transaction.boundParams.treeNumber, _transaction.nullifiers);
+    emit Nullified(_transaction.boundParams.treeNumber, _transaction.nullifiers);
 
     // Loop through each commitment
     for (

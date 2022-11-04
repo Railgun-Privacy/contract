@@ -3,7 +3,7 @@ import { RailgunLogic } from '../../typechain-types';
 import {
   TransactEventObject,
   ShieldEventObject,
-  NullifiersEventObject,
+  NullifiedEventObject,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
 import { arrayToBigInt, bigIntToArray, arrayToByteLength, hexStringToArray } from '../global/bytes';
 import { SNARK_SCALAR_FIELD } from '../global/constants';
@@ -288,9 +288,9 @@ class MerkleTree {
 
             // Insert leaves
             await this.insertLeaves(leaves, startPosition);
-          } else if (parsedLog.name === 'Nullifiers') {
-            // Type cast to NullifiersEventObject
-            const args = parsedLog.args as unknown as NullifiersEventObject;
+          } else if (parsedLog.name === 'Nullified') {
+            // Type cast to NullifiedEventObject
+            const args = parsedLog.args as unknown as NullifiedEventObject;
 
             // Get nullifiers as Uint8Array
             const nullifiersFormatted = args.nullifier.map((nullifier) =>

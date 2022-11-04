@@ -1,3 +1,5 @@
+// These are old events from previous implementations of upgradable contracts, inject into exported ABI to allow for parsing of old events
+
 const additions: Record<string, object[]> = {
   'contracts/logic/RailgunSmartWallet.sol:RailgunSmartWallet': [
     {
@@ -111,6 +113,25 @@ const additions: Record<string, object[]> = {
         },
       ],
       name: 'GeneratedCommitmentBatch',
+      type: 'event',
+    },
+    {
+      anonymous: false,
+      inputs: [
+        {
+          indexed: false,
+          internalType: 'uint256',
+          name: 'treeNumber',
+          type: 'uint256',
+        },
+        {
+          indexed: false,
+          internalType: 'uint256[]',
+          name: 'nullifier',
+          type: 'uint256[]',
+        },
+      ],
+      name: 'Nullifiers',
       type: 'event',
     },
   ],

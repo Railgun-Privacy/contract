@@ -823,7 +823,7 @@ describe('Logic/RailgunLogic', () => {
 
       // Check nullifier event is emitted
       await expect(railgunLogic.accumulateAndNullifyTransactionStub(transaction, i, 0))
-        .to.emit(railgunLogic, 'Nullifiers')
+        .to.emit(railgunLogic, 'Nullified')
         .withArgs(0, nullifiersMatcher(transaction.nullifiers));
 
       // Check returned values match transaction values
