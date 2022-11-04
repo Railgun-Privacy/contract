@@ -13,7 +13,7 @@ import { Contract } from 'ethers';
  * @param constructorArguments - constructor arguments
  * @returns promise resolved on deploy deployed
  */
-function logVerify(
+async function logVerify(
   name: string,
   contract: Contract,
   constructorArguments: unknown[],

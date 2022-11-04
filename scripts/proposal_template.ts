@@ -1,5 +1,6 @@
 import readline from 'readline';
 import { ethers } from 'hardhat';
+import type { Contract } from 'ethers';
 import { expect } from 'chai';
 import { chainConfigs, abis } from '@railgun-community/deployments';
 import { ChainConfig } from '@railgun-community/deployments/dist/types';
@@ -15,6 +16,27 @@ const PROPOSAL_DOCUMENT = '';
 const NEW_DEPLOYMENTS: Record<string, string> = {};
 
 /**
+ * Log data to verify contract
+ *
+ * @param name - name of contract
+ * @param contract - contract object
+ * @param constructorArguments - constructor arguments
+ * @returns promise resolved on deploy deployed
+ */
+ async function logVerify(
+  name: string,
+  contract: Contract,
+  constructorArguments: unknown[],
+): Promise<null> {
+  console.log(`\nDeploying ${name}`);
+  console.log({
+    address: contract.address,
+    constructorArguments,
+  });
+  return contract.deployTransaction.wait().then();
+}
+
+/**
  * Run preparation steps
  * 
  * @param chainConfig - chain config
@@ -24,6 +46,7 @@ async function prep(chainConfig: ChainConfig) {
   // WRITE PREPARATION CODE FOR TEST (EG DEPLOY IMPLEMENTATION CONTRACT FOR UPGRADE)
   expect(typeof chainConfig).to.equal('object');
   NEW_DEPLOYMENTS.a = 'a';
+  console.log(logVerify);
   await mine();
 }
 
