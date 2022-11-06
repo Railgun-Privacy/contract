@@ -40,8 +40,12 @@ const config: HardhatUserConfig = {
 };
 
 const exportContractABIs = [
+  // Logic
   'contracts/logic/RailgunSmartWallet.sol:RailgunSmartWallet',
   'contracts/adapt/Relay.sol:RelayAdapt',
+  // Governance
+  'contracts/governance/Staking.sol:Staking',
+  'contracts/governance/Voting.sol:Voting',
 ];
 
 task(TASK_COMPILE).setAction(async (taskArguments, hre, runSuper) => {
@@ -64,14 +68,14 @@ task(TASK_CLEAN).setAction(async (taskArguments, hre, runSuper) => {
   await hre.run('abi-clean');
 });
 
-task('abi-clean').setAction((taskArguments, hre) => {
+task('abi-clean', 'Clean exported ABI artifacts').setAction((taskArguments, hre) => {
   return new Promise((resolve) => {
     cleanExportedAbis(hre);
     resolve(null);
   });
 });
 
-task('abi-export').setAction(async (taskArguments, hre) => {
+task('abi-export', 'Export ABI artifacts').setAction(async (taskArguments, hre) => {
   await exportABIs(hre, exportContractABIs);
 });
 
