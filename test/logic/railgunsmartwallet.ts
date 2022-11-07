@@ -10,7 +10,7 @@ import { MerkleTree } from '../../helpers/logic/merkletree';
 import { Wallet } from '../../helpers/logic/wallet';
 import { loadAllArtifacts } from '../../helpers/logic/artifacts';
 import { randomBytes } from '../../helpers/global/crypto';
-import { Note, TokenData, TokenType } from '../../helpers/logic/note';
+import { getTokenID, Note, TokenData, TokenType } from '../../helpers/logic/note';
 import {
   dummyTransact,
   getFee,
@@ -307,6 +307,14 @@ describe('Logic/RailgunSmartWallet', () => {
 
     // Check token moved correctly
     expect(await testERC721.ownerOf(10)).to.equal(railgunSmartWalletSnarkBypass.address);
+
+    // Check tokenID mapping has been updated
+    const tokenIDContractMapping = await railgunSmartWalletSnarkBypass.tokenIDMapping(
+      getTokenID(tokenData),
+    );
+    expect(tokenIDContractMapping.tokenType).to.equal(tokenData.tokenType);
+    expect(tokenIDContractMapping.tokenAddress).to.equal(tokenData.tokenAddress);
+    expect(tokenIDContractMapping.tokenSubID).to.equal(tokenData.tokenSubID);
 
     // Scan transaction
     await merkletree.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);

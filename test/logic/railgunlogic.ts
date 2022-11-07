@@ -16,7 +16,7 @@ import {
   transact,
   UnshieldType,
 } from '../../helpers/logic/transaction';
-import { Note, TokenType, UnshieldNote } from '../../helpers/logic/note';
+import { getTokenID, Note, TokenType, UnshieldNote } from '../../helpers/logic/note';
 import { randomBytes } from '../../helpers/global/crypto';
 import { arrayToHexString } from '../../helpers/global/bytes';
 import { MerkleTree } from '../../helpers/logic/merkletree';
@@ -956,6 +956,12 @@ describe('Logic/RailgunLogic', () => {
       // Check ERC721 is transferred
       await railgunLogic.transferTokenInStub(await erc721Note.getCommitmentPreimage());
       expect(await testERC721.ownerOf(i)).to.equal(railgunLogic.address);
+
+      // Check tokenID mapping has been updated
+      const tokenIDContractMapping = await railgunLogic.tokenIDMapping(getTokenID(tokenDataERC721));
+      expect(tokenIDContractMapping.tokenType).to.equal(tokenDataERC721.tokenType);
+      expect(tokenIDContractMapping.tokenAddress).to.equal(tokenDataERC721.tokenAddress);
+      expect(tokenIDContractMapping.tokenSubID).to.equal(tokenDataERC721.tokenSubID);
 
       // Check ERC1155 is rejected
       const tokenDataERC1155 = {
