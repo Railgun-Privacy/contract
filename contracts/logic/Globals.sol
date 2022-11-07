@@ -47,7 +47,7 @@ enum UnshieldType {
 
 struct BoundParams {
   uint16 treeNumber;
-  uint72 minGasPrice;
+  uint72 minGasPrice; // Only for type 0 transactions
   UnshieldType unshield;
   uint64 chainID;
   address adaptContract;
