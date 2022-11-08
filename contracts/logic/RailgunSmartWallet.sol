@@ -64,7 +64,7 @@ contract RailgunSmartWallet is RailgunLogic {
     uint256 commitmentsStartOffset = 0;
     CommitmentCiphertext[] memory ciphertext = new CommitmentCiphertext[](commitmentsCount);
 
-    // Loop through each transaction
+    // Loop through each transaction, validate, and nullify
     for (
       uint256 transactionIter = 0;
       transactionIter < _transactions.length;
@@ -83,7 +83,14 @@ contract RailgunSmartWallet is RailgunLogic {
         commitmentsStartOffset,
         ciphertext
       );
+    }
 
+    // Loop through each transaction and process unshields
+    for (
+      uint256 transactionIter = 0;
+      transactionIter < _transactions.length;
+      transactionIter += 1
+    ) {
       // If unshield is specified, process
       if (_transactions[transactionIter].boundParams.unshield != UnshieldType.NONE) {
         RailgunLogic.transferTokenOut(_transactions[transactionIter].unshieldPreimage);
