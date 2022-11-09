@@ -223,18 +223,18 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     returns (bool, string memory)
   {
     // Note must be more than 0
-    if (_note.value == 0) return (false, "0 value note");
+    if (_note.value == 0) return (false, "Invalid Note Value");
 
     // Note token must not be blocklisted
     if (TokenBlocklist.tokenBlocklist[_note.token.tokenAddress])
-      return (false, "Blocklisted token");
+      return (false, "Unsupported Token");
 
     // Note NPK must be in field
-    if (uint256(_note.npk) >= SNARK_SCALAR_FIELD) return (false, "Invalid NPK");
+    if (uint256(_note.npk) >= SNARK_SCALAR_FIELD) return (false, "Invalid Note NPK");
 
     // ERC721 notes should have a value of 1
     if (_note.token.tokenType == TokenType.ERC721 && _note.value != 1)
-      return (false, "NFT note with value != 1");
+      return (false, "Invalid NFT Note Value");
 
     return (true, "");
   }
@@ -408,14 +408,14 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     if (
       _transaction.boundParams.adaptContract != address(0) &&
       _transaction.boundParams.adaptContract != msg.sender
-    ) return (false, "Submitter isn't adapt contract");
+    ) return (false, "Invalid Adapt Contract as Sender");
 
     // ChainID should match the current EVM chainID
     if (_transaction.boundParams.chainID != block.chainid) return (false, "ChainID mismatch");
 
     // Merkle root must be a seen historical root
     if (!Commitments.rootHistory[_transaction.boundParams.treeNumber][_transaction.merkleRoot])
-      return (false, "Invalid merkle root");
+      return (false, "Invalid Merkle Root");
 
     // Loop through each nullifier
     for (
@@ -428,14 +428,14 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         Commitments.nullifiers[_transaction.boundParams.treeNumber][
           _transaction.nullifiers[nullifierIter]
         ]
-      ) return (false, "Transaction is double spend");
+      ) return (false, "Note already spent");
     }
 
     if (_transaction.boundParams.unshield != UnshieldType.NONE) {
       // Ensure ciphertext length matches the commitments length (minus 1 for unshield output)
       if (
         _transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length - 1
-      ) return (false, "Ciphertext length mismatch");
+      ) return (false, "Invalid Note Ciphertext Array Length");
 
       // Check unshield preimage hash is correct
       bytes32 hash;
@@ -455,15 +455,15 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Check hash equals the last commitment in array
       if (hash != _transaction.commitments[_transaction.commitments.length - 1])
-        return (false, "Withdraw preimage invalid");
+        return (false, "Invalid Withdraw Note");
     } else {
       // Ensure ciphertext length matches the commitments length
       if (_transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length)
-        return (false, "Ciphertext length mismatch");
+        return (false, "Invalid Note Ciphertext Array Length");
     }
 
     // Verify SNARK proof
-    if (!Verifier.verify(_transaction)) return (false, "Invalid snark proof");
+    if (!Verifier.verify(_transaction)) return (false, "Invalid Snark Proof");
 
     return (true, "");
   }

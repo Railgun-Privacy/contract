@@ -413,7 +413,7 @@ describe('Logic/RailgunLogic', () => {
       await railgunLogic.validateCommitmentPreimage(
         await invalidERC721Note.getCommitmentPreimage(),
       ),
-    ).to.deep.equal([false, 'NFT note with value != 1']);
+    ).to.deep.equal([false, 'Invalid NFT Note Value']);
 
     // Check zero value note returns false
     const zeroNote = new Note(
@@ -431,7 +431,7 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogic.validateCommitmentPreimage(await zeroNote.getCommitmentPreimage()),
-    ).to.deep.equal([false, '0 value note']);
+    ).to.deep.equal([false, 'Invalid Note Value']);
 
     // Check note with npk out of range returns false
     const invalidNPK = await validNote.getCommitmentPreimage();
@@ -439,7 +439,7 @@ describe('Logic/RailgunLogic', () => {
 
     expect(await railgunLogic.validateCommitmentPreimage(invalidNPK)).to.deep.equal([
       false,
-      'Invalid NPK',
+      'Invalid Note NPK',
     ]);
 
     // Check blocklisted token returns false
@@ -447,7 +447,7 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogic.validateCommitmentPreimage(await validNote.getCommitmentPreimage()),
-    ).to.deep.equal([false, 'Blocklisted token']);
+    ).to.deep.equal([false, 'Unsupported Token']);
   });
 
   it('Should sum commitments in a transaction', async () => {
@@ -630,7 +630,7 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, "Submitter isn't adapt contract"]);
+    ).to.deep.equal([false, 'Invalid Adapt Contract as Sender']);
 
     dummyTransaction.boundParams.adaptContract = ethers.constants.AddressZero;
 
@@ -643,7 +643,7 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'Invalid merkle root']);
+    ).to.deep.equal([false, 'Invalid Merkle Root']);
 
     await railgunLogic.setMerkleRoot(0, tree.root, true);
 
@@ -656,7 +656,7 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'Transaction is double spend']);
+    ).to.deep.equal([false, 'Note already spent']);
 
     await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], false);
 
@@ -696,13 +696,13 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'Ciphertext length mismatch']);
+    ).to.deep.equal([false, 'Invalid Note Ciphertext Array Length']);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Ciphertext length mismatch']);
+    ).to.deep.equal([false, 'Invalid Note Ciphertext Array Length']);
 
     dummyTransaction.boundParams.commitmentCiphertext.pop();
 
@@ -726,13 +726,13 @@ describe('Logic/RailgunLogic', () => {
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Withdraw preimage invalid']);
+    ).to.deep.equal([false, 'Invalid Withdraw Note']);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Withdraw preimage invalid']);
+    ).to.deep.equal([false, 'Invalid Withdraw Note']);
 
     dummyTransactionUnshield.unshieldPreimage.value -= 100n;
     dummyTransactionUnshieldRedirect.unshieldPreimage.value -= 100n;
@@ -759,7 +759,7 @@ describe('Logic/RailgunLogic', () => {
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Withdraw preimage invalid']);
+    ).to.deep.equal([false, 'Invalid Withdraw Note']);
 
     if (process.env.LONG_TESTS === 'yes') {
       // Generate SNARK proof
@@ -783,7 +783,7 @@ describe('Logic/RailgunLogic', () => {
       // Should return false for transaction without valid snark proof
       expect(
         await railgunLogic.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-      ).to.deep.equal([false, 'Invalid snark proof']);
+      ).to.deep.equal([false, 'Invalid Snark Proof']);
     }
   });
 

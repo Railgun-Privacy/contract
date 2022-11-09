@@ -419,7 +419,7 @@ describe('Logic/RailgunSmartWallet', () => {
       railgunSmartWallet.shield([
         ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
       ]),
-    ).to.be.revertedWith('RailgunSmartWallet: 0 value note');
+    ).to.be.revertedWith('RailgunSmartWallet: Invalid Note Value');
   });
 
   it('Should reject invalid transactions', async () => {
@@ -483,7 +483,7 @@ describe('Logic/RailgunSmartWallet', () => {
           transferNotes.outputs,
         ),
       ]),
-    ).to.be.revertedWith('RailgunSmartWallet: Invalid snark proof');
+    ).to.be.revertedWith('RailgunSmartWallet: Invalid Snark Proof');
   });
 
   it('Should no-op on empty calls', async () => {
