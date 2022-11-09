@@ -419,7 +419,7 @@ describe('Logic/RailgunSmartWallet', () => {
       railgunSmartWallet.shield([
         ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
       ]),
-    ).to.be.revertedWith('RailgunSmartWallet: Note preimage is invalid');
+    ).to.be.revertedWith('RailgunSmartWallet: 0 value note');
   });
 
   it('Should reject invalid transactions', async () => {
@@ -483,7 +483,7 @@ describe('Logic/RailgunSmartWallet', () => {
           transferNotes.outputs,
         ),
       ]),
-    ).to.be.revertedWith("RailgunSmartWallet: Transaction isn't valid");
+    ).to.be.revertedWith('RailgunSmartWallet: Invalid snark proof');
   });
 
   it('Should no-op on empty calls', async () => {

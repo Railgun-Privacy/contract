@@ -11,6 +11,7 @@ chainid
 CIPHERTEXT
 circomlib
 circomlibjs
+concat
 delegatecall
 Earmaked
 eddsa

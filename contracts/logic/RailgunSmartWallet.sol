@@ -27,10 +27,10 @@ contract RailgunSmartWallet is RailgunLogic {
     // Loop through each note and process
     for (uint256 notesIter = 0; notesIter < _shieldRequests.length; notesIter += 1) {
       // Check note is valid
-      require(
-        RailgunLogic.validateCommitmentPreimage(_shieldRequests[notesIter].preimage),
-        "RailgunSmartWallet: Note preimage is invalid"
+      (bool valid, string memory reason) = RailgunLogic.validateCommitmentPreimage(
+        _shieldRequests[notesIter].preimage
       );
+      require(valid, string.concat("RailgunSmartWallet: ", reason));
 
       // Process shield request and store adjusted note
       commitments[notesIter] = RailgunLogic.transferTokenIn(_shieldRequests[notesIter].preimage);
@@ -71,10 +71,10 @@ contract RailgunSmartWallet is RailgunLogic {
       transactionIter += 1
     ) {
       // Validate transaction
-      require(
-        RailgunLogic.validateTransaction(_transactions[transactionIter]),
-        "RailgunSmartWallet: Transaction isn't valid"
+      (bool valid, string memory reason) = RailgunLogic.validateTransaction(
+        _transactions[transactionIter]
       );
+      require(valid, string.concat("RailgunSmartWallet: ", reason));
 
       // Nullify, accumulate, and update offset
       commitmentsStartOffset = RailgunLogic.accumulateAndNullifyTransaction(

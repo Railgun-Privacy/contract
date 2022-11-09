@@ -215,25 +215,28 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   /**
    * @notice Checks commitment ranges for validity
+   * @return valid, reason
    */
   function validateCommitmentPreimage(CommitmentPreimage calldata _note)
     public
     view
-    returns (bool)
+    returns (bool, string memory)
   {
     // Note must be more than 0
-    if (_note.value == 0) return false;
+    if (_note.value == 0) return (false, "0 value note");
 
     // Note token must not be blocklisted
-    if (TokenBlocklist.tokenBlocklist[_note.token.tokenAddress]) return false;
+    if (TokenBlocklist.tokenBlocklist[_note.token.tokenAddress])
+      return (false, "Blocklisted token");
 
     // Note NPK must be in field
-    if (uint256(_note.npk) >= SNARK_SCALAR_FIELD) return false;
+    if (uint256(_note.npk) >= SNARK_SCALAR_FIELD) return (false, "Invalid NPK");
 
     // ERC721 notes should have a value of 1
-    if (_note.token.tokenType == TokenType.ERC721 && _note.value != 1) return false;
+    if (_note.token.tokenType == TokenType.ERC721 && _note.value != 1)
+      return (false, "NFT note with value != 1");
 
-    return true;
+    return (true, "");
   }
 
   /**
@@ -390,23 +393,29 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   /**
    * @notice Verifies transaction validity
+   * @return valid, reason
    */
-  function validateTransaction(Transaction calldata _transaction) public view returns (bool) {
+  function validateTransaction(Transaction calldata _transaction)
+    public
+    view
+    returns (bool, string memory)
+  {
     // Gas price of eth transaction should be equal or greater than railgun transaction specified min gas price
-    if (tx.gasprice < _transaction.boundParams.minGasPrice) return false;
+    // This will only work correctly for type 0 transactions, set to 0 for EIP-1559 transactions
+    if (tx.gasprice < _transaction.boundParams.minGasPrice) return (false, "Gas price too low");
 
     // Adapt contract must either equal 0 or msg.sender
     if (
       _transaction.boundParams.adaptContract != address(0) &&
       _transaction.boundParams.adaptContract != msg.sender
-    ) return false;
+    ) return (false, "Submitter isn't adapt contract");
 
     // ChainID should match the current EVM chainID
-    if (_transaction.boundParams.chainID != block.chainid) return false;
+    if (_transaction.boundParams.chainID != block.chainid) return (false, "ChainID mismatch");
 
     // Merkle root must be a seen historical root
     if (!Commitments.rootHistory[_transaction.boundParams.treeNumber][_transaction.merkleRoot])
-      return false;
+      return (false, "Invalid merkle root");
 
     // Loop through each nullifier
     for (
@@ -419,14 +428,14 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
         Commitments.nullifiers[_transaction.boundParams.treeNumber][
           _transaction.nullifiers[nullifierIter]
         ]
-      ) return false;
+      ) return (false, "Transaction is double spend");
     }
 
     if (_transaction.boundParams.unshield != UnshieldType.NONE) {
       // Ensure ciphertext length matches the commitments length (minus 1 for unshield output)
       if (
         _transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length - 1
-      ) return false;
+      ) return (false, "Ciphertext length mismatch");
 
       // Check unshield preimage hash is correct
       bytes32 hash;
@@ -445,15 +454,18 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       }
 
       // Check hash equals the last commitment in array
-      if (hash != _transaction.commitments[_transaction.commitments.length - 1]) return false;
+      if (hash != _transaction.commitments[_transaction.commitments.length - 1])
+        return (false, "Withdraw preimage invalid");
     } else {
       // Ensure ciphertext length matches the commitments length
       if (_transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length)
-        return false;
+        return (false, "Ciphertext length mismatch");
     }
 
     // Verify SNARK proof
-    return Verifier.verify(_transaction);
+    if (!Verifier.verify(_transaction)) return (false, "Invalid snark proof");
+
+    return (true, "");
   }
 
   /**
