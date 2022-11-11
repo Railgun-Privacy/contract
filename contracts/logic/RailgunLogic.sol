@@ -35,13 +35,13 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   address payable public treasury; // Treasury contract
   uint120 private constant BASIS_POINTS = 10000; // Number of basis points that equal 100%
   // % fee in 100ths of a %. 100 = 1%.
-  uint120 public shieldFee;
-  uint120 public unshieldFee;
+  uint120 public shieldFee; // Previously called as depositFee
+  uint120 public unshieldFee; // Previously called withdrawFee
 
   // Flat fee in wei that applies to NFT transactions
-  // THIS IS CURRENTLY SET TO 0 AND LOGIC IS NOT IMPLEMENTED
+  // LOGIC IS NOT IMPLEMENTED
   // TODO: Revisit adapt module structure if we want to implement this
-  uint256 public nftFee;
+  uint256 public nftFee; // Previously called transferFee
 
   // Safety vectors
   mapping(uint256 => bool) public snarkSafetyVector;
@@ -248,6 +248,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     internal
     returns (CommitmentPreimage memory)
   {
+    // validateTransaction and accumulateAndNullifyTransaction functions MUST be called
+    // in that order BEFORE invoking this function to process an unshield on a transaction
+    // else reentrancy attacks are possible
+
     CommitmentPreimage memory adjustedNote;
 
     // Process shield request
@@ -295,6 +299,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _note - note to process
    */
   function transferTokenOut(CommitmentPreimage calldata _note) internal {
+    // validateTransaction and accumulateAndNullifyTransaction functions MUST be called
+    // in that order BEFORE invoking this function to process an unshield on a transaction
+    // else reentrancy attacks are possible
+
     // Process unshield request
     if (_note.token.tokenType == TokenType.ERC20) {
       // ERC20
