@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { getStorageAt, setStorageAt } from '@nomicfoundation/hardhat-network-helpers';
 import { additions } from './abi-additions';
 
 /**
@@ -26,7 +27,7 @@ async function overwriteArtifact(
  *
  * @param hre - hardhat runtime environment
  * @param contracts - contracts to export abis for
- * @returns promise for completion
+ * @returns complete
  */
 async function exportABIs(hre: HardhatRuntimeEnvironment, contracts: string[]): Promise<void> {
   // Get output directory and ensure it exists
@@ -63,7 +64,7 @@ async function exportABIs(hre: HardhatRuntimeEnvironment, contracts: string[]): 
  * Deletes exported ABIs folder
  *
  * @param hre - hardhat runtime environment
- * @returns promise for completion
+ * @returns complete
  */
 function cleanExportedAbis(hre: HardhatRuntimeEnvironment) {
   const outputDirectory = path.resolve(hre.config.paths.root, './abi-exports');
@@ -72,4 +73,42 @@ function cleanExportedAbis(hre: HardhatRuntimeEnvironment) {
   return null;
 }
 
-export { overwriteArtifact, exportABIs, cleanExportedAbis };
+/**
+ * Sets ERC20 token balance
+ *
+ * @param hre - hardhat runtime env
+ * @param address - address to set balance for
+ * @param token - ERC20 token to set balance of
+ * @param balance - balance to set
+ * @returns complete
+ */
+async function grantBalance(hre: HardhatRuntimeEnvironment, address: string, token: string, balance: bigint) {
+  // Format balance
+  const balanceFormatted = `0x${balance.toString(16).padStart(64, '0')}`;
+
+  // Get token
+  const ERC20 = await hre.ethers.getContractFactory('TestERC20');
+  const erc20 = ERC20.attach(token);
+
+  for (let i = 0; i < 1000; i += 1) {
+    // Calculate storage slot
+    const storageSlot = hre.ethers.utils.solidityKeccak256(
+      ['uint256', 'uint256'],
+      [(await hre.ethers.getSigners())[0].address, i],
+    );
+
+    // Get storage before
+    const before = await getStorageAt(token, storageSlot);
+
+    // Set storage
+    await setStorageAt(token, storageSlot, balanceFormatted);
+
+    // Check if token balance changed
+    if ((await erc20.balanceOf(address)).toBigInt() === balance) break;
+
+    // Restore storage before going to next slot
+    await setStorageAt(token, storageSlot, before);
+  }
+}
+
+export { overwriteArtifact, exportABIs, cleanExportedAbis, grantBalance };

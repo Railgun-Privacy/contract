@@ -6,11 +6,11 @@ import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-local-networks-config-plugin';
-import { time, setStorageAt, getStorageAt } from '@nomicfoundation/hardhat-network-helpers';
+import { time } from '@nomicfoundation/hardhat-network-helpers';
 import { TASK_COMPILE, TASK_CLEAN, TASK_TEST } from 'hardhat/builtin-tasks/task-names';
 
 import { poseidonContract } from 'circomlibjs';
-import { overwriteArtifact, exportABIs, cleanExportedAbis } from './hardhat.utils';
+import { overwriteArtifact, exportABIs, cleanExportedAbis, grantBalance } from './hardhat.utils';
 import mocharc from './.mocharc.json';
 
 const config: HardhatUserConfig = {
@@ -113,32 +113,7 @@ task('set-balance', 'Sets balance of ERC20 token')
       { address, token, balance }: { address: string; token: string; balance: string },
       hre,
     ) => {
-      // Format balance
-      const balanceFormatted = `0x${BigInt(balance).toString(16).padStart(64, '0')}`;
-
-      // Get token
-      const ERC20 = await hre.ethers.getContractFactory('TestERC20');
-      const erc20 = ERC20.attach(token);
-
-      for (let i = 0; i < 1000; i += 1) {
-        // Calculate storage slot
-        const storageSlot = hre.ethers.utils.solidityKeccak256(
-          ['uint256', 'uint256'],
-          [(await hre.ethers.getSigners())[0].address, i],
-        );
-
-        // Get storage before
-        const before = await getStorageAt(token, storageSlot);
-
-        // Set storage
-        await setStorageAt(token, storageSlot, balanceFormatted);
-
-        // Check if token balance changed
-        if ((await erc20.balanceOf(address)).toBigInt() === BigInt(balanceFormatted)) break;
-
-        // Restore storage before going to next slot
-        await setStorageAt(token, storageSlot, before);
-      }
+      await grantBalance(hre, address, token, BigInt(balance));
     },
   );
 
