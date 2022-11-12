@@ -82,6 +82,7 @@ task(TASK_COMPILE).setAction(async (taskArguments, hre, runSuper) => {
 task(TASK_CLEAN).setAction(async (taskArguments, hre, runSuper) => {
   await runSuper();
   await hre.run('abi-clean');
+  await hre.run('storage-layout-clean');
 });
 
 task('abi-clean', 'Clean exported ABI artifacts').setAction((taskArguments, hre) => {

@@ -163,7 +163,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint120 _feeBP
   ) public pure returns (uint120, uint120) {
     // Expand width of amount to uint136 to accommodate full size of (2**120-1)*BASIS_POINTS
-    uint136 amountExpanded = _amount;
 
     // Base is the amount sent into the railgun contract or sent to the target eth address
     // for shields and unshields respectively
@@ -172,10 +171,10 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint136 fee;
 
     if (_isInclusive) {
-      base = amountExpanded - (amountExpanded * _feeBP) / BASIS_POINTS;
-      fee = amountExpanded - base;
+      base = _amount - (_amount * _feeBP) / BASIS_POINTS;
+      fee = _amount - base;
     } else {
-      base = amountExpanded;
+      base = _amount;
       fee = (BASIS_POINTS * base) / (BASIS_POINTS - _feeBP) - base;
     }
 

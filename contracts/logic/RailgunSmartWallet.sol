@@ -17,19 +17,6 @@ import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCip
  * @dev Entry point for processing private meta-transactions
  */
 contract RailgunSmartWallet is RailgunLogic, ReentrancyGuardUpgradeable {
-  // Set to true if contract is in a session
-  bool private isInSession = false;
-
-  /**
-   * @notice Only allows single session to be active at a time
-   */
-  modifier onlySingleSession() {
-    require(!isInSession, "RailgunSmartWallet: Already in session");
-    isInSession = true;
-    _;
-    isInSession = false;
-  }
-
   /**
    * @notice Shields requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _shieldRequests - list of commitments to shield
@@ -128,4 +115,6 @@ contract RailgunSmartWallet is RailgunLogic, ReentrancyGuardUpgradeable {
     // Store block number of last event for easier sync
     RailgunLogic.lastEventBlock = block.number;
   }
+
+  function startSession() external nonReentrant {}
 }

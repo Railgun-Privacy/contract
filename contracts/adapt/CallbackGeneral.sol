@@ -18,7 +18,7 @@ import { RailgunSmartWallet } from "../logic/RailgunSmartWallet.sol";
  * @notice Multicall adapt contract for Railgun with relayer support
  */
 
-contract RelayAdapt is IRailgunAdapt {
+contract CallbackGeneral is IRailgunAdapt {
   using SafeERC20 for IERC20;
 
   // Set to true if contract is executing
