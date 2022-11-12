@@ -190,6 +190,22 @@ describe('Logic/RailgunSmartWallet', () => {
       ),
     ]);
 
+    // Double spends should not be possible
+    await expect(
+      railgunSmartWalletSnarkBypass.transact([
+        await dummyTransact(
+          merkletree,
+          0n,
+          UnshieldType.NONE,
+          chainID,
+          ethers.constants.AddressZero,
+          new Uint8Array(32),
+          transferNotes.inputs,
+          transferNotes.outputs,
+        ),
+      ]),
+    ).to.be.revertedWith('RailgunSmartWallet: Note already spent');
+
     // Check lastEventBlock updated
     expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(
       transferTransaction.blockNumber,
@@ -351,6 +367,22 @@ describe('Logic/RailgunSmartWallet', () => {
         transferNotes.outputs,
       ),
     ]);
+
+    // Double spends should not be possible
+    await expect(
+      railgunSmartWalletSnarkBypass.transact([
+        await dummyTransact(
+          merkletree,
+          0n,
+          UnshieldType.NONE,
+          chainID,
+          ethers.constants.AddressZero,
+          new Uint8Array(32),
+          transferNotes.inputs,
+          transferNotes.outputs,
+        ),
+      ]),
+    ).to.be.revertedWith('RailgunSmartWallet: Note already spent');
 
     // Scan transaction
     await merkletree.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
