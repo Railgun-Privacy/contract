@@ -10,7 +10,14 @@ import { time } from '@nomicfoundation/hardhat-network-helpers';
 import { TASK_COMPILE, TASK_CLEAN, TASK_TEST } from 'hardhat/builtin-tasks/task-names';
 
 import { poseidonContract } from 'circomlibjs';
-import { overwriteArtifact, exportABIs, cleanExportedAbis, grantBalance } from './hardhat.utils';
+import {
+  overwriteArtifact,
+  exportABIs,
+  cleanExportedAbis,
+  grantBalance,
+  cleanExportedStorageLayouts,
+  exportStorageLayouts,
+} from './hardhat.utils';
 import mocharc from './.mocharc.json';
 
 const config: HardhatUserConfig = {
@@ -48,6 +55,14 @@ const exportContractABIs = [
   'contracts/governance/Voting.sol:Voting',
 ];
 
+const exportContractStorageLayouts = [
+  // Logic
+  'contracts/logic/RailgunSmartWallet.sol:RailgunSmartWallet',
+  // Governance
+  'contracts/treasury/Treasury.sol:Treasury',
+  'contracts/treasury/GovernorRewards.sol:GovernorRewards',
+];
+
 task(TASK_COMPILE).setAction(async (taskArguments, hre, runSuper) => {
   await runSuper();
   await overwriteArtifact(
@@ -61,6 +76,7 @@ task(TASK_COMPILE).setAction(async (taskArguments, hre, runSuper) => {
     poseidonContract.createCode(3),
   );
   await hre.run('abi-export');
+  await hre.run('storage-layout-export');
 });
 
 task(TASK_CLEAN).setAction(async (taskArguments, hre, runSuper) => {
@@ -123,5 +139,16 @@ task('fastforward', 'Fast forwards time')
     await time.increase(86400 * Number(taskArguments.days));
     console.log(`Fast forwarded ${taskArguments.days} days`);
   });
+
+task('storage-layout-clean', 'Clean exported storage layouts').setAction((taskArguments, hre) => {
+  return new Promise((resolve) => {
+    cleanExportedStorageLayouts(hre);
+    resolve(null);
+  });
+});
+
+task('storage-layout-export', 'Export storage layouts').setAction(async (taskArguments, hre) => {
+  await exportStorageLayouts(hre, exportContractStorageLayouts);
+});
 
 export default config;

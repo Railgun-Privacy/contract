@@ -27,6 +27,7 @@ report.md
 typechain
 typechain-types
 abi-exports
+storage-layouts
 
 # Temporary Files
 scripts/ephemeral
