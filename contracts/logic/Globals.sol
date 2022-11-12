@@ -9,6 +9,8 @@ uint256 constant SNARK_SCALAR_FIELD = 218882428718392752222464057452572750885483
 // https://etherscan.io/address/0x000000000000000000000000000000000000dEaD
 address constant VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEaD;
 
+bytes32 constant ACCEPT_RAILGUN_RESPONSE = keccak256(abi.encodePacked("Accept Railgun Session"));
+
 struct ShieldRequest {
   CommitmentPreimage preimage;
   ShieldCiphertext ciphertext;
