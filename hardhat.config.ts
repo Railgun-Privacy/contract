@@ -51,8 +51,10 @@ const exportContractABIs = [
   'contracts/logic/RailgunSmartWallet.sol:RailgunSmartWallet',
   'contracts/adapt/Relay.sol:RelayAdapt',
   // Governance
+  'contracts/governance/Getters.sol:Getters',
   'contracts/governance/Staking.sol:Staking',
   'contracts/governance/Voting.sol:Voting',
+  'contracts/treasury/GovernorRewards.sol:GovernorRewards',
 ];
 
 const exportContractStorageLayouts = [

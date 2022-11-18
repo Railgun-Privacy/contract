@@ -49,7 +49,7 @@ describe('Governance/Staking', () => {
 
     for (let i = 0; i < 10; i += 1) {
       // Take snapshot every third interval, interval 0 will never have a snapshot
-      if (i - (1 % 3) === 0 && i !== 0) {
+      if (i % 3 === 0 && i !== 0) {
         await staking.snapshotStub((await ethers.getSigners())[0].address);
         snapshots.push(i);
       }
