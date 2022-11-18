@@ -6,7 +6,7 @@ import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-local-networks-config-plugin';
-import { time } from '@nomicfoundation/hardhat-network-helpers';
+import { setBalance, time } from '@nomicfoundation/hardhat-network-helpers';
 import { TASK_COMPILE, TASK_CLEAN, TASK_TEST } from 'hardhat/builtin-tasks/task-names';
 
 import { poseidonContract } from 'circomlibjs';
@@ -123,7 +123,7 @@ task('deploy:test', 'Deploy full deployment for testing purposes', async (taskAr
   await hre.run('run', { script: 'scripts/deploy_test.ts' });
 });
 
-task('set-balance', 'Sets balance of ERC20 token')
+task('set-token-balance', 'Sets balance of ERC20 token')
   .addParam('address', 'Address to set balance for')
   .addParam('token', 'Token address to set balance on')
   .addParam('balance', 'Balance to set')
@@ -135,6 +135,13 @@ task('set-balance', 'Sets balance of ERC20 token')
       await grantBalance(hre, address, token, BigInt(balance));
     },
   );
+
+task('set-eth-balance', 'Sets ETH balance')
+  .addParam('address', 'Address to set balance for')
+  .addParam('balance', 'Balance to set')
+  .setAction(async ({ address, balance }: { address: string; balance: string }, hre) => {
+    await setBalance(address, hre.ethers.BigNumber.from(balance).toHexString());
+  });
 
 task('fastforward', 'Fast forwards time')
   .addParam('days', 'Days to fast forward (accepts decimal values)')
