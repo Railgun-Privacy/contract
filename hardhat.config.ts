@@ -148,7 +148,7 @@ task('set-code', 'Sets contract code for address')
   .addParam('contract', 'Contract to set at address')
   .setAction(async ({ address, contract }: { address: string; contract: string }, hre) => {
     const code = await hre.artifacts.readArtifact(contract);
-    await setCode(address, code.bytecode);
+    await setCode(address, code.deployedBytecode);
   });
 
 task('fastforward', 'Fast forwards time')
