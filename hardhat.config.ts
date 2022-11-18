@@ -6,7 +6,7 @@ import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-local-networks-config-plugin';
-import { setBalance, time } from '@nomicfoundation/hardhat-network-helpers';
+import { setBalance, setCode, time } from '@nomicfoundation/hardhat-network-helpers';
 import { TASK_COMPILE, TASK_CLEAN, TASK_TEST } from 'hardhat/builtin-tasks/task-names';
 
 import { poseidonContract } from 'circomlibjs';
@@ -141,6 +141,14 @@ task('set-eth-balance', 'Sets ETH balance')
   .addParam('balance', 'Balance to set')
   .setAction(async ({ address, balance }: { address: string; balance: string }, hre) => {
     await setBalance(address, hre.ethers.BigNumber.from(balance).toHexString());
+  });
+
+task('set-code', 'Sets contract code for address')
+  .addParam('address', 'Address to set code for')
+  .addParam('contract', 'Contract to set at address')
+  .setAction(async ({ address, contract }: { address: string; contract: string }, hre) => {
+    const code = await hre.artifacts.readArtifact(contract);
+    await setCode(address, code.bytecode);
   });
 
 task('fastforward', 'Fast forwards time')
