@@ -188,7 +188,6 @@ describe('Governance/Getters', () => {
         distributionTokens[0].address,
         0,
         100,
-        new Array(101).fill(0) as number[],
       ),
     ).to.deep.equal(tokensEarned);
   });

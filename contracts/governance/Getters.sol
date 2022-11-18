@@ -81,8 +81,7 @@ contract Getters {
     address _account,
     IERC20 _token,
     uint256 _startingInterval,
-    uint256 _endingInterval,
-    uint256[] calldata _hints
+    uint256 _endingInterval
   ) external view returns (uint256[] memory) {
     // Create bitmap array
     uint256 intervalsLength = _endingInterval - _startingInterval + 1;
@@ -92,7 +91,7 @@ contract Getters {
     for (uint256 intervalIter = 0; intervalIter < intervalsLength; intervalIter++) {
       // Calculate hint parameter
       uint256[] memory hintParam = new uint256[](1);
-      hintParam[0] = _hints[intervalIter];
+      hintParam[0] = 0;
 
       // Calculate tokens parameter
       IERC20[] memory tokenParam = new IERC20[](1);
