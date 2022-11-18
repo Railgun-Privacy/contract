@@ -157,4 +157,39 @@ describe('Governance/Getters', () => {
       ),
     ).to.deep.equal(allClaims);
   });
+
+  it('Should get earned amounts', async () => {
+    const { staking, governorRewards, getters, distributionTokens } = await loadFixture(deploy);
+
+    // Stake and increase time to distribution interval 100
+    const governorRewardsInterval = Number(await governorRewards.DISTRIBUTION_INTERVAL());
+    await staking.stake(100);
+    await time.increase(governorRewardsInterval * 100);
+
+    await governorRewards.prefetchGlobalSnapshots(
+      0,
+      100,
+      new Array(101).fill(0) as number[],
+      distributionTokens.map((token) => token.address),
+    );
+
+    // Calculate expected array
+    const tokensEarned: number[] = await Promise.all(
+      new Array(101).fill(0).map(async (x, index) => {
+        return Number(await governorRewards.earmarked(distributionTokens[0].address, index));
+      }),
+    );
+
+    expect(
+      await getters.getEarnedTokensPerInterval(
+        (
+          await ethers.getSigners()
+        )[0].address,
+        distributionTokens[0].address,
+        0,
+        100,
+        new Array(101).fill(0) as number[],
+      ),
+    ).to.deep.equal(tokensEarned);
+  });
 });

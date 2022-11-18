@@ -72,6 +72,57 @@ contract Getters {
    * @notice Gets all claimed for account and interval for token
    * @dev this will return a flattened bool array
    * @param _account - account to get claims for
+   * @param _token - token to get earned amount for
+   * @param _startingInterval - fetch starting interval
+   * @param _endingInterval - fetch ending interval
+   * @return flattened claims array
+   */
+  function getEarnedTokensPerInterval(
+    address _account,
+    IERC20 _token,
+    uint256 _startingInterval,
+    uint256 _endingInterval,
+    uint256[] calldata _hints
+  ) external view returns (uint256[] memory) {
+    // Create bitmap array
+    uint256 intervalsLength = _endingInterval - _startingInterval + 1;
+    uint256[] memory earned = new uint256[](intervalsLength);
+
+    // Loop through each interval
+    for (uint256 intervalIter = 0; intervalIter < intervalsLength; intervalIter++) {
+      // Calculate hint parameter
+      uint256[] memory hintParam = new uint256[](1);
+      hintParam[0] = _hints[intervalIter];
+
+      // Calculate tokens parameter
+      IERC20[] memory tokenParam = new IERC20[](1);
+      tokenParam[0] = _token;
+
+      // Get earned amounts for token
+      uint256[] memory earnedForInterval = governorRewards.calculateRewards(
+        tokenParam,
+        _account,
+        intervalIter + _startingInterval,
+        intervalIter + _startingInterval,
+        hintParam,
+        true
+      );
+
+      // Loop through tokens
+      for (uint256 tokenIter = 0; tokenIter < earnedForInterval.length; tokenIter++) {
+        // Insert each earned amount into token sub-array
+        earned[tokenIter * intervalsLength + intervalIter] = earnedForInterval[tokenIter];
+      }
+    }
+
+    // Return
+    return earned;
+  }
+
+  /**
+   * @notice Gets all claimed for account and interval for token
+   * @dev this will return a flattened bool array
+   * @param _account - account to get claims for
    * @param _tokens - tokens to get claims bitmap for
    * @param _startingInterval - fetch starting interval
    * @param _endingInterval - fetch ending interval
@@ -79,7 +130,7 @@ contract Getters {
    */
   function getClaimed(
     address _account,
-    address[] calldata _tokens,
+    IERC20[] calldata _tokens,
     uint256 _startingInterval,
     uint256 _endingInterval
   ) external view returns (bool[] memory) {
@@ -89,11 +140,11 @@ contract Getters {
 
     // Loop through each token
     for (uint256 tokensIter = 0; tokensIter < _tokens.length; tokensIter++) {
-      for (uint256 interval = 0; interval < intervalsLength; interval++) {
-        claimed[tokensIter * intervalsLength + interval] = governorRewards.getClaimed(
+      for (uint256 intervalIter = 0; intervalIter < intervalsLength; intervalIter++) {
+        claimed[tokensIter * intervalsLength + intervalIter] = governorRewards.getClaimed(
           _account,
-          IERC20(_tokens[tokensIter]),
-          interval + _startingInterval
+          _tokens[tokensIter],
+          intervalIter + _startingInterval
         );
       }
     }
