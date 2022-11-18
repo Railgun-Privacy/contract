@@ -111,9 +111,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     nextSnapshotPreCalcInterval = _startingInterval;
 
     // Set initial tokens to distribute
-    for (uint256 i = 0; i < _tokens.length; i += 1) {
-      tokens[_tokens[i]] = true;
-    }
+    addTokens(_tokens);
   }
 
   /**
@@ -177,7 +175,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @notice Adds new tokens to distribution set
    * @param _tokens - new tokens to distribute
    */
-  function addTokens(IERC20[] calldata _tokens) external onlyOwner {
+  function addTokens(IERC20[] calldata _tokens) public onlyOwner {
     // Add tokens to distribution set
     for (uint256 i = 0; i < _tokens.length; i += 1) {
       tokens[_tokens[i]] = true;
