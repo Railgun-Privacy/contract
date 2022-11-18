@@ -169,4 +169,20 @@ task('storage-layout-export', 'Export storage layouts').setAction(async (taskArg
   await exportStorageLayouts(hre, exportContractStorageLayouts);
 });
 
+task(
+  'load-debug-info',
+  'Loads debug info into hardhat node for better errors in fork mode',
+).setAction(async (taskArguments, hre) => {
+  const list = await hre.artifacts.getAllFullyQualifiedNames();
+  for (const fqn of list) {
+    console.log(`Loading debug artifacts for ${fqn}`);
+    const buildInfo = await hre.artifacts.getBuildInfo(fqn);
+    await hre.ethers.provider.send('hardhat_addCompilationResult', [
+      buildInfo?.solcVersion,
+      buildInfo?.input,
+      buildInfo?.output,
+    ]);
+  }
+});
+
 export default config;
