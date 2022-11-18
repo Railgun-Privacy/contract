@@ -122,7 +122,7 @@ async function grantBalance(
     // Calculate storage slot
     const storageSlot = hre.ethers.utils.solidityKeccak256(
       ['uint256', 'uint256'],
-      [(await hre.ethers.getSigners())[0].address, i],
+      [address, i],
     );
 
     // Get storage before
