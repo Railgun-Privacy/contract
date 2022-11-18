@@ -104,14 +104,10 @@ contract Getters {
         intervalIter + _startingInterval,
         intervalIter + _startingInterval,
         hintParam,
-        true
+        false
       );
 
-      // Loop through tokens
-      for (uint256 tokenIter = 0; tokenIter < earnedForInterval.length; tokenIter++) {
-        // Insert each earned amount into token sub-array
-        earned[tokenIter * intervalsLength + intervalIter] = earnedForInterval[tokenIter];
-      }
+      earned[intervalIter] = earnedForInterval[0];
     }
 
     // Return

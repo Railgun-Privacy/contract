@@ -54,6 +54,8 @@ describe('Governance/Getters', () => {
       distributionTokens.map((token) => token.address),
     );
 
+    await governorRewards.setIntervalBP(10);
+
     // Give fee distribution contract transfer role
     await treasury.grantRole(await treasury.TRANSFER_ROLE(), governorRewards.address);
 
@@ -118,15 +120,15 @@ describe('Governance/Getters', () => {
   it('Should get claimed', async () => {
     const { staking, governorRewards, getters, distributionTokens } = await loadFixture(deploy);
 
-    // Stake and increase time to distribution interval 100
+    // Stake and increase time to distribution interval 10
     const governorRewardsInterval = Number(await governorRewards.DISTRIBUTION_INTERVAL());
     await staking.stake(100);
-    await time.increase(governorRewardsInterval * 100);
+    await time.increase(governorRewardsInterval * 10);
 
     await governorRewards.prefetchGlobalSnapshots(
       0,
-      100,
-      new Array(101).fill(0) as number[],
+      10,
+      new Array(11).fill(0) as number[],
       distributionTokens.map((token) => token.address),
     );
 
@@ -142,7 +144,7 @@ describe('Governance/Getters', () => {
     );
 
     // Calculate expected bitmap
-    const tokenClaims: boolean[] = new Array(101).fill(false) as boolean[];
+    const tokenClaims: boolean[] = new Array(11).fill(false) as boolean[];
     tokenClaims.fill(true, 5, 11);
     const allClaims = new Array(distributionTokens.length).fill(tokenClaims).flat() as boolean[];
 
@@ -153,7 +155,7 @@ describe('Governance/Getters', () => {
         )[0].address,
         distributionTokens.map((token) => token.address),
         0,
-        100,
+        10,
       ),
     ).to.deep.equal(allClaims);
   });
@@ -161,22 +163,22 @@ describe('Governance/Getters', () => {
   it('Should get earned amounts', async () => {
     const { staking, governorRewards, getters, distributionTokens } = await loadFixture(deploy);
 
-    // Stake and increase time to distribution interval 100
+    // Stake and increase time to distribution interval 10
     const governorRewardsInterval = Number(await governorRewards.DISTRIBUTION_INTERVAL());
     await staking.stake(100);
-    await time.increase(governorRewardsInterval * 100);
+    await time.increase(governorRewardsInterval * 10);
 
     await governorRewards.prefetchGlobalSnapshots(
       0,
-      100,
-      new Array(101).fill(0) as number[],
+      10,
+      new Array(11).fill(0) as number[],
       distributionTokens.map((token) => token.address),
     );
 
     // Calculate expected array
-    const tokensEarned: number[] = await Promise.all(
-      new Array(101).fill(0).map(async (x, index) => {
-        return Number(await governorRewards.earmarked(distributionTokens[0].address, index));
+    const tokensEarned: bigint[] = await Promise.all(
+      new Array(11).fill(0).map(async (x, index) => {
+        return (await governorRewards.earmarked(distributionTokens[0].address, index)).toBigInt();
       }),
     );
 
@@ -187,7 +189,7 @@ describe('Governance/Getters', () => {
         )[0].address,
         distributionTokens[0].address,
         0,
-        100,
+        10,
       ),
     ).to.deep.equal(tokensEarned);
   });
