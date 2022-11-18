@@ -1,10 +1,11 @@
 import readline from 'readline';
+import hre from 'hardhat';
 import { ethers } from 'hardhat';
 import type { Contract } from 'ethers';
 import { expect } from 'chai';
 import { chainConfigs, abis } from '@railgun-community/deployments';
 import { ChainConfig } from '@railgun-community/deployments/dist/types';
-import { grantBalance } from '../utils/grant_balance';
+import { grantBalance } from '../hardhat.utils';
 import { Voting, ProposalEvent } from '../typechain-types/contracts/governance/Voting';
 import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
@@ -93,6 +94,7 @@ async function testProposalUpgrade(chainConfig: ChainConfig) {
 async function becomeWhale(chainConfig: ChainConfig) {
   // Set balance of governance token to 100 million
   await grantBalance(
+    hre,
     (
       await ethers.getSigners()
     )[0].address,
