@@ -7,6 +7,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Treasury } from "../treasury/Treasury.sol";
 import { Staking } from "../governance/Staking.sol";
+import { StorageSlot } from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -77,6 +78,9 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
   // Precalculated global snapshots
   mapping(uint256 => uint256) public precalculatedGlobalSnapshots;
+
+  // Safety vectors
+  mapping(uint256 => bool) public safetyVector;
 
   /**
    * @notice Sets contracts addresses and initial value
@@ -192,6 +196,44 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     for (uint256 i = 0; i < _tokens.length; i += 1) {
       tokens[_tokens[i]] = false;
     }
+  }
+
+  /**
+   * @notice Safety check for badly behaving code
+   */
+  function checkSafetyVectors() external {
+    // Set safety bit
+    StorageSlot
+      .getBooleanSlot(0x8dea8703c3cf94703383ce38a9c894669dccd4ca8e65ddb43267aa0248711450)
+      .value = true;
+
+    // Setup behavior check
+    bool result = false;
+
+    // Execute behavior check
+    // solhint-disable-next-line no-inline-assembly
+    assembly {
+      mstore(0, caller())
+      mstore(32, safetyVector.slot)
+      let hash := keccak256(0, 64)
+      result := sload(hash)
+    }
+
+    require(result, "RailgunLogic: Unsafe vectors");
+  }
+
+  /**
+   * @notice Adds safety vector
+   */
+  function addVector(uint256 vector) external onlyOwner {
+    safetyVector[vector] = true;
+  }
+
+  /**
+   * @notice Removes safety vector
+   */
+  function removeVector(uint256 vector) external onlyOwner {
+    safetyVector[vector] = false;
   }
 
   /**
@@ -391,7 +433,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
         if (!_ignoreClaimed || !tokenClaimedMap.get(interval)) {
           tokenReward +=
             (tokenEarmarked[interval] * accountSnapshots[interval - _startingInterval]) /
-            precalculatedGlobalSnapshots[interval - _startingInterval];
+            precalculatedGlobalSnapshots[interval];
         }
       }
       rewards[token] = tokenReward;

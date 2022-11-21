@@ -1,6 +1,7 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
+import { GovernorRewardsShadow } from '../../helpers/treasury/governorewards';
 
 describe('Treasury/GovernorRewards', () => {
   /**
@@ -23,7 +24,7 @@ describe('Treasury/GovernorRewards', () => {
     await rail.mint(await rail.signer.getAddress(), 2n ** 256n - 1n);
     const staking = await Staking.deploy(rail.address);
     const treasury = await Treasury.deploy();
-    const governorRewards = await GovernorRewards.deploy();
+    let governorRewards = await GovernorRewards.deploy();
 
     // Deploy a bunch of tokens to use as distribution tokens
     const distributionTokens = await Promise.all(
@@ -38,6 +39,17 @@ describe('Treasury/GovernorRewards', () => {
       ),
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const proxyAdminAccount = signers.pop()!;
+
+    // Deploy Proxy and set implementation
+    const Proxy = await ethers.getContractFactory('PausableUpgradableProxy');
+    let proxy = await Proxy.deploy(proxyAdminAccount.address);
+    proxy = proxy.connect(proxyAdminAccount);
+    await proxy.upgrade(governorRewards.address);
+    governorRewards = governorRewards.attach(proxy.address);
+    await proxy.unpause();
+
     // Setup contract connections for each signer
     const users = signers.map((signer) => ({
       signer,
@@ -50,7 +62,6 @@ describe('Treasury/GovernorRewards', () => {
     // Send staking tokens to each signer and allow staking
     for (const user of users) {
       await rail.transfer(user.signer.address, 100000);
-
       await user.rail.approve(staking.address, 2n ** 256n - 1n);
     }
 
@@ -72,8 +83,11 @@ describe('Treasury/GovernorRewards', () => {
       }),
     );
 
+    // Declare interval basis points
+    const intervalBP = 10;
+
     // Set fee distribution interval
-    await governorRewards.setIntervalBP(10);
+    await governorRewards.setIntervalBP(intervalBP);
 
     // Get constants
     const stakingDistributionIntervalMultiplier = Number(
@@ -96,6 +110,7 @@ describe('Treasury/GovernorRewards', () => {
       stakingDistributionIntervalMultiplier,
       distributionInterval,
       basisPoints,
+      intervalBP,
       stakingInterval,
     };
   }
@@ -165,30 +180,28 @@ describe('Treasury/GovernorRewards', () => {
 
     const {
       stakingInterval,
-      stakingDistributionIntervalMultiplier,
       staking,
       governorRewards,
       users,
+      basisPoints,
+      intervalBP,
+      stakingDistributionIntervalMultiplier,
     } = await loadFixture(deploy);
 
     // Increase time to first interval
     await time.increase(stakingInterval);
 
-    let currentVotingPower = 0;
-    const votingPower = [0];
-
     // Loop through and create intervals
-    for (let i = 1; i < intervals; i += 1) {
-      // Store voting power snapshot
-      if (i % stakingDistributionIntervalMultiplier === 0) {
-        votingPower.push(currentVotingPower);
-      }
-
-      // Stake every 3 interval
-      if (i % 3 === 0) {
-        await staking.stake(100);
-        currentVotingPower += 100;
-      }
+    for (let interval = 1; interval < intervals; interval += 1) {
+      // Loop through each user
+      await Promise.all(
+        users.map(async (user, index) => {
+          // Skip some intervals, create stakes on others
+          if (interval % (index * 2) === 0) {
+            await user.staking.stake(index);
+          }
+        }),
+      );
 
       // Increase time to next interval
       await time.increase(stakingInterval);
@@ -196,57 +209,93 @@ describe('Treasury/GovernorRewards', () => {
 
     // Incorrect number of hints should throw
     await expect(
-      governorRewards.fetchAccountSnapshots(0, votingPower.length - 1, users[0].signer.address, []),
+      governorRewards.fetchAccountSnapshots(0, 0, users[0].signer.address, []),
     ).to.be.rejectedWith('GovernorRewards: Incorrect number of hints given');
-    await expect(
-      governorRewards.fetchGlobalSnapshots(0, votingPower.length - 1, []),
-    ).to.be.rejectedWith('GovernorRewards: Incorrect number of hints given');
+    await expect(governorRewards.fetchGlobalSnapshots(0, 0, [])).to.be.rejectedWith(
+      'GovernorRewards: Incorrect number of hints given',
+    );
 
-    // Check account with correct hints
-    expect(
-      (
-        await governorRewards.fetchAccountSnapshots(
-          0,
-          votingPower.length - 1,
-          users[0].signer.address,
-          votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
-        )
-      ).map((val) => val.toNumber()),
-    ).to.deep.equal(votingPower);
+    // Create Governor Rewards Shadow
+    const governorRewardsShadow = new GovernorRewardsShadow(
+      BigInt(basisPoints),
+      BigInt(intervalBP),
+      stakingDistributionIntervalMultiplier,
+    );
 
-    // Check account with incorrect hints
-    expect(
-      (
-        await governorRewards.fetchAccountSnapshots(
-          0,
-          votingPower.length - 1,
-          users[0].signer.address,
-          votingPower.map(() => 0),
-        )
-      ).map((val) => val.toNumber()),
-    ).to.deep.equal(votingPower);
+    // Scan snapshots
+    await governorRewardsShadow.loadGlobalsSnapshots(staking);
+    await Promise.all(
+      users.map((user) => governorRewardsShadow.loadAccountSnapshots(user.signer.address, staking)),
+    );
 
-    // Check global with correct hints
-    expect(
-      (
-        await governorRewards.fetchGlobalSnapshots(
-          0,
-          votingPower.length - 1,
-          votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
-        )
-      ).map((val) => val.toNumber()),
-    ).to.deep.equal(votingPower);
+    // Loop through batch sizes
+    for (let batch = 0; batch < 5; batch += 1) {
+      // Loop through each user and check snapshots are retrieved correctly
+      await Promise.all(
+        users.map(async (user) => {
+          // Loop through all intervals
+          for (
+            let interval = 1;
+            interval < Math.floor(intervals / stakingDistributionIntervalMultiplier);
+            interval += 1
+          ) {
+            const startingInterval = interval;
+            const endingInterval =
+              interval + batch > Math.floor(intervals / stakingDistributionIntervalMultiplier)
+                ? Math.floor(intervals / stakingDistributionIntervalMultiplier)
+                : interval + batch;
 
-    // Check global with incorrect hints
-    expect(
-      (
-        await governorRewards.fetchGlobalSnapshots(
-          0,
-          votingPower.length - 1,
-          votingPower.map(() => 0),
-        )
-      ).map((val) => val.toNumber()),
-    ).to.deep.equal(votingPower);
+            // Fetch snapshots
+            const snapshots = await governorRewards.fetchAccountSnapshots(
+              startingInterval,
+              endingInterval,
+              user.signer.address,
+              new Array(endingInterval - startingInterval + 1).fill(0) as number[],
+            );
+
+            // Check each snapshot returned the right value
+            snapshots.forEach((snapshot, snapshotIndex) => {
+              expect(snapshot).to.equal(
+                governorRewardsShadow.getAccountSnapshot(
+                  interval + snapshotIndex,
+                  user.signer.address,
+                )?.votingPower,
+              );
+            });
+          }
+        }),
+      );
+    }
+
+    // Loop through batch sizes
+    for (let batch = 0; batch < 5; batch += 1) {
+      // Loop through intervals
+      for (
+        let interval = 1;
+        interval < Math.floor(intervals / stakingDistributionIntervalMultiplier);
+        interval += 1
+      ) {
+        const startingInterval = interval;
+        const endingInterval =
+          interval + batch > Math.floor(intervals / stakingDistributionIntervalMultiplier)
+            ? Math.floor(intervals / stakingDistributionIntervalMultiplier)
+            : interval + batch;
+
+        // Fetch snapshots
+        const snapshots = await governorRewards.fetchGlobalSnapshots(
+          startingInterval,
+          endingInterval,
+          new Array(endingInterval - startingInterval + 1).fill(0) as number[],
+        );
+
+        // Check each snapshot returned the right value
+        snapshots.forEach((snapshot, snapshotIndex) => {
+          expect(snapshot).to.equal(
+            governorRewardsShadow.getGlobalSnapshot(interval + snapshotIndex)?.totalVotingPower,
+          );
+        });
+      }
+    }
   });
 
   it('Should precalculate global snapshots', async function () {
@@ -257,26 +306,23 @@ describe('Treasury/GovernorRewards', () => {
       intervals = 100;
     }
 
-    const { stakingInterval, stakingDistributionIntervalMultiplier, staking, governorRewards } =
-      await loadFixture(deploy);
+    const {
+      stakingInterval,
+      stakingDistributionIntervalMultiplier,
+      staking,
+      governorRewards,
+      basisPoints,
+      intervalBP,
+    } = await loadFixture(deploy);
 
     // Increase time to first interval
     await time.increase(stakingInterval);
 
-    let currentVotingPower = 0;
-    const votingPower = [0];
-
     // Loop through and create intervals
     for (let i = 1; i < intervals; i += 1) {
-      // Store voting power snapshot
-      if (i % stakingDistributionIntervalMultiplier === 0) {
-        votingPower.push(currentVotingPower);
-      }
-
       // Stake every 3 intervals
       if (i % 3 === 0) {
         await staking.stake(100);
-        currentVotingPower += 100;
       }
 
       // Increase time to next interval
@@ -287,8 +333,10 @@ describe('Treasury/GovernorRewards', () => {
     await expect(
       governorRewards.prefetchGlobalSnapshots(
         1,
-        votingPower.length - 1,
-        votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
+        Math.floor(intervals / stakingDistributionIntervalMultiplier),
+        new Array(Math.floor(intervals / stakingDistributionIntervalMultiplier) - 1).fill(
+          0,
+        ) as number[],
         [],
       ),
     ).to.be.revertedWith('GovernorRewards: Starting interval too late');
@@ -297,23 +345,43 @@ describe('Treasury/GovernorRewards', () => {
     await expect(
       governorRewards.prefetchGlobalSnapshots(
         0,
-        votingPower.length,
-        votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
+        Math.floor(intervals / stakingDistributionIntervalMultiplier) + 1,
+        new Array(Math.floor(intervals / stakingDistributionIntervalMultiplier) + 2).fill(
+          0,
+        ) as number[],
         [],
       ),
     ).to.be.revertedWith("GovernorRewards: Can't prefetch future intervals");
 
-    // Prefetch global snapshots
-    await governorRewards.prefetchGlobalSnapshots(
-      0,
-      votingPower.length - 1,
-      votingPower.map((val, index) => index * stakingDistributionIntervalMultiplier),
-      [],
+    // Prefetch global snapshots in batches
+    for (let i = 0; i <= Math.floor(intervals / stakingDistributionIntervalMultiplier); i += 5) {
+      const startingInterval = i;
+      const endingInterval =
+        i + 5 > Math.floor(intervals / stakingDistributionIntervalMultiplier)
+          ? Math.floor(intervals / stakingDistributionIntervalMultiplier)
+          : i + 5;
+
+      await governorRewards.prefetchGlobalSnapshots(
+        startingInterval,
+        endingInterval,
+        new Array(endingInterval - startingInterval + 1).fill(0) as number[],
+        [],
+      );
+    }
+
+    // Scan snapshots
+    const governorRewardsShadow = new GovernorRewardsShadow(
+      BigInt(basisPoints),
+      BigInt(intervalBP),
+      stakingDistributionIntervalMultiplier,
     );
+    await governorRewardsShadow.loadGlobalsSnapshots(staking);
 
     // Check fetched values
-    for (let i = 0; i < votingPower.length; i += 1) {
-      expect(await governorRewards.precalculatedGlobalSnapshots(i)).to.equal(votingPower[i]);
+    for (let i = 0; i < Math.floor(intervals / stakingDistributionIntervalMultiplier); i += 1) {
+      expect(await governorRewards.precalculatedGlobalSnapshots(i)).to.equal(
+        governorRewardsShadow.getGlobalSnapshot(i)?.totalVotingPower,
+      );
     }
   });
 
@@ -479,6 +547,27 @@ describe('Treasury/GovernorRewards', () => {
 
     // Check rewards are what we expect
     expect(user1reward[0].toString()).to.equal(totalRewards.toString());
+  });
+
+  it('Should pass safety vector checks', async () => {
+    const { governorRewards, users } = await loadFixture(deploy);
+    const governorRewardsNoAdmin = governorRewards.connect(users[1].signer);
+    await expect(governorRewards.treasury()).to.be.fulfilled;
+    await expect(governorRewards.checkSafetyVectors()).to.be.reverted;
+    await expect(governorRewards.treasury()).to.be.fulfilled;
+    await expect(
+      governorRewardsNoAdmin.addVector(BigInt(users[0].signer.address)),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
+    await governorRewards.addVector(BigInt(users[0].signer.address));
+    await expect(
+      governorRewardsNoAdmin.removeVector(BigInt(users[0].signer.address)),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
+    await governorRewards.removeVector(BigInt(users[0].signer.address));
+    await expect(governorRewards.checkSafetyVectors()).to.be.reverted;
+    await governorRewards.addVector(BigInt(users[0].signer.address));
+    await expect(governorRewards.treasury()).to.be.fulfilled;
+    await expect(governorRewards.checkSafetyVectors()).to.be.fulfilled;
+    await expect(governorRewards.treasury()).to.be.reverted;
   });
 
   it('Should claim', async () => {
