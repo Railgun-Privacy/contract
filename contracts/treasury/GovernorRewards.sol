@@ -429,11 +429,14 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       // Loop through each snapshot and accumulate rewards
       uint256 tokenReward = 0;
       for (uint256 interval = _startingInterval; interval <= _endingInterval; interval += 1) {
-        // Skip if already claimed if we're ignoring claimed amounts
-        if (!_ignoreClaimed || !tokenClaimedMap.get(interval)) {
-          tokenReward +=
-            (tokenEarmarked[interval] * accountSnapshots[interval - _startingInterval]) /
-            precalculatedGlobalSnapshots[interval];
+        // Skip if globals snapshot has 0 total voting power
+        if (precalculatedGlobalSnapshots[interval] != 0) {
+          // Skip if already claimed if we're ignoring claimed amounts
+          if (!_ignoreClaimed || !tokenClaimedMap.get(interval)) {
+            tokenReward +=
+              (tokenEarmarked[interval] * accountSnapshots[interval - _startingInterval]) /
+              precalculatedGlobalSnapshots[interval];
+          }
         }
       }
       rewards[token] = tokenReward;
