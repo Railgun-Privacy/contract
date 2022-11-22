@@ -385,55 +385,149 @@ describe('Treasury/GovernorRewards', () => {
     }
   });
 
-  it('Should earmark', async () => {
+  it('Should earmark', async function () {
     const {
       distributionInterval,
       distributionTokens,
       basisPoints,
+      intervalBP,
+      stakingDistributionIntervalMultiplier,
       staking,
       treasury,
       governorRewards,
     } = await loadFixture(deploy);
 
-    // Stake tokens
-    await staking.stake(100);
+    const intervals = 10;
 
-    // Fast forward to first interval
-    await time.increase(distributionInterval);
+    // Stake every 3rd interval
+    for (let i = 0; i < intervals; i += 1) {
+      if (i % 3 === 2) {
+        // Stake tokens
+        await staking.stake(100);
+      }
+
+      // Fast forward to first interval
+      await time.increase(distributionInterval);
+    }
 
     // Prefetch snapshots
-    await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0], []);
+    await governorRewards.prefetchGlobalSnapshots(
+      0,
+      intervals,
+      new Array(intervals + 1).fill(0) as number[],
+      [],
+    );
 
-    for (let i = 0; i < distributionTokens.length; i += 1) {
+    // Scan events in to shadow
+    const governorRewardsShadow = new GovernorRewardsShadow(
+      BigInt(basisPoints),
+      BigInt(intervalBP),
+      stakingDistributionIntervalMultiplier,
+    );
+    await governorRewardsShadow.loadGlobalsSnapshots(staking);
+
+    for (let tokenIndex = 0; tokenIndex < distributionTokens.length; tokenIndex += 1) {
       // Set fee distribution interval
-      await governorRewards.setIntervalBP(i);
+      await governorRewards.setIntervalBP(tokenIndex);
 
-      // Get expected earmark amount
+      // Get initial treasury balance
       const treasuryBalanceBeforeEarmark = (
-        await distributionTokens[i].balanceOf(treasury.address)
+        await distributionTokens[tokenIndex].balanceOf(treasury.address)
       ).toBigInt();
-      const expectedEarmark = (treasuryBalanceBeforeEarmark * BigInt(i)) / BigInt(basisPoints);
+
+      // Calculate expected earmarks
+      governorRewardsShadow.intervalBP = BigInt(tokenIndex);
+      const expectedEarmarks = governorRewardsShadow.calculateEarmarkAmount(
+        treasuryBalanceBeforeEarmark,
+        0,
+        intervals,
+      );
+
+      // Get total tokens that should move
+      const totalMoved = expectedEarmarks.reduce((l, r) => l + r);
 
       // Earmark token and check the right amount was moved
-      await expect(governorRewards.earmark(distributionTokens[i].address)).to.changeTokenBalances(
-        distributionTokens[i],
+      await expect(
+        governorRewards.earmark(distributionTokens[tokenIndex].address),
+      ).to.changeTokenBalances(
+        distributionTokens[tokenIndex],
         [treasury.address, governorRewards.address],
-        [-expectedEarmark, expectedEarmark],
+        [-totalMoved, totalMoved],
       );
 
       // Multiple calls shouldn't earmark repeatedly
-      await expect(governorRewards.earmark(distributionTokens[i].address)).to.changeTokenBalances(
-        distributionTokens[i],
+      await expect(
+        governorRewards.earmark(distributionTokens[tokenIndex].address),
+      ).to.changeTokenBalances(
+        distributionTokens[tokenIndex],
         [treasury.address, governorRewards.address],
         [0, 0],
       );
 
-      // Check that the right amount was entered in the earmarked record
-      expect(
-        (await governorRewards.earmarked(distributionTokens[i].address, 0)).toBigInt() +
-          (await governorRewards.earmarked(distributionTokens[i].address, 1)).toBigInt(),
-      ).to.equal(expectedEarmark);
+      // Check all earmark values are correct
+      await Promise.all(
+        new Array(intervals).fill(0).map(async (x, earmarkIndex) => {
+          expect(
+            await governorRewards.earmarked(distributionTokens[tokenIndex].address, earmarkIndex),
+          ).to.equal(expectedEarmarks[earmarkIndex]);
+        }),
+      );
     }
+
+    // Set fee distribution interval
+    await governorRewards.setIntervalBP(200);
+
+    const startingInterval = Number(await governorRewards.nextSnapshotPreCalcInterval());
+    const endingInterval = startingInterval + 3;
+
+    // Earmark after some more intervals
+    await time.increase(distributionInterval * (endingInterval - startingInterval + 1));
+
+    // Prefetch snapshots
+    await governorRewards.prefetchGlobalSnapshots(
+      startingInterval,
+      endingInterval,
+      new Array(endingInterval - startingInterval + 1).fill(0) as number[],
+      [],
+    );
+
+    // Get initial treasury balance
+    const treasuryBalanceBeforeEarmark = (
+      await distributionTokens[0].balanceOf(treasury.address)
+    ).toBigInt();
+
+    // Load snapshots
+    await governorRewardsShadow.loadGlobalsSnapshots(staking);
+
+    // Calculate expected earmarks
+    governorRewardsShadow.intervalBP = BigInt(200);
+    const expectedEarmarks = governorRewardsShadow.calculateEarmarkAmount(
+      treasuryBalanceBeforeEarmark,
+      startingInterval,
+      endingInterval,
+    );
+
+    // Get total tokens that should move
+    const totalMoved = expectedEarmarks.reduce((l, r) => l + r);
+
+    // Earmark token and check the right amount was moved
+    await expect(governorRewards.earmark(distributionTokens[0].address)).to.changeTokenBalances(
+      distributionTokens[0],
+      [treasury.address, governorRewards.address],
+      [-totalMoved, totalMoved],
+    );
+
+    // Check all earmark values are correct
+    await Promise.all(
+      new Array(endingInterval - startingInterval + 1).fill(0).map(async (x, earmarkIndex) => {
+        expect(
+          await governorRewards.earmarked(
+            distributionTokens[0].address,
+            earmarkIndex + startingInterval,
+          ),
+        ).to.equal(expectedEarmarks[earmarkIndex]);
+      }),
+    );
   });
 
   it('Should add and remove from earmark list', async () => {
@@ -464,89 +558,82 @@ describe('Treasury/GovernorRewards', () => {
     await expect(governorRewards.earmark(distributionTokens[0].address)).to.be.fulfilled;
   });
 
-  it("Shouldn't earmark if no tokens are staked", async () => {
-    const { distributionInterval, distributionTokens, treasury, governorRewards } =
-      await loadFixture(deploy);
+  it('Should calculate rewards', async () => {
+    const {
+      distributionInterval,
+      distributionTokens,
+      users,
+      governorRewards,
+      basisPoints,
+      intervalBP,
+      stakingDistributionIntervalMultiplier,
+      staking,
+    } = await loadFixture(deploy);
 
-    // Fast forward to first interval
-    await time.increase(distributionInterval);
+    const intervals = 10;
 
-    for (let i = 0; i < distributionTokens.length; i += 1) {
-      // Set fee distribution interval
-      await governorRewards.setIntervalBP(i);
-
-      // Earmark token
-      await expect(
-        governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0], [distributionTokens[i].address]),
-      ).to.changeTokenBalances(
-        distributionTokens[i],
-        [treasury.address, governorRewards.address],
-        [0, 0],
+    // Stake and increase intervals
+    for (let i = 0; i < intervals; i += 1) {
+      await Promise.all(
+        users.map(async (user, index) => {
+          if (i % index === 1) {
+            await user.staking.stake(100);
+          }
+        }),
       );
 
-      // Check that nothing was entered in the earmarked record
-      expect(await governorRewards.earmarked(distributionTokens[i].address, 0)).to.equal(0);
-      expect(await governorRewards.earmarked(distributionTokens[i].address, 1)).to.equal(0);
+      // Fast forward to first interval
+      await time.increase(distributionInterval);
     }
-  });
 
-  it('Should calculate rewards', async () => {
-    const { distributionInterval, distributionTokens, users, governorRewards } = await loadFixture(
-      deploy,
-    );
-
-    // Stake tokens
-    await users[0].staking.stake(100);
-    await users[1].staking.stake(100);
-
-    // Increase time to 10th interval
-    await time.increase(distributionInterval * 10);
-
-    // Prefetch data
+    // Prefetch data and earmark
     await governorRewards.prefetchGlobalSnapshots(
       0,
-      9,
-      Array(10).fill(0) as number[],
+      intervals,
+      Array(intervals + 1).fill(0) as number[],
       distributionTokens.map((token) => token.address),
     );
 
-    // Calculate rewards
-    const user1reward = (
-      await governorRewards.calculateRewards(
-        distributionTokens.map((token) => token.address),
-        users[0].signer.address,
-        0,
-        9,
-        Array(10).fill(0) as number[],
-        false,
-      )
-    ).map((val) => val.toBigInt());
+    // Scan events in to shadow
+    const governorRewardsShadow = new GovernorRewardsShadow(
+      BigInt(basisPoints),
+      BigInt(intervalBP),
+      stakingDistributionIntervalMultiplier,
+    );
+    await governorRewardsShadow.loadGlobalsSnapshots(staking);
 
-    const user2reward = (
-      await governorRewards.calculateRewards(
-        distributionTokens.map((token) => token.address),
-        users[1].signer.address,
-        0,
-        9,
-        Array(10).fill(0) as number[],
-        false,
-      )
-    ).map((val) => val.toBigInt());
+    // Loop through each user and check rewards are what we expect
+    for (let userIndex = 0; userIndex < users.length; userIndex += 1) {
+      // Fetch snapshots
+      await governorRewardsShadow.loadAccountSnapshots(users[userIndex].signer.address, staking);
 
-    // Rewards should be the same for equal stakes
-    expect(user1reward).to.deep.equal(user2reward);
+      // Calculate rewards
+      for (let i = 0; i < intervals; i += userIndex + 1) {
+        const startingInterval = i;
+        const endingInterval = i + userIndex < intervals ? i + userIndex : intervals;
 
-    // Get total rewards for first distribution token
-    let totalRewards = 0n;
-    for (let i = 0; i <= 9; i += 1) {
-      const intervalEarmarked = (
-        await governorRewards.earmarked(distributionTokens[0].address, i)
-      ).toBigInt();
-      totalRewards += intervalEarmarked / 2n;
+        const expectedRewards = await governorRewardsShadow.calculateRewards(
+          governorRewards,
+          distributionTokens[0].address,
+          users[userIndex].signer.address,
+          startingInterval,
+          endingInterval,
+        );
+
+        expect(
+          (
+            await governorRewards.calculateRewards(
+              [distributionTokens[0].address],
+              users[userIndex].signer.address,
+              startingInterval,
+              endingInterval,
+              new Array(endingInterval - startingInterval + 1).fill(0) as number[],
+              true,
+            )
+          )[0],
+        ).to.equal(expectedRewards);
+      }
     }
-
-    // Check rewards are what we expect
-    expect(user1reward[0].toString()).to.equal(totalRewards.toString());
   });
 
   it('Should pass safety vector checks', async () => {

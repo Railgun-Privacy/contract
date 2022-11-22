@@ -312,41 +312,38 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
     // Get intervals
     // Will throw if nextSnapshotPreCalcInterval = 0
-    uint256 _calcToInterval = nextSnapshotPreCalcInterval - 1;
     uint256 _calcFromInterval = nextEarmarkInterval[_token];
+    uint256 _calcToInterval = nextSnapshotPreCalcInterval - 1;
 
-    // Don't process if we haven't advanced at least one interval
-    if (_calcToInterval >= _calcFromInterval) {
-      // Get balance from treasury
-      uint256 treasuryBalance = _token.balanceOf(address(treasury));
+    // Get balance from treasury
+    uint256 treasuryBalance = _token.balanceOf(address(treasury));
 
-      // Get total distribution amount
-      uint256 totalDistributionAmounts = 0;
+    // Get total distribution amount
+    uint256 totalDistributionAmounts = 0;
 
-      // Store earmarked amounts
-      for (uint256 i = _calcFromInterval; i <= _calcToInterval; i += 1) {
-        // Skip for intervals that have no voting power as those tokens will be unclaimable
-        if (precalculatedGlobalSnapshots[i] > 0) {
-          // Get distribution amount for this interval
-          uint256 distributionAmountForInterval = (treasuryBalance * intervalBP) / BASIS_POINTS;
+    // Loop through each interval we need to earmark for
+    for (uint256 i = _calcFromInterval; i <= _calcToInterval; i++) {
+      // Skip for intervals that have no voting power as those tokens will be unclaimable
+      if (precalculatedGlobalSnapshots[i] > 0) {
+        // Get distribution amount for this interval
+        uint256 distributionAmountForInterval = (treasuryBalance * intervalBP) / BASIS_POINTS;
 
-          // Store as earmarked amount
-          earmarked[_token][i] = distributionAmountForInterval;
+        // Store as earmarked amount
+        earmarked[_token][i] = distributionAmountForInterval;
 
-          // Add to total distribution counter
-          totalDistributionAmounts += distributionAmountForInterval;
+        // Add to total distribution counter
+        totalDistributionAmounts += distributionAmountForInterval;
 
-          // Subtract from treasury balance
-          treasuryBalance -= distributionAmountForInterval;
-        }
+        // Subtract from treasury balance
+        treasuryBalance -= distributionAmountForInterval;
       }
-
-      // Store last earmarked interval for token
-      nextEarmarkInterval[_token] = _calcToInterval + 1;
-
-      // Transfer tokens
-      treasury.transferERC20(_token, address(this), totalDistributionAmounts);
     }
+
+    // Store last earmarked interval for token
+    nextEarmarkInterval[_token] = _calcToInterval + 1;
+
+    // Transfer tokens
+    treasury.transferERC20(_token, address(this), totalDistributionAmounts);
   }
 
   /**

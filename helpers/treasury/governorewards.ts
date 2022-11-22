@@ -1,4 +1,4 @@
-import { Staking } from '../../typechain-types';
+import { GovernorRewards, Staking } from '../../typechain-types';
 
 export interface AccountSnapshot {
   interval: number;
@@ -158,9 +158,84 @@ class GovernorRewardsShadow {
     });
   }
 
-  // calculateEarmarkAmount(treasuryBalance: bigint, intervals: bigint) {
-  //   return treasuryBalance * 
-  // }
+  /**
+   * Calculates expected earmark numbers
+   *
+   * @param treasuryBalance - starting treasury balance
+   * @param startingInterval - starting interval
+   * @param endingInterval - ending interval
+   * @returns expected earmark numbers
+   */
+  calculateEarmarkAmount(
+    treasuryBalance: bigint,
+    startingInterval: number,
+    endingInterval: number,
+  ): bigint[] {
+    let treasuryBalanceRunningTally = treasuryBalance;
+
+    const expectedAmounts: bigint[] = [];
+
+    // Loop through each interval
+    for (let i = startingInterval; i <= endingInterval; i += 1) {
+      const globalSnapshot = this.getGlobalSnapshot(i);
+      // Skip if total voting power is 0
+      if (globalSnapshot && globalSnapshot.totalVotingPower > 0n) {
+        // Calculate the expected earmark amount
+        expectedAmounts[i - startingInterval] =
+          (treasuryBalanceRunningTally * this.intervalBP) / this.BASIS_POINTS;
+
+        // Subtract from treasury balance running tally
+        treasuryBalanceRunningTally -= expectedAmounts[i - startingInterval];
+      } else {
+        // Return 0 if global total voting power is 0
+        expectedAmounts[i - startingInterval] = 0n;
+      }
+    }
+
+    return expectedAmounts;
+  }
+
+  /**
+   * Calculates expected rewards
+   *
+   * @param governorRewards - governor rewards contract to retrieve earmarks amounts from
+   * @param token - token address
+   * @param account - address to calculate rewards for
+   * @param startingInterval - starting interval
+   * @param endingInterval - ending interval
+   * @returns expected rewards
+   */
+  async calculateRewards(
+    governorRewards: GovernorRewards,
+    token: string,
+    account: string,
+    startingInterval: number,
+    endingInterval: number,
+  ): Promise<bigint> {
+    const expectedAmounts: bigint[] = [];
+
+    // Loop through each interval
+    for (let i = startingInterval; i <= endingInterval; i += 1) {
+      // Fetch snapshots
+      const globalSnapshot = this.getGlobalSnapshot(i);
+      const accountSnapshot = this.getAccountSnapshot(i, account);
+      // Skip if total voting power or account voting power is 0
+      if (
+        globalSnapshot &&
+        globalSnapshot.totalVotingPower > 0n &&
+        accountSnapshot &&
+        accountSnapshot.votingPower > 0n
+      ) {
+        expectedAmounts[i - startingInterval] =
+          ((await governorRewards.earmarked(token, i)).toBigInt() * accountSnapshot.votingPower) /
+          globalSnapshot.totalVotingPower;
+      } else {
+        expectedAmounts[i - startingInterval] = 0n;
+      }
+    }
+
+    return expectedAmounts.reduce((l, r) => l + r);
+  }
 }
 
 export { GovernorRewardsShadow };
