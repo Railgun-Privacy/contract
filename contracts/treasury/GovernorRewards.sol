@@ -315,18 +315,10 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256 _calcToInterval = nextSnapshotPreCalcInterval - 1;
     uint256 _calcFromInterval = nextEarmarkInterval[_token];
 
-    // Get token earmarked array
-    mapping(uint256 => uint256) storage tokenEarmarked = earmarked[_token];
-
     // Don't process if we haven't advanced at least one interval
     if (_calcToInterval >= _calcFromInterval) {
       // Get balance from treasury
       uint256 treasuryBalance = _token.balanceOf(address(treasury));
-
-      // Get distribution amount per interval
-      uint256 distributionAmountPerInterval = (treasuryBalance * intervalBP) /
-        BASIS_POINTS /
-        (_calcToInterval - _calcFromInterval + 1);
 
       // Get total distribution amount
       uint256 totalDistributionAmounts = 0;
@@ -335,8 +327,17 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       for (uint256 i = _calcFromInterval; i <= _calcToInterval; i += 1) {
         // Skip for intervals that have no voting power as those tokens will be unclaimable
         if (precalculatedGlobalSnapshots[i] > 0) {
-          tokenEarmarked[i] = distributionAmountPerInterval;
-          totalDistributionAmounts += distributionAmountPerInterval;
+          // Get distribution amount for this interval
+          uint256 distributionAmountForInterval = (treasuryBalance * intervalBP) / BASIS_POINTS;
+
+          // Store as earmarked amount
+          earmarked[_token][i] = distributionAmountForInterval;
+
+          // Add to total distribution counter
+          totalDistributionAmounts += distributionAmountForInterval;
+
+          // Subtract from treasury balance
+          treasuryBalance -= distributionAmountForInterval;
         }
       }
 
