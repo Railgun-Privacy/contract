@@ -69,7 +69,6 @@ describe('Treasury/GovernorRewards', () => {
     await treasury.initializeTreasury(users[0].signer.address);
 
     await governorRewards.initializeGovernorRewards(
-      users[0].signer.address,
       staking.address,
       treasury.address,
       0,
@@ -116,11 +115,10 @@ describe('Treasury/GovernorRewards', () => {
   }
 
   it("Shouldn't initialize twice", async () => {
-    const { governorRewards, treasury, staking, users } = await loadFixture(deploy);
+    const { governorRewards, treasury, staking } = await loadFixture(deploy);
 
     await expect(
       governorRewards.initializeGovernorRewards(
-        users[0].signer.address,
         staking.address,
         treasury.address,
         0,

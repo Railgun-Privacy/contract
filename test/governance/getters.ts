@@ -45,9 +45,6 @@ describe('Governance/Getters', () => {
     await treasury.initializeTreasury((await ethers.getSigners())[0].address);
 
     await governorRewards.initializeGovernorRewards(
-      (
-        await ethers.getSigners()
-      )[0].address,
       staking.address,
       treasury.address,
       0,

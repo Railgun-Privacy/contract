@@ -84,14 +84,12 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
   /**
    * @notice Sets contracts addresses and initial value
-   * @param _owner - initial owner address
    * @param _staking - Staking contract address
    * @param _treasury - Treasury contract address
    * @param _startingInterval - interval to start distribution at
    * @param _tokens - tokens to distribute
    */
   function initializeGovernorRewards(
-    address _owner,
     Staking _staking,
     Treasury _treasury,
     uint256 _startingInterval,
@@ -101,7 +99,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     OwnableUpgradeable.__Ownable_init();
 
     // Set owner
-    OwnableUpgradeable.transferOwnership(_owner);
+    OwnableUpgradeable.transferOwnership(msg.sender);
 
     // Set contract addresses
     treasury = _treasury;
