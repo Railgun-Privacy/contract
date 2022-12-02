@@ -28,6 +28,7 @@ describe('Governance/OnlyAddress', () => {
     );
 
     // Pass if addresses match
-    await expect(onlyAddress.lock((await ethers.getSigners())[0].address)).to.eventually.be.fulfilled;
+    await expect(onlyAddress.lock((await ethers.getSigners())[0].address)).to.eventually.be
+      .fulfilled;
   });
 });

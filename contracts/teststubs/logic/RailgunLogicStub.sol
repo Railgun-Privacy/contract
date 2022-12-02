@@ -21,26 +21,17 @@ contract RailgunLogicStub is RailgunLogic {
     RailgunLogic.initializeRailgunLogic(_treasury, _shieldFee, _unshieldFee, _nftFee, _owner);
   }
 
-  function setMerkleRoot(
-    uint256 _treeNumber,
-    bytes32 _root,
-    bool _setting
-  ) external {
+  function setMerkleRoot(uint256 _treeNumber, bytes32 _root, bool _setting) external {
     Commitments.rootHistory[_treeNumber][_root] = _setting;
   }
 
-  function setNullifier(
-    uint256 _treeNumber,
-    bytes32 _nullifier,
-    bool _setting
-  ) external {
+  function setNullifier(uint256 _treeNumber, bytes32 _nullifier, bool _setting) external {
     Commitments.nullifiers[_treeNumber][_nullifier] = _setting;
   }
 
-  function transferTokenInStub(CommitmentPreimage calldata _note)
-    external
-    returns (CommitmentPreimage memory)
-  {
+  function transferTokenInStub(
+    CommitmentPreimage calldata _note
+  ) external returns (CommitmentPreimage memory) {
     return RailgunLogic.transferTokenIn(_note);
   }
 
@@ -52,14 +43,7 @@ contract RailgunLogicStub is RailgunLogic {
     Transaction calldata _transaction,
     uint256 _initialArrayLengths,
     uint256 _commitmentsStartOffset
-  )
-    external
-    returns (
-      uint256,
-      bytes32[] memory,
-      CommitmentCiphertext[] memory
-    )
-  {
+  ) external returns (uint256, bytes32[] memory, CommitmentCiphertext[] memory) {
     bytes32[] memory _commitments = new bytes32[](_initialArrayLengths);
     CommitmentCiphertext[] memory _ciphertext = new CommitmentCiphertext[](_initialArrayLengths);
 

@@ -14,8 +14,8 @@ import { GovernorRewards } from "../treasury/GovernorRewards.sol";
  * @notice Convenience functions to quickly get data from governance contracts
  */
 contract Getters {
-  Staking staking;
-  GovernorRewards governorRewards;
+  Staking public staking;
+  GovernorRewards public governorRewards;
 
   /**
    * @notice Sets external contract addresses
@@ -32,11 +32,9 @@ contract Getters {
    * @param _account - account to get snapshots for
    * @return snapshots
    */
-  function getAccountSnapshots(address _account)
-    external
-    view
-    returns (Staking.AccountSnapshot[] memory)
-  {
+  function getAccountSnapshots(
+    address _account
+  ) external view returns (Staking.AccountSnapshot[] memory) {
     // Get number of snapshots
     uint256 length = staking.accountSnapshotLength(_account);
 

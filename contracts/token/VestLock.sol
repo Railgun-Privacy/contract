@@ -123,11 +123,7 @@ contract VestLock is Initializable, OwnableUpgradeable {
    * @param _to - Address to transfer tokens to
    * @param _amount - Amount of tokens to transfer
    */
-  function transferERC20(
-    IERC20 _token,
-    address _to,
-    uint256 _amount
-  ) external locked onlyOwner {
+  function transferERC20(IERC20 _token, address _to, uint256 _amount) external locked onlyOwner {
     _token.safeTransfer(_to, _amount);
   }
 

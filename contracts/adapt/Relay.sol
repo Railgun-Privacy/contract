@@ -261,7 +261,10 @@ contract RelayAdapt {
    * @param _requireSuccess - Whether transaction should throw on call failure
    * @param _calls - multicall array
    */
-  function multicall(bool _requireSuccess, Call[] calldata _calls) external payable onlySelfIfExecuting {
+  function multicall(
+    bool _requireSuccess,
+    Call[] calldata _calls
+  ) external payable onlySelfIfExecuting {
     _multicall(_requireSuccess, _calls);
   }
 
@@ -271,11 +274,10 @@ contract RelayAdapt {
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _actionData - Actions to take in transaction
    */
-  function getAdaptParams(Transaction[] calldata _transactions, ActionData calldata _actionData)
-    public
-    pure
-    returns (bytes32)
-  {
+  function getAdaptParams(
+    Transaction[] calldata _transactions,
+    ActionData calldata _actionData
+  ) public pure returns (bytes32) {
     // Get 2D array of nullifiers of transaction
     bytes32[][] memory nullifiers = new bytes32[][](_transactions.length);
 
@@ -296,11 +298,10 @@ contract RelayAdapt {
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _actionData - Actions to take in transaction
    */
-  function relay(Transaction[] calldata _transactions, ActionData calldata _actionData)
-    external
-    payable
-    onlySelfIfExecuting
-  {
+  function relay(
+    Transaction[] calldata _transactions,
+    ActionData calldata _actionData
+  ) external payable onlySelfIfExecuting {
     // ~55000 gas needs to be added above the minGasLimit value as this amount will be
     // consumed by the time we reach this check
     require(gasleft() > _actionData.minGasLimit, "RelayAdapt: Not enough gas supplied");

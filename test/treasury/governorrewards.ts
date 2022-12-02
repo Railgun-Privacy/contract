@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
-import { GovernorRewardsShadow } from '../../helpers/treasury/governorewards';
+import { GovernorRewardsShadow } from '../../helpers/treasury/governorrewards';
 
 describe('Treasury/GovernorRewards', () => {
   /**
@@ -118,12 +118,7 @@ describe('Treasury/GovernorRewards', () => {
     const { governorRewards, treasury, staking } = await loadFixture(deploy);
 
     await expect(
-      governorRewards.initializeGovernorRewards(
-        staking.address,
-        treasury.address,
-        0,
-        [],
-      ),
+      governorRewards.initializeGovernorRewards(staking.address, treasury.address, 0, []),
     ).to.be.revertedWith('Initializable: contract is already initialized');
   });
 

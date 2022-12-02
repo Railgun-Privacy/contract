@@ -120,10 +120,7 @@ async function grantBalance(
 
   for (let i = 0; i < 1000; i += 1) {
     // Calculate storage slot
-    const storageSlot = hre.ethers.utils.solidityKeccak256(
-      ['uint256', 'uint256'],
-      [address, i],
-    );
+    const storageSlot = hre.ethers.utils.solidityKeccak256(['uint256', 'uint256'], [address, i]);
 
     // Get storage before
     const before = await getStorageAt(token, storageSlot);
@@ -184,7 +181,11 @@ async function exportStorageLayouts(
 
       const destination = path.resolve(outputDirectory, contract) + '.json';
       await fs.promises.mkdir(path.dirname(destination), { recursive: true });
-      await fs.promises.writeFile(destination, `${JSON.stringify(storageArrayFormatted, null, 2)}\n`, { flag: 'w' });
+      await fs.promises.writeFile(
+        destination,
+        `${JSON.stringify(storageArrayFormatted, null, 2)}\n`,
+        { flag: 'w' },
+      );
     }),
   );
 }

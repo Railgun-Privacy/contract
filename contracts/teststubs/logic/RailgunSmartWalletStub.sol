@@ -9,19 +9,11 @@ contract RailgunSmartWalletStub is RailgunSmartWallet {
     Commitments.newTree();
   }
 
-  function setMerkleRoot(
-    uint256 _treeNumber,
-    bytes32 _root,
-    bool _setting
-  ) external {
+  function setMerkleRoot(uint256 _treeNumber, bytes32 _root, bool _setting) external {
     Commitments.rootHistory[_treeNumber][_root] = _setting;
   }
 
-  function setNullifier(
-    uint256 _treeNumber,
-    bytes32 _nullifier,
-    bool _setting
-  ) external {
+  function setNullifier(uint256 _treeNumber, bytes32 _nullifier, bool _setting) external {
     Commitments.nullifiers[_treeNumber][_nullifier] = _setting;
   }
 }

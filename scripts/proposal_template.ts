@@ -24,7 +24,7 @@ const NEW_DEPLOYMENTS: Record<string, string> = {};
  * @param constructorArguments - constructor arguments
  * @returns promise resolved on deploy deployed
  */
- async function logVerify(
+async function logVerify(
   name: string,
   contract: Contract,
   constructorArguments: unknown[],
@@ -39,7 +39,7 @@ const NEW_DEPLOYMENTS: Record<string, string> = {};
 
 /**
  * Run preparation steps
- * 
+ *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -87,7 +87,7 @@ async function testProposalUpgrade(chainConfig: ChainConfig) {
 
 /**
  * Increase governance token balance for testing
- * 
+ *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -105,7 +105,7 @@ async function becomeWhale(chainConfig: ChainConfig) {
 
 /**
  * Stake all rail tokens
- * 
+ *
  * @param chainConfig - chain config
  * @returns complete
  */

@@ -197,11 +197,10 @@ contract Staking {
    * @param _index - index to get snapshot at
    * @return Account snapshot
    */
-  function accountSnapshot(address _account, uint256 _index)
-    external
-    view
-    returns (AccountSnapshot memory)
-  {
+  function accountSnapshot(
+    address _account,
+    uint256 _index
+  ) external view returns (AccountSnapshot memory) {
     return accountSnapshots[_account][_index];
   }
 
@@ -230,11 +229,7 @@ contract Staking {
    * @param _to - account to move voting power to
    * @param _amount - amount of voting power to move
    */
-  function moveVotingPower(
-    address _from,
-    address _to,
-    uint256 _amount
-  ) internal {
+  function moveVotingPower(address _from, address _to, uint256 _amount) internal {
     votingPower[_from] -= _amount;
     votingPower[_to] += _amount;
   }
@@ -283,11 +278,9 @@ contract Staking {
    * @return state
    */
 
-  function globalsSnapshotAtSearch(uint256 _interval)
-    internal
-    view
-    returns (GlobalsSnapshot memory)
-  {
+  function globalsSnapshotAtSearch(
+    uint256 _interval
+  ) internal view returns (GlobalsSnapshot memory) {
     // Index of element
     uint256 index;
 
@@ -331,11 +324,10 @@ contract Staking {
    * @return state
    */
 
-  function globalsSnapshotAt(uint256 _interval, uint256 _hint)
-    external
-    view
-    returns (GlobalsSnapshot memory)
-  {
+  function globalsSnapshotAt(
+    uint256 _interval,
+    uint256 _hint
+  ) external view returns (GlobalsSnapshot memory) {
     require(_interval <= currentInterval(), "Staking: Interval out of bounds");
 
     // Check if hint is correct, else fall back to binary search
@@ -356,11 +348,10 @@ contract Staking {
    * @param _interval - interval to get state at
    * @return state
    */
-  function accountSnapshotAtSearch(address _account, uint256 _interval)
-    internal
-    view
-    returns (AccountSnapshot memory)
-  {
+  function accountSnapshotAtSearch(
+    address _account,
+    uint256 _interval
+  ) internal view returns (AccountSnapshot memory) {
     // Get account snapshots array
     AccountSnapshot[] storage snapshots = accountSnapshots[_account];
 

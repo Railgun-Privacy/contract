@@ -27,11 +27,7 @@ contract Distributor is Ownable {
    * @param _vestLockImplementation - implementation address for vestlock contract
    */
 
-  constructor(
-    address _admin,
-    address _staking,
-    address _vestLockImplementation
-  ) {
+  constructor(address _admin, address _staking, address _vestLockImplementation) {
     // Set initial admin
     Ownable.transferOwnership(_admin);
 

@@ -132,11 +132,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _unshieldFee - Unshield fee
    * @param _nftFee - Flat fee in wei that applies to NFT transactions
    */
-  function changeFee(
-    uint120 _shieldFee,
-    uint120 _unshieldFee,
-    uint256 _nftFee
-  ) public onlyOwner {
+  function changeFee(uint120 _shieldFee, uint120 _unshieldFee, uint256 _nftFee) public onlyOwner {
     if (_shieldFee != shieldFee || _unshieldFee != unshieldFee || _nftFee != nftFee) {
       require(_shieldFee <= BASIS_POINTS / 2, "RailgunLogic: Shield Fee exceeds 50%");
       require(_unshieldFee <= BASIS_POINTS / 2, "RailgunLogic: Unshield Fee exceeds 50%");
@@ -197,11 +193,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   /**
    * @notice Hashes a commitment
    */
-  function hashCommitment(CommitmentPreimage memory _commitmentPreimage)
-    public
-    pure
-    returns (bytes32)
-  {
+  function hashCommitment(
+    CommitmentPreimage memory _commitmentPreimage
+  ) public pure returns (bytes32) {
     return
       PoseidonT4.poseidon(
         [
@@ -216,11 +210,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Checks commitment ranges for validity
    * @return valid, reason
    */
-  function validateCommitmentPreimage(CommitmentPreimage calldata _note)
-    public
-    view
-    returns (bool, string memory)
-  {
+  function validateCommitmentPreimage(
+    CommitmentPreimage calldata _note
+  ) public view returns (bool, string memory) {
     // Note must be more than 0
     if (_note.value == 0) return (false, "Invalid Note Value");
 
@@ -243,10 +235,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _note - note to process
    * @return adjusted note
    */
-  function transferTokenIn(CommitmentPreimage calldata _note)
-    internal
-    returns (CommitmentPreimage memory)
-  {
+  function transferTokenIn(
+    CommitmentPreimage calldata _note
+  ) internal returns (CommitmentPreimage memory) {
     // validateTransaction and accumulateAndNullifyTransaction functions MUST be called
     // in that order BEFORE invoking this function to process an unshield on a transaction
     // else reentrancy attacks are possible
@@ -402,11 +393,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @notice Verifies transaction validity
    * @return valid, reason
    */
-  function validateTransaction(Transaction calldata _transaction)
-    public
-    view
-    returns (bool, string memory)
-  {
+  function validateTransaction(
+    Transaction calldata _transaction
+  ) public view returns (bool, string memory) {
     // Gas price of eth transaction should be equal or greater than railgun transaction specified min gas price
     // This will only work correctly for type 0 transactions, set to 0 for EIP-1559 transactions
     if (tx.gasprice < _transaction.boundParams.minGasPrice) return (false, "Gas price too low");

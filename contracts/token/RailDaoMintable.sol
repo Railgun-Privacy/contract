@@ -61,11 +61,10 @@ contract RailTokenDAOMintable is Ownable, ERC20 {
    * @return success
    */
 
-  function governanceMint(address _account, uint256 _amount)
-    external
-    onlyOwner
-    returns (bool success)
-  {
+  function governanceMint(
+    address _account,
+    uint256 _amount
+  ) external onlyOwner returns (bool success) {
     _mint(_account, _amount);
     return true;
   }

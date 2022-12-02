@@ -19,6 +19,7 @@ ethersproject
 fastforward
 forktoken
 gasleft
+governorrewards
 groth
 IERC
 Initializable

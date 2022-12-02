@@ -177,10 +177,10 @@ contract Voting {
    * @param _actions - actions to take
    */
 
-  function createProposal(string calldata _proposalDocument, Call[] calldata _actions)
-    external
-    returns (uint256)
-  {
+  function createProposal(
+    string calldata _proposalDocument,
+    Call[] calldata _actions
+  ) external returns (uint256) {
     // Don't allow proposals with no actions
     require(_actions.length > 0, "Voting: No actions specified");
 

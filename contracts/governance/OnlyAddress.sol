@@ -13,6 +13,7 @@ contract OnlyAddress {
    * @param _lock - caller to lock transaction to
    */
   function lock(address _lock) public view {
+    // solhint-disable-next-line avoid-tx-origin
     require(tx.origin == _lock, "OnlyAddress: Caller isn't allowed to execute");
   }
 }

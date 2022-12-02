@@ -11,12 +11,7 @@ contract SimpleSwap {
 
   uint256 private constant BASIS_POINTS = 10000; // Number of basis points that equal 100%
 
-  function swap(
-    IERC20 _from,
-    IERC20 _to,
-    uint256 _amount,
-    uint256 _rateBP
-  ) external {
+  function swap(IERC20 _from, IERC20 _to, uint256 _amount, uint256 _rateBP) external {
     _from.safeTransferFrom(msg.sender, address(this), _amount);
     _to.safeTransfer(msg.sender, (_amount * _rateBP) / BASIS_POINTS);
   }
