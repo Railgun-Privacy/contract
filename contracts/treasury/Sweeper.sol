@@ -22,7 +22,8 @@ contract Sweeper {
    */
   function transferETH() external {
     // solhint-disable-next-line avoid-low-level-calls
-    receiver.call{ value: address(this).balance }("");
+    (bool success,) = receiver.call{ value: address(this).balance }("");
+    if (!success) revert();
   }
 
   /**
