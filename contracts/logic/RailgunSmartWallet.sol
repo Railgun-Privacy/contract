@@ -2,9 +2,6 @@
 pragma solidity ^0.8.7;
 pragma abicoder v2;
 
-// Openzeppelin v4
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-
 import { TokenBlocklist } from "./TokenBlocklist.sol";
 import { Commitments } from "./Commitments.sol";
 import { RailgunLogic } from "./RailgunLogic.sol";
@@ -16,7 +13,7 @@ import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCip
  * @notice Railgun private smart wallet
  * @dev Entry point for processing private meta-transactions
  */
-contract RailgunSmartWallet is RailgunLogic, ReentrancyGuardUpgradeable {
+contract RailgunSmartWallet is RailgunLogic {
   /**
    * @notice Shields requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _shieldRequests - list of commitments to shield
@@ -115,6 +112,4 @@ contract RailgunSmartWallet is RailgunLogic, ReentrancyGuardUpgradeable {
     // Store block number of last event for easier sync
     RailgunLogic.lastEventBlock = block.number;
   }
-
-  function startSession() external nonReentrant {}
 }
