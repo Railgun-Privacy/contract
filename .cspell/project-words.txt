@@ -1,6 +1,8 @@
 abicoder
 addmod
 alphabeta
+Arbitrum
+ARBSYS
 babyjubjub
 blocklist
 blocklisted
@@ -12,6 +14,7 @@ CIPHERTEXT
 circomlib
 circomlibjs
 concat
+crosschain
 delegatecall
 Earmaked
 eddsa
@@ -51,6 +54,7 @@ RAILTEST
 reentrancy
 returndatacopy
 returndatasize
+rollup
 sighash
 sload
 snapshotting

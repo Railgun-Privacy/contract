@@ -46,7 +46,7 @@ contract Voting {
   // Proposal executed
   event VoteKeySet(address indexed account, address votingKey);
 
-  // Errors
+  // Errors event
   error ExecutionFailed(uint256 index, bytes data);
 
   // Function call
@@ -200,7 +200,7 @@ contract Voting {
     // Store sponsor voting snapshot interval
     proposal.sponsorInterval = STAKING_CONTRACT.currentInterval();
 
-    // Loop over actions and copy manually as solidity doesn't support copying structs
+    // Loop over actions and copy manually as solidity doesn't support copying struct arrays from calldata
     for (uint256 i = 0; i < _actions.length; i += 1) {
       proposal.actions.push(Call(_actions[i].callContract, _actions[i].data, _actions[i].value));
     }
