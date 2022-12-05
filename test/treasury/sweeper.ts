@@ -53,4 +53,20 @@ describe('Treasury/Sweeper', function () {
       [-1000, 1000],
     );
   });
+
+  it('Should revert on failed ETH send', async function () {
+    // Deploy reverting contract
+    const Target = await ethers.getContractFactory('GovernanceTargetAlphaStub');
+    const target = await Target.deploy();
+
+    // Deploy sweeper
+    const Sweeper = await ethers.getContractFactory('Sweeper');
+    const sweeper = await Sweeper.deploy(target.address);
+
+    // Mint ETH
+    await setBalance(sweeper.address, 1000);
+
+    // Transfer ETH should revert
+    await expect(sweeper.transferETH()).to.be.reverted;
+  });
 });
