@@ -52,6 +52,7 @@ proxied
 Railgun
 RAILTEST
 reentrancy
+Retryable
 returndatacopy
 returndatasize
 rollup

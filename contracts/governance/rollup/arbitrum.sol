@@ -3,17 +3,19 @@ pragma solidity ^0.8.7;
 pragma abicoder v2;
 
 // OpenZeppelin v4
-import { LibArbitrumL2 } from "@openzeppelin/contracts/crosschain/arbitrum/LibArbitrumL2.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IInbox } from "@openzeppelin/contracts/vendor/arbitrum/IInbox.sol";
 
 import { Delegator } from "../Delegator.sol";
 
 /**
  * @title Executor
  * @author Railgun Contributors
- * @notice Stores instructions to execute after rollup sender confirms
+ * @notice Stores instructions to execute after L1 sender confirms
  */
 contract ArbitrumExecutor {
+  uint160 public constant L1_ADDRESS_OFFSET = uint160(0x1111000000000000000000000000000000001111);
+
   address public immutable SENDER_L1; // Voting contract on L1
   Delegator public immutable DELEGATOR; // Delegator contract
 
@@ -79,8 +81,7 @@ contract ArbitrumExecutor {
   function readyTask(uint256 _task) external {
     // Check cross chain call
     require(
-      LibArbitrumL2.isCrossChain(LibArbitrumL2.ARBSYS) &&
-        LibArbitrumL2.crossChainSender(LibArbitrumL2.ARBSYS) == SENDER_L1,
+      msg.sender == address(uint160(SENDER_L1) + L1_ADDRESS_OFFSET),
       "ArbitrumExecutor: Caller is not L1 sender contract"
     );
 
@@ -128,18 +129,43 @@ contract ArbitrumExecutor {
 /**
  * @title Sender
  * @author Railgun Contributors
- * @notice Sends contract to
+ * @notice Sets tasks on Arbitrum sender to executable
  */
-contract ArbitrumSender is Ownable {
+contract L1ToArbitrumSender is Ownable {
   address public immutable EXECUTOR_L2; // Sender contract on L2
+  IInbox public immutable ARBITRUM_INBOX; // Arbitrum Inbox
+
+  event RetryableTicketCreated(uint256 id);
 
   /**
    * @notice Sets contract addresses
-   * @param _executorL2 - sender contract on L1
    * @param _admin - delegator contract
+   * @param _executorL2 - sender contract on L1
+   * @param _arbitrumInbox - arbitrum inbox address
    */
-  constructor(address _admin, address _executorL2) {
+  constructor(address _admin, address _executorL2, IInbox _arbitrumInbox) {
     Ownable.transferOwnership(_admin);
     EXECUTOR_L2 = _executorL2;
+    ARBITRUM_INBOX = _arbitrumInbox;
+  }
+
+  /**
+   * 
+   */
+  function readyTask(uint256 _task) external onlyOwner {
+    // Create retryable ticket on arbitrum to set execution for governance task to true
+    uint256 ticketID = ARBITRUM_INBOX.createRetryableTicket(
+      EXECUTOR_L2,
+      0,
+      0,
+      msg.sender,
+      msg.sender,
+      0,
+      0,
+      abi.encodeWithSelector(ArbitrumExecutor.readyTask.selector, _task)
+    );
+
+    // Emit event with ticket ID so EOAs can retry on Arbitrum if need be
+    emit RetryableTicketCreated(ticketID);
   }
 }
