@@ -22,8 +22,8 @@ contract Sweeper {
    */
   function transferETH() external {
     // solhint-disable-next-line avoid-low-level-calls
-    (bool success,) = receiver.call{ value: address(this).balance }("");
-    if (!success) revert();
+    (bool success, ) = receiver.call{ value: address(this).balance }("");
+    if (!success) revert("ETH transfer failed");
   }
 
   /**

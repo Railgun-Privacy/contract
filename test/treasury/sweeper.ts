@@ -67,6 +67,6 @@ describe('Treasury/Sweeper', function () {
     await setBalance(sweeper.address, 1000);
 
     // Transfer ETH should revert
-    await expect(sweeper.transferETH()).to.be.reverted;
+    await expect(sweeper.transferETH()).to.be.revertedWith('ETH transfer failed');
   });
 });
