@@ -34,6 +34,8 @@ async function main() {
   const Proxy = await ethers.getContractFactory('PausableUpgradableProxy');
   const ProxyAdmin = await ethers.getContractFactory('ProxyAdmin');
   const RailToken = await ethers.getContractFactory('AdminERC20');
+  const TestERC20 = await ethers.getContractFactory('TestERC20');
+  const TestERC721 = await ethers.getContractFactory('TestERC721');
   const RelayAdapt = await ethers.getContractFactory('RelayAdapt');
   const Staking = await ethers.getContractFactory('Staking');
   const TreasuryImplementation = await ethers.getContractFactory('Treasury');
@@ -150,6 +152,13 @@ async function main() {
   const relayAdapt = await RelayAdapt.deploy(proxy.address, weth9.address);
   await logVerify('Relay Adapt', relayAdapt, [proxy.address, weth9.address]);
 
+  // Deploy test tokens
+  const testERC20 = await TestERC20.deploy();
+  await logVerify('Test ERC20', testERC20, []);
+
+  const testERC721 = await TestERC721.deploy();
+  await logVerify('Test ERC721', testERC721, []);
+
   console.log('\nDEPLOY CONFIG:');
   console.log({
     delegator: delegator.address,
@@ -160,6 +169,8 @@ async function main() {
     proxyAdmin: proxyAdmin.address,
     rail: rail.address,
     staking: staking.address,
+    testERC20: testERC20.address,
+    testERC721: testERC721.address,
     treasuryImplementation: treasuryImplementation.address,
     treasuryProxy: treasuryProxy.address,
     voting: voting.address,
