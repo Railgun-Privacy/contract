@@ -139,7 +139,6 @@ async function main() {
   await (await delegator.transferOwnership(voting.address)).wait();
 
   // Deploy WETH9
-  console.log('\nDeploying WETH9');
   const WETH9 = new ethers.ContractFactory(
     weth9artifact.WETH9.abi,
     weth9artifact.WETH9.bytecode,
