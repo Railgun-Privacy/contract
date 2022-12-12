@@ -32,9 +32,11 @@ contract ArbInboxStub {
     bytes calldata _data
   ) external payable returns (uint256) {
     require(
-      msg.value >= calculateRetryableSubmissionFee(_data.length, block.basefee),
-      "InsufficientSubmissionCost"
+      _maxSubmissionCost >= calculateRetryableSubmissionFee(_data.length, block.basefee),
+      "_maxSubmissionCost too low"
     );
+
+    require(msg.value == _maxSubmissionCost, "msg.value wrong");
 
     to = _to;
     arbTxCallValue = _arbTxCallValue;

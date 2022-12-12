@@ -3,7 +3,6 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import {
   loadFixture,
-  setBalance,
   setCode,
   setNextBlockBaseFeePerGas,
 } from '@nomicfoundation/hardhat-network-helpers';
@@ -44,9 +43,6 @@ describe('Governance/Arbitrum/Sender', () => {
     // Get executor interface
     const ArbitrumExecutor = await ethers.getContractFactory('ArbitrumExecutor');
 
-    // Give ETH to sender
-    await setBalance(sender.address, 20n * 10n ** 18n);
-
     return {
       primaryAccount,
       adminAccount,
@@ -79,11 +75,18 @@ describe('Governance/Arbitrum/Sender', () => {
       '0x',
     ]);
 
+    // Send ETH to sender
+    await senderAdmin.signer.sendTransaction({
+      to: senderAdmin.address,
+      data: '0x',
+      value: 10n ** 18n,
+    });
+
     // Set base fee
     await setNextBlockBaseFeePerGas(100);
 
     // Run ready task
-    await expect(senderAdmin.readyTask(3))
+    await expect(senderAdmin.readyTask(3, { maxFeePerGas: 100 }))
       .to.changeEtherBalances([arbInboxStub.address, senderAdmin.address], [200, -200])
       .to.emit(senderAdmin, 'RetryableTicketCreated')
       .withArgs(12);
@@ -92,7 +95,7 @@ describe('Governance/Arbitrum/Sender', () => {
     expect(await arbInboxStub.getData()).to.deep.equal([
       ethers.utils.getAddress(executorL2address),
       0,
-      0,
+      200,
       await senderAdmin.signer.getAddress(),
       await senderAdmin.signer.getAddress(),
       0,

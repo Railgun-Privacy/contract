@@ -61,7 +61,7 @@ contract ArbitrumSender is Ownable {
     uint256 ticketID = ARBITRUM_INBOX.createRetryableTicket{ value: submissionFee }(
       executorL2,
       0,
-      0,
+      submissionFee,
       // solhint-disable-next-line avoid-tx-origin
       tx.origin,
       // solhint-disable-next-line avoid-tx-origin
@@ -82,4 +82,7 @@ contract ArbitrumSender is Ownable {
   function setExecutorL2(address _executorL2) public onlyOwner {
     executorL2 = _executorL2;
   }
+
+  // Allow receiving ETH
+  receive() payable external {}
 }

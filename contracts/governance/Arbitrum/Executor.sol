@@ -78,10 +78,10 @@ contract ArbitrumExecutor {
 
   /**
    * @notice Gets actions for a task
-   * @param _ticket - ticket to get tasks for
+   * @param _tasks - task to get actions for
    */
-  function getActions(uint256 _ticket) external view returns (Action[] memory) {
-    return tasks[_ticket].actions;
+  function getActions(uint256 _tasks) external view returns (Action[] memory) {
+    return tasks[_tasks].actions;
   }
 
   /**
