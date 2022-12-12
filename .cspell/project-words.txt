@@ -4,6 +4,7 @@ alphabeta
 Arbitrum
 ARBSYS
 babyjubjub
+basefee
 blocklist
 blocklisted
 bytecode

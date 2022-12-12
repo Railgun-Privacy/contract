@@ -1,7 +1,12 @@
 import hre from 'hardhat';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import { loadFixture, setCode } from '@nomicfoundation/hardhat-network-helpers';
+import {
+  loadFixture,
+  setBalance,
+  setCode,
+  setNextBlockBaseFeePerGas,
+} from '@nomicfoundation/hardhat-network-helpers';
 
 import { hash } from '../../../helpers/global/crypto';
 import { fromUTF8String, arrayToHexString } from '../../../helpers/global/bytes';
@@ -26,15 +31,21 @@ describe('Governance/Arbitrum/Sender', () => {
       true,
     );
 
+    // Deploy inbox stub
     const ArbInboxStub = await hre.artifacts.readArtifact('ArbInboxStub');
     await setCode(arbitrumInbox, ArbInboxStub.deployedBytecode);
     const arbInboxStub = await ethers.getContractAt('ArbInboxStub', arbitrumInbox);
 
+    // Deploy sender
     const Sender = await ethers.getContractFactory('ArbitrumSender');
     const sender = await Sender.deploy(adminAccount.address, executorL2address, arbitrumInbox);
     const senderAdmin = sender.connect(adminAccount);
 
+    // Get executor interface
     const ArbitrumExecutor = await ethers.getContractFactory('ArbitrumExecutor');
+
+    // Give ETH to sender
+    await setBalance(sender.address, 20n * 10n ** 18n);
 
     return {
       primaryAccount,
@@ -68,8 +79,12 @@ describe('Governance/Arbitrum/Sender', () => {
       '0x',
     ]);
 
+    // Set base fee
+    await setNextBlockBaseFeePerGas(100);
+
     // Run ready task
     await expect(senderAdmin.readyTask(3))
+      .to.changeEtherBalances([arbInboxStub.address, senderAdmin.address], [200, -200])
       .to.emit(senderAdmin, 'RetryableTicketCreated')
       .withArgs(12);
 
@@ -89,7 +104,9 @@ describe('Governance/Arbitrum/Sender', () => {
   it('Should not allow non-owner to call', async () => {
     const { sender } = await loadFixture(deploy);
 
-    // Run ready task
     await expect(sender.readyTask(3)).to.be.rejectedWith('Ownable: caller is not the owner');
+    await expect(sender.setExecutorL2(ethers.constants.AddressZero)).to.be.rejectedWith(
+      'Ownable: caller is not the owner',
+    );
   });
 });

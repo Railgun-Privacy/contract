@@ -14,6 +14,13 @@ contract ArbInboxStub {
 
   uint256 public ticketID;
 
+  function calculateRetryableSubmissionFee(
+    uint256 dataLength,
+    uint256 baseFee
+  ) public pure returns (uint256) {
+    return baseFee * 2 + dataLength * 0; // multiply by 0 to silence unused variable warning
+  }
+
   function createRetryableTicket(
     address _to,
     uint256 _arbTxCallValue,
@@ -24,6 +31,11 @@ contract ArbInboxStub {
     uint256 _maxFeePerGas,
     bytes calldata _data
   ) external payable returns (uint256) {
+    require(
+      msg.value >= calculateRetryableSubmissionFee(_data.length, block.basefee),
+      "InsufficientSubmissionCost"
+    );
+
     to = _to;
     arbTxCallValue = _arbTxCallValue;
     maxSubmissionCost = _maxSubmissionCost;
