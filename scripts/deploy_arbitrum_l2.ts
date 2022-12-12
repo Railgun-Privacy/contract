@@ -5,8 +5,8 @@ import { Contract } from 'ethers';
 
 // Sender L1 Address
 // Ethereum:
-// Goerli: 0x97EF01b9bc0B8412345A865f7cDe81F1D344e72E
-const SENDER_L1 = '0x97EF01b9bc0B8412345A865f7cDe81F1D344e72E';
+// Goerli: 0xd40fb456bc7026fbb004dCBFC7287D4e4EfCD706
+const SENDER_L1 = '0xd40fb456bc7026fbb004dCBFC7287D4e4EfCD706';
 
 // Wrapped Base Token
 // Ethereum: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
