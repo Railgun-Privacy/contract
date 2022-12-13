@@ -28,8 +28,6 @@ contract ArbitrumSender is Ownable {
 
   address public executorL2; // Sender contract on L2
 
-  event RetryableTicketCreated(uint256 id);
-
   /**
    * @notice Sets contract addresses
    * @param _admin - delegator contract
@@ -58,7 +56,7 @@ contract ArbitrumSender is Ownable {
     );
 
     // Create retryable ticket on arbitrum to set execution for governance task to true
-    uint256 ticketID = ARBITRUM_INBOX.createRetryableTicket{ value: submissionFee }(
+    ARBITRUM_INBOX.createRetryableTicket{ value: submissionFee }(
       executorL2,
       0,
       submissionFee,
@@ -70,9 +68,6 @@ contract ArbitrumSender is Ownable {
       0,
       data
     );
-
-    // Emit event with ticket ID so EOAs can retry on Arbitrum if need be
-    emit RetryableTicketCreated(ticketID);
   }
 
   /**

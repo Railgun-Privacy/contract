@@ -86,10 +86,10 @@ describe('Governance/Arbitrum/Sender', () => {
     await setNextBlockBaseFeePerGas(100);
 
     // Run ready task
-    await expect(senderAdmin.readyTask(3, { maxFeePerGas: 100 }))
-      .to.changeEtherBalances([arbInboxStub.address, senderAdmin.address], [200, -200])
-      .to.emit(senderAdmin, 'RetryableTicketCreated')
-      .withArgs(12);
+    await expect(senderAdmin.readyTask(3, { maxFeePerGas: 100 })).to.changeEtherBalances(
+      [arbInboxStub.address, senderAdmin.address],
+      [200, -200],
+    );
 
     // Check values have been changed
     expect(await arbInboxStub.getData()).to.deep.equal([
