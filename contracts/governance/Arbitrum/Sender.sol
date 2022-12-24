@@ -79,5 +79,5 @@ contract ArbitrumSender is Ownable {
   }
 
   // Allow receiving ETH
-  receive() payable external {}
+  receive() external payable {}
 }
