@@ -60,7 +60,7 @@ contract ArbitrumExecutor {
    * @notice Creates new task
    * @param _actions - list of calls to execute for this task
    */
-  function createTask(Action[] calldata _actions) external {
+  function createTask(Action[] calldata _actions) external returns (uint256) {
     uint256 taskID = tasks.length;
 
     // Get new task
@@ -74,6 +74,8 @@ contract ArbitrumExecutor {
 
     // Emit event
     emit TaskCreated(taskID);
+
+    return taskID;
   }
 
   /**
@@ -103,8 +105,8 @@ contract ArbitrumExecutor {
    * @notice Convenience function to execute retryable ticket redeem
    * @param _ticket - ticket ID to redeem
    */
-  function redeem(uint256 _ticket) external {
-    ARB_RETRYABLE_TX.redeem(bytes32(_ticket));
+  function redeem(uint256 _ticket) external returns (bytes32) {
+    return ARB_RETRYABLE_TX.redeem(bytes32(_ticket));
   }
 
   /**
