@@ -112,4 +112,12 @@ describe('Governance/Arbitrum/Sender', () => {
       'Ownable: caller is not the owner',
     );
   });
+
+  it('Should not allow setting executor to 0', async () => {
+    const { senderAdmin } = await loadFixture(deploy);
+
+    await expect(senderAdmin.setExecutorL2(ethers.constants.AddressZero)).to.be.rejectedWith(
+      'ArbitrumSender: Executor address is 0',
+    );
+  });
 });

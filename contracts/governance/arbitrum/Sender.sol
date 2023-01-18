@@ -55,18 +55,19 @@ contract ArbitrumSender is Ownable {
     );
 
     // Create retryable ticket on arbitrum to set execution for governance task to true
-    return ARBITRUM_INBOX.createRetryableTicket{ value: submissionFee }(
-      executorL2,
-      0,
-      submissionFee,
-      // solhint-disable-next-line avoid-tx-origin
-      tx.origin,
-      // solhint-disable-next-line avoid-tx-origin
-      tx.origin,
-      0,
-      0,
-      data
-    );
+    return
+      ARBITRUM_INBOX.createRetryableTicket{ value: submissionFee }(
+        executorL2,
+        0,
+        submissionFee,
+        // solhint-disable-next-line avoid-tx-origin
+        tx.origin,
+        // solhint-disable-next-line avoid-tx-origin
+        tx.origin,
+        0,
+        0,
+        data
+      );
   }
 
   /**
