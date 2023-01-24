@@ -9,6 +9,8 @@ import 'hardhat-local-networks-config-plugin';
 import { setBalance, setCode, time } from '@nomicfoundation/hardhat-network-helpers';
 import { TASK_COMPILE, TASK_CLEAN, TASK_TEST } from 'hardhat/builtin-tasks/task-names';
 
+import './tasks';
+
 import { poseidonContract } from 'circomlibjs';
 import {
   overwriteArtifact,
@@ -117,10 +119,6 @@ task('accounts', 'Prints the list of accounts', async (taskArguments, hre) => {
   accounts.forEach((account) => {
     console.log(account.address);
   });
-});
-
-task('deploy:test', 'Deploy full deployment for testing purposes', async (taskArguments, hre) => {
-  await hre.run('run', { script: 'scripts/deploy_test.ts' });
 });
 
 task('set-token-balance', 'Sets balance of ERC20 token')

@@ -1,0 +1,2 @@
+import './full';
+import './test';

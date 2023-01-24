@@ -1,9 +1,10 @@
-import { ethers } from 'hardhat';
+import { task } from 'hardhat/config';
+import type { TaskArguments } from 'hardhat/types';
 
 import * as weth9artifact from '@ethereum-artifacts/weth9';
 
-import { loadAllArtifacts } from '../helpers/logic/artifacts';
-import { Contract } from 'ethers';
+import { loadAllArtifacts } from '../../helpers/logic/artifacts';
+import type { Contract } from 'ethers';
 
 /**
  * Log data to verify contract
@@ -26,7 +27,13 @@ async function logVerify(
   return contract.deployTransaction.wait().then();
 }
 
-async function main() {
+task('deploy:test', 'Creates test environment deployment').setAction(async function (
+  taskArguments: TaskArguments,
+  hre,
+) {
+  const { ethers } = hre;
+  await hre.run('compile');
+
   // Get build artifacts
   const Delegator = await ethers.getContractFactory('Delegator');
   const PoseidonT3 = await ethers.getContractFactory('PoseidonT3');
@@ -176,11 +183,4 @@ async function main() {
     weth9: weth9.address,
     relayAdapt: relayAdapt.address,
   });
-}
-
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+});
