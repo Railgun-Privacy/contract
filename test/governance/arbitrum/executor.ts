@@ -6,6 +6,7 @@ import {
   loadFixture,
   setBalance,
   setCode,
+  time,
 } from '@nomicfoundation/hardhat-network-helpers';
 
 import { hash } from '../../../helpers/global/crypto';
@@ -101,7 +102,7 @@ describe('Governance/Arbitrum/Executor', () => {
 
     // Create tasks and verify they match
     for (let i = 0; i < 15; i += 1) {
-      // Push a new task to calls array
+      // Push a new action to calls array
       calls.push({
         callContract: arrayToHexString(
           hash.keccak256(bigIntToArray(BigInt(i), 32)).slice(0, 20),
@@ -112,7 +113,16 @@ describe('Governance/Arbitrum/Executor', () => {
       });
 
       // Create task
-      await expect(executor.createTask(calls)).to.emit(executor, 'TaskCreated').withArgs(i);
+      const creationTX = await executor.createTask(calls);
+
+      // Check event was emitted
+      await expect(creationTX).to.emit(executor, 'TaskCreated').withArgs(i);
+
+      // Task state should be created
+      expect((await executor.tasks(i)).state).to.equal(0);
+
+      // Task creation time should be timestamp of latest block
+      expect((await executor.tasks(i)).creationTime).to.equal(await time.latest());
 
       // Get actions and check they match what was submitted
       const contractActions = await executor.getActions(i);
@@ -149,8 +159,18 @@ describe('Governance/Arbitrum/Executor', () => {
       'ArbitrumExecutor: Task not marked as executable',
     );
 
+    // Ready task should only be callable by L1 sender
+    await expect(executor.readyTask(0)).to.be.revertedWith(
+      'ArbitrumExecutor: Caller is not L1 sender contract',
+    );
+
     // Ready task
     await expect(executorFromSender.readyTask(0)).to.emit(executor, 'TaskReady').withArgs(0);
+
+    // Ready task should fail if task is already readied
+    await expect(executorFromSender.readyTask(0)).to.be.revertedWith(
+      'ArbitrumExecutor: Task has already been executed',
+    );
 
     // Task should now execute
     await expect(executor.executeTask(0)).to.emit(executor, 'TaskExecuted').withArgs(0);
@@ -160,26 +180,13 @@ describe('Governance/Arbitrum/Executor', () => {
       'ArbitrumExecutor: Task not marked as executable',
     );
 
+    // Ready task should fail if called again after execution
+    await expect(executorFromSender.readyTask(0)).to.be.revertedWith(
+      'ArbitrumExecutor: Task has already been executed',
+    );
+
     // Check greeting has changed
     expect(await stateChangeTarget.greeting()).to.equal('hello');
-  });
-
-  it('Should ready task should only be callable by L1 sender', async () => {
-    const { executor } = await loadFixture(deploy);
-
-    // Create task
-    await executor.createTask([
-      {
-        callContract: ethers.constants.AddressZero,
-        data: '0x',
-        value: 0,
-      },
-    ]);
-
-    // Call should fail
-    await expect(executor.readyTask(0)).to.be.revertedWith(
-      'ArbitrumExecutor: Caller is not L1 sender contract',
-    );
   });
 
   it('Should throw on reverting sub call', async () => {
@@ -206,5 +213,27 @@ describe('Governance/Arbitrum/Executor', () => {
           .encode(['string'], ['1 is not equal to 2'])
           .slice(2)}`,
       );
+  });
+
+  it('Should throw if task has expired', async () => {
+    const { executor, executorFromSender, stateChangeTarget } = await loadFixture(deploy);
+
+    // Create task
+    await executor.createTask([
+      {
+        callContract: stateChangeTarget.address,
+        data: '0x',
+        value: 0,
+      },
+    ]);
+
+    // Ready task
+    await executorFromSender.readyTask(0);
+
+    // Advance time
+    await time.increase((await executor.EXPIRY_TIME()).toNumber() + 1);
+
+    // Execution should throw
+    await expect(executor.executeTask(0)).to.be.revertedWith('ArbitrumExecutor: Task has expired');
   });
 });

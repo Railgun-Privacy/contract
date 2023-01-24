@@ -21,6 +21,8 @@ contract ArbitrumExecutor {
   // solhint-disable-next-line var-name-mixedcase
   Delegator public immutable DELEGATOR; // Delegator contract
 
+  uint256 public constant EXPIRY_TIME = 40 days;
+
   // Action structure
   struct Action {
     address callContract;
@@ -28,10 +30,16 @@ contract ArbitrumExecutor {
     uint256 value;
   }
 
+  enum ExecutionState {
+    Created,
+    AwaitingExecution,
+    Executed
+  }
+
   // Task structure
   struct Task {
-    bool canExecute; // Starts marked false, is marked true when signalled by L1 voting contract
-    // marked false again when executed
+    uint256 creationTime; // Creation time of task
+    ExecutionState state; // Execution state of task
     Action[] actions; // Calls to execute
   }
 
@@ -65,6 +73,12 @@ contract ArbitrumExecutor {
 
     // Get new task
     Task storage task = tasks.push();
+
+    // Set task creation time
+    task.creationTime = block.timestamp;
+
+    // Set task execution state
+    task.state = ExecutionState.Created;
 
     // Set call list
     // Loop over actions and copy manually as solidity doesn't support copying struct arrays from calldata
@@ -120,8 +134,17 @@ contract ArbitrumExecutor {
       "ArbitrumExecutor: Caller is not L1 sender contract"
     );
 
+    // Get task
+    Task storage task = tasks[_task];
+
+    // Check task hasn't already been executed
+    require(
+      task.state == ExecutionState.Created,
+      "ArbitrumExecutor: Task has already been executed"
+    );
+
     // Set task can execute
-    tasks[_task].canExecute = true;
+    task.state = ExecutionState.AwaitingExecution;
 
     // Emit event
     emit TaskReady(_task);
@@ -136,10 +159,19 @@ contract ArbitrumExecutor {
     Task storage task = tasks[_task];
 
     // Check task can be executed
-    require(task.canExecute, "ArbitrumExecutor: Task not marked as executable");
+    require(
+      task.state == ExecutionState.AwaitingExecution,
+      "ArbitrumExecutor: Task not marked as executable"
+    );
+
+    // Check task hasn't expired
+    require(
+      block.timestamp < task.creationTime + EXPIRY_TIME,
+      "ArbitrumExecutor: Task has expired"
+    );
 
     // Mark task as executed
-    task.canExecute = false;
+    task.state = ExecutionState.Executed;
 
     // Loop over actions and execute
     for (uint256 i = 0; i < task.actions.length; i += 1) {
