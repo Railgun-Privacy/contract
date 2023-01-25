@@ -8,6 +8,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IInbox } from "@arbitrum/nitro-contracts/src/bridge/IInbox.sol";
 
 import { ArbitrumExecutor } from "./Executor.sol";
+import { ISender } from "../ISender.sol";
 
 // Patch IInbox to add in calculate fee function
 interface IInboxPatched is IInbox {
@@ -22,7 +23,7 @@ interface IInboxPatched is IInbox {
  * @author Railgun Contributors
  * @notice Sets tasks on Arbitrum sender to executable
  */
-contract ArbitrumSender is Ownable {
+contract ArbitrumSender is Ownable, ISender {
   // solhint-disable-next-line var-name-mixedcase
   IInboxPatched public immutable ARBITRUM_INBOX; // Arbitrum Inbox
 
