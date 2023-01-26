@@ -5,7 +5,6 @@ import type { Contract } from 'ethers';
 import { expect } from 'chai';
 import { chainConfigs, abis } from '@railgun-community/deployments';
 import { ChainConfig } from '@railgun-community/deployments/dist/types';
-import { grantBalance } from '../hardhat.utils';
 import { Voting, ProposalEvent } from '../typechain-types/contracts/governance/Voting';
 import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
@@ -58,12 +57,12 @@ async function prep(chainConfig: ChainConfig) {
 }
 
 /**
- * Get proposal calls
+ * Get task calls
  *
  * @param chainConfig - chain config
- * @returns Proposal calls
+ * @returns Task calls
  */
-async function getProposalCalls(chainConfig: ChainConfig): Promise<Voting.CallStruct[]> {
+async function getTaskCalls(chainConfig: ChainConfig): Promise<Voting.CallStruct[]> {
   const sender = await ethers.getContractAt('ISender', ethers.constants.AddressZero);
 
   // GET L2 TASKS CALLS
@@ -103,46 +102,6 @@ async function testProposalUpgrade(chainConfig: ChainConfig) {
   // WRITE TESTS TO CHECK FOR SUCCESSFUL UPGRADE HERE
   expect(typeof chainConfig).to.equal('object');
   await mine();
-}
-
-/**
- * Increase governance token balance for testing
- *
- * @param chainConfig - chain config
- * @returns complete
- */
-async function becomeWhale(chainConfig: ChainConfig) {
-  // Set balance of governance token to 100 million
-  await grantBalance(
-    hre,
-    (
-      await ethers.getSigners()
-    )[0].address,
-    chainConfig.rail.address,
-    100000000n * 10n ** 18n,
-  );
-}
-
-/**
- * Stake all rail tokens
- *
- * @param chainConfig - chain config
- * @returns complete
- */
-async function stakeAll(chainConfig: ChainConfig) {
-  // Get contracts
-  const rail = (await ethers.getContractFactory('TestERC20')).attach(chainConfig.rail.address);
-  const staking = (await ethers.getContractFactory('Staking')).attach(chainConfig.staking.address);
-
-  // Approve and stake all rail rail
-  await (
-    await rail.approve(
-      staking.address,
-      await rail.balanceOf((await ethers.getSigners())[0].address),
-    )
-  ).wait();
-
-  await (await staking.stake(await rail.balanceOf((await ethers.getSigners())[0].address))).wait();
 }
 
 /**
@@ -244,7 +203,7 @@ async function submit(chainConfig: ChainConfig) {
   await prep(chainConfig);
 
   console.log('\nGETTING PROPOSAL CALLS');
-  const calls = await getProposalCalls(chainConfig);
+  const calls = await getTaskCalls(chainConfig);
 
   console.log('\nSUBMITTING PROPOSAL');
   const proposalID = await submitProposal(chainConfig, calls);

@@ -7,12 +7,14 @@ import { ArbRetryableTx } from "@arbitrum/nitro-contracts/src/precompiles/ArbRet
 
 import { Delegator } from "../Delegator.sol";
 
+import { IL2Executor } from "../IL2Executor.sol";
+
 /**
  * @title Executor
  * @author Railgun Contributors
  * @notice Stores instructions to execute after L1 sender confirms
  */
-contract ArbitrumExecutor {
+contract ArbitrumExecutor is IL2Executor {
   // Addresses
   ArbRetryableTx public constant ARB_RETRYABLE_TX =
     ArbRetryableTx(0x000000000000000000000000000000000000006E);
@@ -22,13 +24,6 @@ contract ArbitrumExecutor {
   Delegator public immutable DELEGATOR; // Delegator contract
 
   uint256 public constant EXPIRY_TIME = 40 days;
-
-  // Action structure
-  struct Action {
-    address callContract;
-    bytes data;
-    uint256 value;
-  }
 
   enum ExecutionState {
     Created,
