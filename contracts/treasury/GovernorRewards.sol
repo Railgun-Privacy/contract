@@ -464,8 +464,15 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       true
     );
 
+    IERC20 previousToken;
+
     // Mark all claimed intervals
     for (uint256 token = 0; token < _tokens.length; token += 1) {
+      require(
+        uint160(address(_tokens[token])) > uint160(address(previousToken)),
+        "GovernorRewards: Duplicate token or tokens aren't ordered"
+      );
+
       // Get claimed bitmap for token
       BitMaps.BitMap storage tokenClaimedMap = claimedBitmap[_account][_tokens[token]];
 
@@ -473,6 +480,8 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
       for (uint256 interval = _startingInterval; interval <= _endingInterval; interval += 1) {
         tokenClaimedMap.set(interval);
       }
+
+      previousToken = _tokens[token];
     }
 
     // Loop through and transfer tokens (separate loop to prevent reentrancy)

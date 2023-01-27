@@ -85,7 +85,7 @@ describe('Treasury/IntervalPayout', () => {
     // Should prevent payouts after the last interval
     for (let i = 0; i < totalPayouts; i += 1) {
       expect(await intervalPayouts.ready()).to.equal(false);
-      await expect(intervalPayouts.payout()).to.eventually.be.rejectedWith(
+      await expect(intervalPayouts.payout()).to.be.revertedWith(
         'IntervalPayouts: Payout not ready',
       );
 

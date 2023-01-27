@@ -236,6 +236,11 @@ contract RelayAdapt {
       // Retrieve call
       Call calldata call = _calls[i];
 
+      // Don't allow calls to Railgun contract in multicall
+      if (call.to == address(railgun)) {
+        revert CallFailed(i, bytes("RelayAdapt: Refusing to call Railgun contract"));
+      }
+
       // Execute call
       // solhint-disable-next-line avoid-low-level-calls
       (bool success, bytes memory returned) = call.to.call{ value: call.value }(call.data);

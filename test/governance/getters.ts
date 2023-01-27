@@ -30,12 +30,16 @@ describe('Governance/Getters', () => {
       await rail.balanceOf((await ethers.getSigners())[0].address),
     );
 
-    // Deploy a bunch of tokens to use as distribution tokens
-    const distributionTokens = await Promise.all(
+    // Deploy a bunch of tokens to use as distribution tokens and sort by integer representation of address
+    const distributionTokensUnsorted = await Promise.all(
       Array(12)
         .fill(1)
         .map(() => ERC20.deploy()),
     );
+
+    const distributionTokens = distributionTokensUnsorted.sort((a, b) => {
+      return Number(BigInt(a.address) - BigInt(b.address));
+    });
 
     await Promise.all(
       distributionTokens.map(async (token) => token.mint(treasury.address, 2n ** 128n - 1n)),

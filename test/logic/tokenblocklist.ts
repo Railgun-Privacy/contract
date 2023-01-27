@@ -47,7 +47,7 @@ describe('Logic/TokenBlocklist', () => {
         '0x459086F2376525BdCebA5bDDA135e4E9d3FeF5bf',
         '0x1C5db575E2Ff833E46a2E9864C22F4B22E0B37C2',
       ]),
-    ).to.be.rejectedWith('Ownable: caller is not the owner');
+    ).to.be.revertedWith('Ownable: caller is not the owner');
 
     const addToList = await tokenBlocklist.addToBlocklist([
       '0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D',
@@ -95,7 +95,7 @@ describe('Logic/TokenBlocklist', () => {
         '0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D',
         '0x3832d2F059E55934220881F831bE501D180671A7',
       ]),
-    ).to.be.rejectedWith('Ownable: caller is not the owner');
+    ).to.be.revertedWith('Ownable: caller is not the owner');
 
     // Should remove from list
     const removeFromList = await tokenBlocklist.removeFromBlocklist([

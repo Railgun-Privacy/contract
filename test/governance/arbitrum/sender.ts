@@ -107,8 +107,8 @@ describe('Governance/Arbitrum/Sender', () => {
   it('Should not allow non-owner to call', async () => {
     const { sender } = await loadFixture(deploy);
 
-    await expect(sender.readyTask(3)).to.be.rejectedWith('Ownable: caller is not the owner');
-    await expect(sender.setExecutorL2(ethers.constants.AddressZero)).to.be.rejectedWith(
+    await expect(sender.readyTask(3)).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(sender.setExecutorL2(ethers.constants.AddressZero)).to.be.revertedWith(
       'Ownable: caller is not the owner',
     );
   });
@@ -116,7 +116,7 @@ describe('Governance/Arbitrum/Sender', () => {
   it('Should not allow setting executor to 0', async () => {
     const { senderAdmin } = await loadFixture(deploy);
 
-    await expect(senderAdmin.setExecutorL2(ethers.constants.AddressZero)).to.be.rejectedWith(
+    await expect(senderAdmin.setExecutorL2(ethers.constants.AddressZero)).to.be.revertedWith(
       'ArbitrumSender: Executor address is 0',
     );
   });

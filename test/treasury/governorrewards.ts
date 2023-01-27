@@ -26,12 +26,16 @@ describe('Treasury/GovernorRewards', () => {
     const treasury = await Treasury.deploy();
     let governorRewards = await GovernorRewards.deploy();
 
-    // Deploy a bunch of tokens to use as distribution tokens
-    const distributionTokens = await Promise.all(
+    // Deploy a bunch of tokens to use as distribution tokens and sort by integer representation of address
+    const distributionTokensUnsorted = await Promise.all(
       Array(12)
         .fill(1)
         .map(() => ERC20.deploy()),
     );
+
+    const distributionTokens = distributionTokensUnsorted.sort((a, b) => {
+      return Number(BigInt(a.address) - BigInt(b.address));
+    });
 
     await Promise.all(
       distributionTokens.map(async (token) =>
@@ -203,8 +207,8 @@ describe('Treasury/GovernorRewards', () => {
     // Incorrect number of hints should throw
     await expect(
       governorRewards.fetchAccountSnapshots(0, 0, users[0].signer.address, []),
-    ).to.be.rejectedWith('GovernorRewards: Incorrect number of hints given');
-    await expect(governorRewards.fetchGlobalSnapshots(0, 0, [])).to.be.rejectedWith(
+    ).to.be.revertedWith('GovernorRewards: Incorrect number of hints given');
+    await expect(governorRewards.fetchGlobalSnapshots(0, 0, [])).to.be.revertedWith(
       'GovernorRewards: Incorrect number of hints given',
     );
 
@@ -688,6 +692,17 @@ describe('Treasury/GovernorRewards', () => {
 
       totalRewards += intervalEarmarked / 2n;
     }
+
+    // Should not be able to claim if tokens aren't ordered correctly
+    await expect(
+      governorRewards.claim(
+        distributionTokens.map((token) => token.address).reverse(),
+        users[1].signer.address,
+        0,
+        9,
+        Array(10).fill(0) as number[],
+      ),
+    ).to.be.revertedWith("GovernorRewards: Duplicate token or tokens aren't ordered");
 
     // Claim rewards
     await expect(

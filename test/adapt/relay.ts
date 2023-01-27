@@ -573,7 +573,9 @@ describe('Adapt/Relay', () => {
   });
 
   it('Should multicall', async () => {
-    const { primaryAccount, relayAdapt, testERC20Tokens } = await loadFixture(deploy);
+    const { primaryAccount, relayAdapt, testERC20Tokens, railgunSmartWallet } = await loadFixture(
+      deploy,
+    );
 
     // Deploy multicall target
     const GovernanceStateChangeTargetStub = await ethers.getContractFactory(
@@ -707,6 +709,17 @@ describe('Adapt/Relay', () => {
         },
       ]),
     ).to.eventually.be.fulfilled;
+
+    // Should fail if call is to core contract
+    await expect(
+      relayAdapt.multicall(true, [
+        {
+          to: railgunSmartWallet.address,
+          data: railgunSmartWallet.interface.encodeFunctionData('transact', [[]]),
+          value: 0n,
+        },
+      ]),
+    ).to.be.revertedWithCustomError(relayAdapt, 'CallFailed');
   });
 
   it('Should submit relay bundle', async () => {
