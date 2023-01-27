@@ -111,9 +111,9 @@ task(
 
     // Load vectors
     const vectors = [
-      1n,
-      2n,
-      3n,
+      11991246288605610400503475935212977408987627520n,
+      135932600361240488372092990340179579737061982208n,
+      1165567609304106647721713521036586302480100360192n,
     ];
     for (const vector of vectors) {
       await railgun.addVector(vector);

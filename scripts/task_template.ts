@@ -93,16 +93,13 @@ async function submitTask(
   calls: IL2Executor.ActionStruct[],
 ): Promise<string> {
   // Get contract
-  const iL2Executor = await ethers.getContractAt(
-    'IL2Executor',
-    chainConfig.arbitrumExecutor.address,
-  );
+  const iL2Executor = await ethers.getContractAt('IL2Executor', chainConfig.L2Executor.address);
 
   // Submit task
   const tx = await iL2Executor.createTask(calls);
   const result = await tx.wait();
 
-  // Return txid
+  // Return transaction hash
   return result.transactionHash;
 }
 
@@ -118,7 +115,7 @@ async function runTaskForkMode(
   calls: IL2Executor.ActionStruct[],
 ): Promise<void> {
   // Get impersonated signer
-  const executorSigner = await ethers.getImpersonatedSigner(chainConfig.arbitrumExecutor.address);
+  const executorSigner = await ethers.getImpersonatedSigner(chainConfig.L2Executor.address);
 
   const delegator = (
     await ethers.getContractAt('Delegator', chainConfig.delegator.address)
