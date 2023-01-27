@@ -58,9 +58,8 @@ task('storage:export', 'Export Storage layouts')
 
         const [file, contract] = contractName.split(':');
 
-        const storageLayout = info.output.contracts[file][contract]
-        // @ts-expect-error extra data injected by solidity compiler
-          .storageLayout as ContractStorage;
+        const storageLayout = // @ts-expect-error extra data injected by solidity compiler
+          info.output.contracts[file][contract].storageLayout as ContractStorage;
 
         const storageArray: Storage[][] = [];
 

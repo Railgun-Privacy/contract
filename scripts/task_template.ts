@@ -1,14 +1,10 @@
 import readline from 'readline';
-import hre from 'hardhat';
 import { ethers } from 'hardhat';
 import type { Contract } from 'ethers';
 import { expect } from 'chai';
 import { chainConfigs, abis } from '@railgun-community/deployments';
 import { ChainConfig } from '@railgun-community/deployments/dist/types';
 import { IL2Executor } from '../typechain-types/contracts/governance/IL2Executor';
-
-// Set this to the task document IPFS hash
-const TASK_DOCUMENT = '';
 
 // Store new deployments here as contract name : address KV pairs
 const NEW_DEPLOYMENTS: Record<string, string> = {};
@@ -43,6 +39,7 @@ async function logVerify(
 async function prep(chainConfig: ChainConfig) {
   // WRITE PREPARATION CODE FOR TEST (EG DEPLOY IMPLEMENTATION CONTRACT FOR UPGRADE)
   expect(typeof chainConfig).to.equal('object');
+  console.log((await ethers.getSigners())[0].address);
   NEW_DEPLOYMENTS.a = 'a';
   console.log(logVerify);
 }
@@ -54,7 +51,7 @@ async function prep(chainConfig: ChainConfig) {
  * @returns Task calls
  */
 async function getTaskCalls(chainConfig: ChainConfig): Promise<IL2Executor.ActionStruct[]> {
-  // REWRITE THE REST OF THIS FUNCTION TO RETURN THE CALLS FOR YOUR TASK
+  // REWRITE THIS FUNCTION TO RETURN THE CALLS FOR YOUR TASK
   // EG UPGRADE IMPLEMENTATION CONTRACT
   const rail = new ethers.Contract(chainConfig.rail.address, abis.rail, ethers.provider);
 
@@ -81,6 +78,7 @@ async function getTaskCalls(chainConfig: ChainConfig): Promise<IL2Executor.Actio
 async function testTaskExecution(chainConfig: ChainConfig) {
   // WRITE TESTS TO CHECK FOR SUCCESSFUL UPGRADE HERE
   expect(typeof chainConfig).to.equal('object');
+  console.log((await ethers.getSigners())[0].address);
 }
 
 /**
@@ -93,17 +91,43 @@ async function testTaskExecution(chainConfig: ChainConfig) {
 async function submitTask(
   chainConfig: ChainConfig,
   calls: IL2Executor.ActionStruct[],
-): Promise<number> {
+): Promise<string> {
   // Get contract
-  const IL2Executor = await ethers.getContractAt('IL2Executor', chainConfig.arbitrumExecutor.address);
+  const iL2Executor = await ethers.getContractAt(
+    'IL2Executor',
+    chainConfig.arbitrumExecutor.address,
+  );
 
   // Submit task
-  const tx = await voting.createTask(TASK_DOCUMENT, calls);
+  const tx = await iL2Executor.createTask(calls);
   const result = await tx.wait();
 
-  // Return task ID
-  const events = result.events as [TaskEvent];
-  return events[0].args.id.toNumber();
+  // Return txid
+  return result.transactionHash;
+}
+
+/**
+ * Runs task in fork mode
+ *
+ * @param chainConfig - chain config
+ * @param calls - calls
+ * @returns task ID
+ */
+async function runTaskForkMode(
+  chainConfig: ChainConfig,
+  calls: IL2Executor.ActionStruct[],
+): Promise<void> {
+  // Get impersonated signer
+  const executorSigner = await ethers.getImpersonatedSigner(chainConfig.arbitrumExecutor.address);
+
+  const delegator = (
+    await ethers.getContractAt('Delegator', chainConfig.delegator.address)
+  ).connect(executorSigner);
+
+  for (const call of calls) {
+    console.log(call);
+    await (await delegator.callContract(call.callContract, call.data, call.value)).wait();
+  }
 }
 
 /**
@@ -143,9 +167,9 @@ async function submit(chainConfig: ChainConfig) {
   const calls = await getTaskCalls(chainConfig);
 
   console.log('\nSUBMITTING TASK');
-  const taskID = await submitTask(chainConfig, calls);
+  const transactionHash = await submitTask(chainConfig, calls);
 
-  console.log('Task ID: ', taskID);
+  console.log('Task creation transaction: ', transactionHash);
 }
 
 /**
@@ -161,12 +185,8 @@ async function test(chainConfig: ChainConfig) {
   console.log('\nGETTING TASK CALLS');
   const calls = await getTaskCalls(chainConfig);
 
-  console.log('\nSUBMITTING TASK');
-  const taskID = await submitTask(chainConfig, calls);
-  console.log('Task ID: ', taskID);
-
-  console.log('\nPASSING TASK');
-  await passTask(chainConfig, taskID);
+  console.log('\nRUNNING TASK');
+  await runTaskForkMode(chainConfig, calls);
 
   console.log('\nTESTING TASK');
   await testTaskExecution(chainConfig);
