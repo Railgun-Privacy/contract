@@ -5,21 +5,13 @@ import type { Contract } from 'ethers';
 import { expect } from 'chai';
 import { chainConfigs, abis } from '@railgun-community/deployments';
 import { ChainConfig } from '@railgun-community/deployments/dist/types';
-import { Voting, ProposalEvent } from '../typechain-types/contracts/governance/Voting';
-import { mine } from '@nomicfoundation/hardhat-network-helpers';
-import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
+import { IL2Executor } from '../typechain-types/contracts/governance/IL2Executor';
 
-// Set this to the proposal document IPFS hash
-const PROPOSAL_DOCUMENT = '';
+// Set this to the task document IPFS hash
+const TASK_DOCUMENT = '';
 
 // Store new deployments here as contract name : address KV pairs
 const NEW_DEPLOYMENTS: Record<string, string> = {};
-
-// Tasks to execute on L2s
-const L2_TASKS: {
-  sender: string;
-  taskNumber: number;
-}[] = [];
 
 /**
  * Log data to verify contract
@@ -53,7 +45,6 @@ async function prep(chainConfig: ChainConfig) {
   expect(typeof chainConfig).to.equal('object');
   NEW_DEPLOYMENTS.a = 'a';
   console.log(logVerify);
-  await mine();
 }
 
 /**
@@ -62,23 +53,12 @@ async function prep(chainConfig: ChainConfig) {
  * @param chainConfig - chain config
  * @returns Task calls
  */
-async function getTaskCalls(chainConfig: ChainConfig): Promise<Voting.CallStruct[]> {
-  const sender = await ethers.getContractAt('ISender', ethers.constants.AddressZero);
-
-  // GET L2 TASKS CALLS
-  const l2TaskCalls: Voting.CallStruct[] = L2_TASKS.map((task) => {
-    return {
-      callContract: task.sender,
-      data: sender.interface.encodeFunctionData('readyTask', [task.taskNumber]),
-      value: 0,
-    };
-  });
-
-  // REWRITE THE REST OF THIS FUNCTION TO RETURN THE CALLS FOR YOUR PROPOSAL
+async function getTaskCalls(chainConfig: ChainConfig): Promise<IL2Executor.ActionStruct[]> {
+  // REWRITE THE REST OF THIS FUNCTION TO RETURN THE CALLS FOR YOUR TASK
   // EG UPGRADE IMPLEMENTATION CONTRACT
   const rail = new ethers.Contract(chainConfig.rail.address, abis.rail, ethers.provider);
 
-  const otherCalls: Voting.CallStruct[] = [
+  const calls: IL2Executor.ActionStruct[] = [
     {
       callContract: chainConfig.rail.address,
       data: rail.interface.encodeFunctionData('balanceOf', [
@@ -89,84 +69,41 @@ async function getTaskCalls(chainConfig: ChainConfig): Promise<Voting.CallStruct
   ];
 
   // Return
-  return [...l2TaskCalls, ...otherCalls];
+  return calls;
 }
 
 /**
- * Test proposal upgrade
+ * Test task execution
  *
  * @param chainConfig - chain config
  * @returns complete
  */
-async function testProposalUpgrade(chainConfig: ChainConfig) {
+async function testTaskExecution(chainConfig: ChainConfig) {
   // WRITE TESTS TO CHECK FOR SUCCESSFUL UPGRADE HERE
   expect(typeof chainConfig).to.equal('object');
-  await mine();
 }
 
 /**
- * Submits proposal
+ * Submit task
  *
  * @param chainConfig - chain config
  * @param calls - calls
- * @returns proposal ID
+ * @returns task ID
  */
-async function submitProposal(
+async function submitTask(
   chainConfig: ChainConfig,
-  calls: Voting.CallStruct[],
+  calls: IL2Executor.ActionStruct[],
 ): Promise<number> {
   // Get contract
-  const voting = (await ethers.getContractFactory('Voting')).attach(chainConfig.voting.address);
+  const IL2Executor = await ethers.getContractAt('IL2Executor', chainConfig.arbitrumExecutor.address);
 
-  // Submit proposal
-  const tx = await voting.createProposal(PROPOSAL_DOCUMENT, calls);
+  // Submit task
+  const tx = await voting.createTask(TASK_DOCUMENT, calls);
   const result = await tx.wait();
 
-  // Return proposal ID
-  const events = result.events as [ProposalEvent];
+  // Return task ID
+  const events = result.events as [TaskEvent];
   return events[0].args.id.toNumber();
-}
-
-/**
- * Passes proposal in test environment
- *
- * @param chainConfig - chain config
- * @param proposalID - proposal ID to pass
- * @returns complete
- */
-async function passProposal(chainConfig: ChainConfig, proposalID: number) {
-  // Get contract
-  const voting = (await ethers.getContractFactory('Voting')).attach(chainConfig.voting.address);
-
-  // Get parameters
-  const votingStartOffset = await voting.VOTING_START_OFFSET();
-  const executionStartOffset = await voting.EXECUTION_START_OFFSET();
-  const quorum = await voting.QUORUM();
-  const proposalSponsorThreshold = await voting.PROPOSAL_SPONSOR_THRESHOLD();
-
-  // Sponsor and send proposal to vote
-  await voting.sponsorProposal(
-    proposalID,
-    proposalSponsorThreshold,
-    (
-      await ethers.getSigners()
-    )[0].address,
-    0n,
-  );
-  await voting.callVote(proposalID);
-
-  // Increase time to voting start offset
-  await increase(votingStartOffset);
-  await mine();
-
-  // Vote
-  await voting.vote(proposalID, quorum, true, (await ethers.getSigners())[0].address, 0n);
-
-  // Increase time to execution start
-  await increase(executionStartOffset.sub(votingStartOffset));
-
-  // Execute
-  await (await voting.executeProposal(proposalID)).wait();
 }
 
 /**
@@ -193,7 +130,7 @@ async function prompt(question: string): Promise<string> {
 }
 
 /**
- * Submit proposal on chain
+ * Submit task on chain
  *
  * @param chainConfig - chain config
  * @returns complete
@@ -202,53 +139,44 @@ async function submit(chainConfig: ChainConfig) {
   console.log('\nRUNNING PREP');
   await prep(chainConfig);
 
-  console.log('\nGETTING PROPOSAL CALLS');
+  console.log('\nGETTING TASK CALLS');
   const calls = await getTaskCalls(chainConfig);
 
-  console.log('\nSUBMITTING PROPOSAL');
-  const proposalID = await submitProposal(chainConfig, calls);
+  console.log('\nSUBMITTING TASK');
+  const taskID = await submitTask(chainConfig, calls);
 
-  console.log('Proposal ID: ', proposalID);
+  console.log('Task ID: ', taskID);
 }
 
 /**
- * Submits, passes, and runs tests against proposal
+ * Submits, passes, and runs tests against task
  *
  * @param chainConfig - chain config
  * @returns complete
  */
 async function test(chainConfig: ChainConfig) {
-  console.log('\nINCREASING RAIL BALANCE FOR VOTE');
-  await becomeWhale(chainConfig);
-
-  console.log('\nSTAKING ALL RAIL');
-  await stakeAll(chainConfig);
-
-  console.log('\nFAST FORWARDING TO SNAPSHOT');
-  await increase(86400);
-
   console.log('\nRUNNING PREP');
   await prep(chainConfig);
 
-  console.log('\nGETTING PROPOSAL CALLS');
-  const calls = await getProposalCalls(chainConfig);
+  console.log('\nGETTING TASK CALLS');
+  const calls = await getTaskCalls(chainConfig);
 
-  console.log('\nSUBMITTING PROPOSAL');
-  const proposalID = await submitProposal(chainConfig, calls);
-  console.log('Proposal ID: ', proposalID);
+  console.log('\nSUBMITTING TASK');
+  const taskID = await submitTask(chainConfig, calls);
+  console.log('Task ID: ', taskID);
 
-  console.log('\nPASSING PROPOSAL');
-  await passProposal(chainConfig, proposalID);
+  console.log('\nPASSING TASK');
+  await passTask(chainConfig, taskID);
 
-  console.log('\nTESTING PROPOSAL');
-  await testProposalUpgrade(chainConfig);
+  console.log('\nTESTING TASK');
+  await testTaskExecution(chainConfig);
 
-  console.log('\nTESTS PASSED FOR PROPOSAL CALLS:');
+  console.log('\nTESTS PASSED FOR TASK CALLS:');
   console.log(calls);
 }
 
 /**
- * Deploys proposal to chain where we have admin permissions
+ * Deploys task to chain where we have admin permissions
  *
  * @param chainConfig - chain config
  * @returns complete
@@ -257,12 +185,11 @@ async function adminDeploy(chainConfig: ChainConfig) {
   console.log('\nRUNNING PREP');
   await prep(chainConfig);
 
-  console.log('\nGETTING PROPOSAL CALLS');
-  const calls = await getProposalCalls(chainConfig);
+  console.log('\nGETTING TASK CALLS');
+  const calls = await getTaskCalls(chainConfig);
 
   console.log('\nRUNNING CALLS');
-  const Delegator = await ethers.getContractFactory('Delegator');
-  const delegator = Delegator.attach(chainConfig.delegator.address);
+  const delegator = await ethers.getContractAt('Delegator', chainConfig.delegator.address);
 
   for (const call of calls) {
     console.log(call);

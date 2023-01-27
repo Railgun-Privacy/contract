@@ -1,5 +1,4 @@
 import { task } from 'hardhat/config';
-import type { TaskArguments } from 'hardhat/types';
 
 import { loadAllArtifacts } from '../../helpers/logic/artifacts';
 import type { Contract } from 'ethers';
@@ -30,12 +29,9 @@ task(
   'Creates deployment without governance (eg. for use in rollup deployments)',
 )
   .addParam('weth9', 'Address of WETH9 wrapped base token contract')
-  .setAction(async function (taskArguments: TaskArguments, hre) {
+  .setAction(async function ({ weth9 }: { weth9: string }, hre) {
     const { ethers } = hre;
     await hre.run('compile');
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const WETH9_ADDRESS = taskArguments.weth9 as string;
 
     // Get build artifacts
     const Delegator = await ethers.getContractFactory('Delegator');
@@ -120,8 +116,8 @@ task(
 
     // Deploy RelayAdapt
     console.log('\nDeploying Relay Adapt');
-    const relayAdapt = await RelayAdapt.deploy(proxy.address, WETH9_ADDRESS);
-    await logVerify('Relay Adapt', relayAdapt, [proxy.address, WETH9_ADDRESS]);
+    const relayAdapt = await RelayAdapt.deploy(proxy.address, weth9);
+    await logVerify('Relay Adapt', relayAdapt, [proxy.address, weth9]);
 
     console.log('\nDEPLOY CONFIG:');
     console.log({

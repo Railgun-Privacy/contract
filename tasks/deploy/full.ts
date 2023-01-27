@@ -1,5 +1,4 @@
 import { task } from 'hardhat/config';
-import type { TaskArguments } from 'hardhat/types';
 
 import { loadAllArtifacts } from '../../helpers/logic/artifacts';
 import type { Contract } from 'ethers';
@@ -29,16 +28,12 @@ task('deploy:full', 'Creates full deployment')
   .addParam('railName', 'Name of Rail ERC20 governance token')
   .addParam('railSymbol', 'Symbol of Rail ERC20 governance token')
   .addParam('weth9', 'Address of WETH9 wrapped base token contract')
-  .setAction(async function (taskArguments: TaskArguments, hre) {
+  .setAction(async function (
+    { railName, railSymbol, weth9 }: { railName: string; railSymbol: string; weth9: string },
+    hre,
+  ) {
     const { ethers } = hre;
     await hre.run('compile');
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const RAIL_NAME = taskArguments.railName as string;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const RAIL_SYMBOL = taskArguments.railSymbol as string;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const WETH9_ADDRESS = taskArguments.weth9 as string;
 
     // Get build artifacts
     const Delegator = await ethers.getContractFactory('Delegator');
@@ -70,8 +65,8 @@ task('deploy:full', 'Creates full deployment')
         await ethers.getSigners()
       )[0].address,
       50000000n * 10n ** 18n,
-      RAIL_NAME,
-      RAIL_SYMBOL,
+      railName,
+      railSymbol,
     );
     await logVerify('AdminERC20', rail, ['RailTest', 'RAILTEST']);
 
@@ -146,8 +141,8 @@ task('deploy:full', 'Creates full deployment')
 
     // Deploy RelayAdapt
     console.log('\nDeploying Relay Adapt');
-    const relayAdapt = await RelayAdapt.deploy(proxy.address, WETH9_ADDRESS);
-    await logVerify('Relay Adapt', relayAdapt, [proxy.address, WETH9_ADDRESS]);
+    const relayAdapt = await RelayAdapt.deploy(proxy.address, weth9);
+    await logVerify('Relay Adapt', relayAdapt, [proxy.address, weth9]);
 
     console.log('\nDEPLOY CONFIG:');
     console.log({

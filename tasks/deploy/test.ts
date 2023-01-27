@@ -1,5 +1,4 @@
 import { task } from 'hardhat/config';
-import type { TaskArguments } from 'hardhat/types';
 
 import * as weth9artifact from '@ethereum-artifacts/weth9';
 
@@ -28,7 +27,7 @@ async function logVerify(
 }
 
 task('deploy:test', 'Creates test environment deployment').setAction(async function (
-  taskArguments: TaskArguments,
+  taskArguments,
   hre,
 ) {
   const { ethers } = hre;

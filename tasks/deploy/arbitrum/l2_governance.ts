@@ -1,5 +1,4 @@
 import { task } from 'hardhat/config';
-import type { TaskArguments } from 'hardhat/types';
 
 import type { Contract } from 'ethers';
 
@@ -27,19 +26,17 @@ async function logVerify(
 task('deploy:arbitrum:l2_governance', 'Creates L2 governance deployment for arbitrum')
   .addParam('senderL1', 'Address of the sender contract on L1')
   .addParam('delegator', 'Address of the delegator contract on L2')
-  .setAction(async function (taskArguments: TaskArguments, hre) {
+  .setAction(async function (
+    { senderL1, delegator }: { senderL1: string; delegator: string },
+    hre,
+  ) {
     const { ethers } = hre;
     await hre.run('compile');
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const SENDER_L1 = taskArguments.senderL1 as string;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const DELEGATOR = taskArguments.delegator as string;
 
     // Get build artifacts
     const Executor = await ethers.getContractFactory('ArbitrumExecutor');
 
     // Deploy executor
-    const executor = await Executor.deploy(SENDER_L1, DELEGATOR);
-    await logVerify('Executor', executor, [SENDER_L1, DELEGATOR]);
+    const executor = await Executor.deploy(senderL1, delegator);
+    await logVerify('Executor', executor, [senderL1, delegator]);
   });

@@ -5,7 +5,6 @@ import type { Contract } from 'ethers';
 import { expect } from 'chai';
 import { chainConfigs, abis } from '@railgun-community/deployments';
 import { ChainConfig } from '@railgun-community/deployments/dist/types';
-import { grantBalance } from '../hardhat.utils';
 import { Voting, ProposalEvent } from '../typechain-types/contracts/governance/Voting';
 import { mine } from '@nomicfoundation/hardhat-network-helpers';
 import { increase } from '@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time';
@@ -113,14 +112,11 @@ async function testProposalUpgrade(chainConfig: ChainConfig) {
  */
 async function becomeWhale(chainConfig: ChainConfig) {
   // Set balance of governance token to 100 million
-  await grantBalance(
-    hre,
-    (
-      await ethers.getSigners()
-    )[0].address,
+  await hre.run('set-token-balance', [
+    (await ethers.getSigners())[0].address,
     chainConfig.rail.address,
-    100000000n * 10n ** 18n,
-  );
+    (100000000n * 10n ** 18n).toString(),
+  ]);
 }
 
 /**
@@ -131,8 +127,8 @@ async function becomeWhale(chainConfig: ChainConfig) {
  */
 async function stakeAll(chainConfig: ChainConfig) {
   // Get contracts
-  const rail = (await ethers.getContractFactory('TestERC20')).attach(chainConfig.rail.address);
-  const staking = (await ethers.getContractFactory('Staking')).attach(chainConfig.staking.address);
+  const rail = await ethers.getContractAt('TestERC20', chainConfig.rail.address);
+  const staking = await ethers.getContractAt('Staking', chainConfig.staking.address);
 
   // Approve and stake all rail rail
   await (
@@ -157,7 +153,7 @@ async function submitProposal(
   calls: Voting.CallStruct[],
 ): Promise<number> {
   // Get contract
-  const voting = (await ethers.getContractFactory('Voting')).attach(chainConfig.voting.address);
+  const voting = await ethers.getContractAt('Voting', chainConfig.voting.address);
 
   // Submit proposal
   const tx = await voting.createProposal(PROPOSAL_DOCUMENT, calls);
@@ -177,7 +173,7 @@ async function submitProposal(
  */
 async function passProposal(chainConfig: ChainConfig, proposalID: number) {
   // Get contract
-  const voting = (await ethers.getContractFactory('Voting')).attach(chainConfig.voting.address);
+  const voting = await ethers.getContractAt('Voting', chainConfig.voting.address);
 
   // Get parameters
   const votingStartOffset = await voting.VOTING_START_OFFSET();
@@ -302,8 +298,7 @@ async function adminDeploy(chainConfig: ChainConfig) {
   const calls = await getProposalCalls(chainConfig);
 
   console.log('\nRUNNING CALLS');
-  const Delegator = await ethers.getContractFactory('Delegator');
-  const delegator = Delegator.attach(chainConfig.delegator.address);
+  const delegator = await ethers.getContractAt('Delegator', chainConfig.delegator.address);
 
   for (const call of calls) {
     console.log(call);

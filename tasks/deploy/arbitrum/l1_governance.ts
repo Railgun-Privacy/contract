@@ -1,5 +1,4 @@
 import { task } from 'hardhat/config';
-import type { TaskArguments } from 'hardhat/types';
 
 import type { Contract } from 'ethers';
 
@@ -26,12 +25,9 @@ async function logVerify(
 
 task('deploy:arbitrum:l1_governance', 'Creates L1 governance deployment for arbitrum')
   .addParam('inbox', 'Address of arbitrum delayed inbox contract')
-  .setAction(async function (taskArguments: TaskArguments, hre) {
+  .setAction(async function ({ inbox }: { inbox: string }, hre) {
     const { ethers } = hre;
     await hre.run('compile');
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const INBOX = taskArguments.inbox as string;
 
     // Get build artifacts
     const Sender = await ethers.getContractFactory('ArbitrumSender');
@@ -42,12 +38,12 @@ task('deploy:arbitrum:l1_governance', 'Creates L1 governance deployment for arbi
         await ethers.getSigners()
       )[0].address,
       '0x0000000000000000000000000000000000000001',
-      INBOX,
+      inbox,
     );
     await logVerify('Sender', sender, [
       (await ethers.getSigners())[0].address,
       '0x0000000000000000000000000000000000000001',
-      INBOX,
+      inbox,
     ]);
 
     console.log(
