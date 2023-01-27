@@ -109,6 +109,16 @@ task(
     console.log('\nSetting Artifacts');
     await loadAllArtifacts(railgun);
 
+    // Load vectors
+    const vectors = [
+      1n,
+      2n,
+      3n,
+    ];
+    for (const vector of vectors) {
+      await railgun.addVector(vector);
+    }
+
     // Transfer contract ownerships
     console.log('\nTransferring ownerships');
     await (await railgun.transferOwnership(delegator.address)).wait();
