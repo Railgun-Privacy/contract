@@ -133,16 +133,6 @@ task('deploy:full', 'Creates full deployment')
     console.log('\nSetting Artifacts');
     await loadAllArtifacts(railgun);
 
-    // Load vectors
-    const vectors = [
-      11991246288605610400503475935212977408987627520n,
-      135932600361240488372092990340179579737061982208n,
-      1165567609304106647721713521036586302480100360192n,
-    ];
-    for (const vector of vectors) {
-      await railgun.addVector(vector);
-    }
-
     // Transfer contract ownerships
     console.log('\nTransferring ownerships');
     await (await railgun.transferOwnership(delegator.address)).wait();

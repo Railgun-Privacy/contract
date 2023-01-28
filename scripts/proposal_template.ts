@@ -63,7 +63,7 @@ async function prep(chainConfig: ChainConfig) {
  * @returns Proposal calls
  */
 async function getProposalCalls(chainConfig: ChainConfig): Promise<Voting.CallStruct[]> {
-  const sender = await ethers.getContractAt('ISender', ethers.constants.AddressZero);
+  const sender = await ethers.getContractAt('IL2Sender', ethers.constants.AddressZero);
 
   // GET L2 TASKS CALLS
   const l2TaskCalls: Voting.CallStruct[] = L2_TASKS.map((task) => {
