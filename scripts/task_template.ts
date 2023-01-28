@@ -1,5 +1,6 @@
 import readline from 'readline';
 import { ethers } from 'hardhat';
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import type { Contract } from 'ethers';
 import { expect } from 'chai';
 import { chainConfigs, abis } from '@railgun-community/deployments';
@@ -114,8 +115,9 @@ async function runTaskForkMode(
   chainConfig: ChainConfig,
   calls: IL2Executor.ActionStruct[],
 ): Promise<void> {
-  // Get impersonated signer
+  // Get impersonated signer and set balance
   const executorSigner = await ethers.getImpersonatedSigner(chainConfig.L2Executor.address);
+  await setBalance(chainConfig.L2Executor.address, 100n * 10n ** 18n);
 
   const delegator = (
     await ethers.getContractAt('Delegator', chainConfig.delegator.address)

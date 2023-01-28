@@ -19,7 +19,7 @@ task('set-token-balance', 'Sets balance of ERC20 token')
       hre,
     ) => {
       // Format balance
-      const balanceFormatted = `0x${balance.padStart(64, '0')}`;
+      const balanceFormatted = `0x${BigInt(balance).toString(16).padStart(64, '0')}`;
 
       // Get token
       const ERC20 = await hre.ethers.getContractFactory('TestERC20');
