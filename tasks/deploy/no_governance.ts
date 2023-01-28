@@ -47,7 +47,7 @@ task(
     const poseidonT4 = await PoseidonT4.deploy();
 
     // Get Railgun Smart Wallet
-    const RailgunSmartWallet = await ethers.getContractFactory('RailgunSmartWalletStub', {
+    const RailgunSmartWallet = await ethers.getContractFactory('RailgunSmartWallet', {
       libraries: {
         PoseidonT3: poseidonT3.address,
         PoseidonT4: poseidonT4.address,
