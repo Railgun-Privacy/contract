@@ -3,6 +3,7 @@ import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
 import '@typechain/hardhat';
+import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-local-networks-config-plugin';
@@ -20,6 +21,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 1600,
       },
+      viaIR: true,
       outputSelection: {
         '*': {
           '*': ['storageLayout'],
