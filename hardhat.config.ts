@@ -15,16 +15,28 @@ import mocharc from './.mocharc.json';
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   solidity: {
-    version: '0.8.17',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 1600,
+    compilers: [
+      {
+        version: '0.8.17',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1600,
+          },
+          viaIR: true,
+          outputSelection: {
+            '*': {
+              '*': ['storageLayout'],
+            },
+          },
+        },
       },
-      viaIR: true,
-      outputSelection: {
-        '*': {
-          '*': ['storageLayout'],
+    ],
+    overrides: {
+      'contracts/proxy/Proxy.sol': {
+        version: '0.8.17',
+        settings: {
+          viaIR: false,
         },
       },
     },

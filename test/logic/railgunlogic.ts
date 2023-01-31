@@ -924,7 +924,7 @@ describe('Logic/RailgunLogic', () => {
             token: preimageERC20.token,
             value: base,
           },
-        ])([adjustedPreimageERC20]),
+        ])([adjustedPreimageERC20[0]]),
       ).to.equal(true);
 
       // Check balances are transferred
@@ -957,7 +957,7 @@ describe('Logic/RailgunLogic', () => {
       const adjustedPreimageERC721 = await railgunLogic.callStatic.transferTokenInStub(
         preimageERC721,
       );
-      expect(commitmentPreimageMatcher([preimageERC721])([adjustedPreimageERC721])).to.equal(true);
+      expect(commitmentPreimageMatcher([preimageERC721])([adjustedPreimageERC721[0]])).to.equal(true);
 
       // Check ERC721 is transferred
       await railgunLogic.transferTokenInStub(await erc721Note.getCommitmentPreimage());

@@ -23,6 +23,7 @@ contract RailgunSmartWallet is RailgunLogic {
     bytes32[] memory insertionLeaves = new bytes32[](_shieldRequests.length);
     CommitmentPreimage[] memory commitments = new CommitmentPreimage[](_shieldRequests.length);
     ShieldCiphertext[] memory shieldCiphertext = new ShieldCiphertext[](_shieldRequests.length);
+    uint256[] memory fees = new uint256[](_shieldRequests.length);
 
     // Loop through each note and process
     for (uint256 notesIter = 0; notesIter < _shieldRequests.length; notesIter += 1) {
@@ -33,7 +34,7 @@ contract RailgunSmartWallet is RailgunLogic {
       require(valid, string.concat("RailgunSmartWallet: ", reason));
 
       // Process shield request and store adjusted note
-      commitments[notesIter] = RailgunLogic.transferTokenIn(_shieldRequests[notesIter].preimage);
+      (commitments[notesIter], fees[notesIter]) = RailgunLogic.transferTokenIn(_shieldRequests[notesIter].preimage);
 
       // Hash note for merkle tree insertion
       insertionLeaves[notesIter] = RailgunLogic.hashCommitment(commitments[notesIter]);
@@ -43,7 +44,7 @@ contract RailgunSmartWallet is RailgunLogic {
     }
 
     // Emit Shield events (for wallets) for the commitments
-    emit Shield(Commitments.treeNumber, Commitments.nextLeafIndex, commitments, shieldCiphertext);
+    emit Shield(Commitments.treeNumber, Commitments.nextLeafIndex, commitments, shieldCiphertext, fees);
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);

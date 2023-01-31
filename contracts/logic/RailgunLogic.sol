@@ -68,7 +68,8 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint256 treeNumber,
     uint256 startPosition,
     CommitmentPreimage[] commitments,
-    ShieldCiphertext[] shieldCiphertext
+    ShieldCiphertext[] shieldCiphertext,
+    uint256[] fees
   );
 
   event Unshield(address to, TokenData token, uint256 amount, uint256 fee);
@@ -237,12 +238,13 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    */
   function transferTokenIn(
     CommitmentPreimage calldata _note
-  ) internal returns (CommitmentPreimage memory) {
+  ) internal returns (CommitmentPreimage memory, uint256) {
     // validateTransaction and accumulateAndNullifyTransaction functions MUST be called
     // in that order BEFORE invoking this function to process an unshield on a transaction
     // else reentrancy attacks are possible
 
     CommitmentPreimage memory adjustedNote;
+    uint256 treasuryFee;
 
     // Process shield request
     if (_note.token.tokenType == TokenType.ERC20) {
@@ -253,6 +255,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Get base and fee amounts
       (uint120 base, uint120 fee) = getFee(_note.value, true, RailgunLogic.shieldFee);
+
+      // Store treasury fee
+      treasuryFee = fee;
 
       // Set adjusted preimage
       adjustedNote = CommitmentPreimage({ npk: _note.npk, value: base, token: _note.token });
@@ -268,6 +273,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Get ERC721 interface
       IERC721 token = IERC721(address(uint160(_note.token.tokenAddress)));
 
+      // Treasury fee will be 0
+      treasuryFee = 0;
+
       // No need to adjust note
       adjustedNote = _note;
 
@@ -281,7 +289,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       revert("RailgunLogic: ERC1155 not yet supported");
     }
 
-    return adjustedNote;
+    return (adjustedNote, treasuryFee);
   }
 
   /**

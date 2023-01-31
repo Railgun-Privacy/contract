@@ -31,7 +31,7 @@ contract RailgunLogicStub is RailgunLogic {
 
   function transferTokenInStub(
     CommitmentPreimage calldata _note
-  ) external returns (CommitmentPreimage memory) {
+  ) external returns (CommitmentPreimage memory, uint256) {
     return RailgunLogic.transferTokenIn(_note);
   }
 
