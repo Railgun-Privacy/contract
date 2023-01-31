@@ -88,12 +88,28 @@ describe('Logic/RailgunLogic', () => {
     await testERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
     await testERC20BypassSigner.approve(railgunLogic.address, 2n ** 256n - 1n);
 
+    // Deploy test ERC20 and approve for shield
+    const NonTransferringERC20 = await ethers.getContractFactory('NonTransferringERC20');
+    const nonTransferringERC20 = await NonTransferringERC20.deploy();
+    const nonTransferringERC20BypassSigner = nonTransferringERC20.connect(snarkBypassSigner);
+    await nonTransferringERC20.mint(primaryAccount.address, 2n ** 128n - 1n);
+    await nonTransferringERC20.mint('0x000000000000000000000000000000000000dEaD', 2n ** 128n - 1n);
+    await nonTransferringERC20.approve(railgunLogic.address, 2n ** 256n - 1n);
+    await nonTransferringERC20BypassSigner.approve(railgunLogic.address, 2n ** 256n - 1n);
+
     // Deploy test ERC721 and approve for shield
     const TestERC721 = await ethers.getContractFactory('TestERC721');
     const testERC721 = await TestERC721.deploy();
     const testERC721BypassSigner = testERC721.connect(snarkBypassSigner);
     await testERC721.setApprovalForAll(railgunLogic.address, true);
     await testERC721BypassSigner.setApprovalForAll(railgunLogic.address, true);
+
+    // Deploy non-transferring ERC721 and approve for shield
+    const NonTransferringERC721 = await ethers.getContractFactory('NonTransferringERC721');
+    const nonTransferringERC721 = await NonTransferringERC721.deploy();
+    const nonTransferringERC721BypassSigner = nonTransferringERC721.connect(snarkBypassSigner);
+    await nonTransferringERC721.setApprovalForAll(railgunLogic.address, true);
+    await nonTransferringERC721BypassSigner.setApprovalForAll(railgunLogic.address, true);
 
     return {
       chainID,
@@ -107,6 +123,10 @@ describe('Logic/RailgunLogic', () => {
       testERC20BypassSigner,
       testERC721,
       testERC721BypassSigner,
+      nonTransferringERC20,
+      nonTransferringERC20BypassSigner,
+      nonTransferringERC721,
+      nonTransferringERC721BypassSigner,
     };
   }
 
@@ -651,19 +671,6 @@ describe('Logic/RailgunLogic', () => {
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
     ).to.deep.equal([true, '']);
 
-    // Should return false if nullifier has been seen before
-    await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], true);
-
-    expect(
-      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'Note already spent']);
-
-    await railgunLogic.setNullifier(0, dummyTransaction.nullifiers[0], false);
-
-    expect(
-      await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([true, '']);
-
     // Should return false if chainID is invalid
     dummyTransaction.boundParams.chainID += 1n;
 
@@ -792,16 +799,16 @@ describe('Logic/RailgunLogic', () => {
 
     const loops = 5;
 
-    // Create random viewing and spending keys
-    const spendingKey = randomBytes(32);
-    const viewingKey = randomBytes(32);
-    const tokenData = {
-      tokenType: TokenType.ERC20,
-      tokenAddress: ethers.constants.AddressZero,
-      tokenSubID: 0n,
-    };
-
     for (let i = 1; i < loops; i += 1) {
+      // Create random viewing and spending keys
+      const spendingKey = randomBytes(32);
+      const viewingKey = randomBytes(32);
+      const tokenData = {
+        tokenType: TokenType.ERC20,
+        tokenAddress: ethers.constants.AddressZero,
+        tokenSubID: 0n,
+      };
+
       // Create notes in and notes out
       const notesIn = new Array(i * 2)
         .fill(1)
@@ -826,27 +833,6 @@ describe('Logic/RailgunLogic', () => {
         notesIn,
         notesOut,
       );
-
-      // Check nullifier event is emitted
-      await expect(railgunLogic.accumulateAndNullifyTransactionStub(transaction, i, 0))
-        .to.emit(railgunLogic, 'Nullified')
-        .withArgs(0, nullifiersMatcher(transaction.nullifiers));
-
-      // Check returned values match transaction values
-      const accumulateAndNullifyReturned =
-        await railgunLogic.callStatic.accumulateAndNullifyTransactionStub(transaction, i, 0);
-
-      expect(accumulateAndNullifyReturned[0]).to.equal(i);
-
-      expect(accumulateAndNullifyReturned[1]).to.deep.equal(
-        transaction.commitments.map((commitment) => arrayToHexString(commitment, true)),
-      );
-
-      expect(
-        ciphertextMatcher(transaction.boundParams.commitmentCiphertext)(
-          accumulateAndNullifyReturned[2],
-        ),
-      ).to.equal(true);
 
       // Check returned values match transaction values with offset values
       const accumulateAndNullifyReturnedOffset =
@@ -876,6 +862,27 @@ describe('Logic/RailgunLogic', () => {
           ...transaction.boundParams.commitmentCiphertext,
         ])(accumulateAndNullifyReturnedOffset[2]),
       ).to.equal(true);
+
+      // Check returned values match transaction values
+      const accumulateAndNullifyReturned =
+        await railgunLogic.callStatic.accumulateAndNullifyTransactionStub(transaction, i, 0);
+
+      expect(accumulateAndNullifyReturned[0]).to.equal(i);
+
+      expect(accumulateAndNullifyReturned[1]).to.deep.equal(
+        transaction.commitments.map((commitment) => arrayToHexString(commitment, true)),
+      );
+
+      expect(
+        ciphertextMatcher(transaction.boundParams.commitmentCiphertext)(
+          accumulateAndNullifyReturned[2],
+        ),
+      ).to.equal(true);
+
+      // Check nullifier event is emitted
+      await expect(railgunLogic.accumulateAndNullifyTransactionStub(transaction, i, 0))
+        .to.emit(railgunLogic, 'Nullified')
+        .withArgs(0, nullifiersMatcher(transaction.nullifiers));
     }
   });
 
@@ -957,7 +964,9 @@ describe('Logic/RailgunLogic', () => {
       const adjustedPreimageERC721 = await railgunLogic.callStatic.transferTokenInStub(
         preimageERC721,
       );
-      expect(commitmentPreimageMatcher([preimageERC721])([adjustedPreimageERC721[0]])).to.equal(true);
+      expect(commitmentPreimageMatcher([preimageERC721])([adjustedPreimageERC721[0]])).to.equal(
+        true,
+      );
 
       // Check ERC721 is transferred
       await railgunLogic.transferTokenInStub(await erc721Note.getCommitmentPreimage());
@@ -1079,5 +1088,165 @@ describe('Logic/RailgunLogic', () => {
         railgunLogic.transferTokenOutStub(erc1155Note.getCommitmentPreimage()),
       ).to.be.revertedWith('RailgunLogic: ERC1155 not yet supported');
     }
+  });
+
+  it('Should transfer tokens in', async () => {
+    const { railgunLogic, testERC20, testERC721, treasuryAccount } = await loadFixture(deploy);
+
+    const loops = 5;
+
+    // Create random viewing and spending keys
+    const spendingKey = randomBytes(32);
+    const viewingKey = randomBytes(32);
+
+    const tokenDataERC20 = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0n,
+    };
+
+    for (let i = 1; i < loops; i += 1) {
+      // Check ERC20 gets transferred
+      const erc20Note = new Note(
+        spendingKey,
+        viewingKey,
+        BigInt(i) * 10n ** 18n,
+        randomBytes(16),
+        tokenDataERC20,
+        '',
+      );
+
+      const preimageERC20 = await erc20Note.getCommitmentPreimage();
+
+      const { base, fee } = getFee(
+        erc20Note.value,
+        true,
+        (await railgunLogic.shieldFee()).toBigInt(),
+      );
+
+      // Check ERC20 note gets adjusted correctly
+      const adjustedPreimageERC20 = await railgunLogic.callStatic.transferTokenInStub(
+        preimageERC20,
+      );
+      expect(
+        commitmentPreimageMatcher([
+          {
+            npk: preimageERC20.npk,
+            token: preimageERC20.token,
+            value: base,
+          },
+        ])([adjustedPreimageERC20[0]]),
+      ).to.equal(true);
+
+      // Check balances are transferred
+      await expect(railgunLogic.transferTokenInStub(preimageERC20)).to.changeTokenBalances(
+        testERC20,
+        [await railgunLogic.signer.getAddress(), railgunLogic.address, treasuryAccount.address],
+        [-erc20Note.value, base, fee],
+      );
+
+      // Check ERC721 gets transferred
+      await testERC721.mint(await railgunLogic.signer.getAddress(), i);
+
+      const tokenDataERC721 = {
+        tokenType: TokenType.ERC721,
+        tokenAddress: testERC721.address,
+        tokenSubID: BigInt(i),
+      };
+
+      const erc721Note = new Note(
+        spendingKey,
+        viewingKey,
+        1n,
+        randomBytes(16),
+        tokenDataERC721,
+        '',
+      );
+
+      // Check ERC721 preimage isn't adjusted
+      const preimageERC721 = await erc721Note.getCommitmentPreimage();
+      const adjustedPreimageERC721 = await railgunLogic.callStatic.transferTokenInStub(
+        preimageERC721,
+      );
+      expect(commitmentPreimageMatcher([preimageERC721])([adjustedPreimageERC721[0]])).to.equal(
+        true,
+      );
+
+      // Check ERC721 is transferred
+      await railgunLogic.transferTokenInStub(await erc721Note.getCommitmentPreimage());
+      expect(await testERC721.ownerOf(i)).to.equal(railgunLogic.address);
+
+      // Check tokenID mapping has been updated
+      const tokenIDContractMapping = await railgunLogic.tokenIDMapping(getTokenID(tokenDataERC721));
+      expect(tokenIDContractMapping.tokenType).to.equal(tokenDataERC721.tokenType);
+      expect(tokenIDContractMapping.tokenAddress).to.equal(tokenDataERC721.tokenAddress);
+      expect(tokenIDContractMapping.tokenSubID).to.equal(tokenDataERC721.tokenSubID);
+
+      // Check ERC1155 is rejected
+      const tokenDataERC1155 = {
+        tokenType: TokenType.ERC1155,
+        tokenAddress: testERC20.address,
+        tokenSubID: BigInt(i),
+      };
+
+      const erc1155Note = new Note(
+        spendingKey,
+        viewingKey,
+        10n ** 18n,
+        randomBytes(16),
+        tokenDataERC1155,
+        '',
+      );
+
+      await expect(
+        railgunLogic.transferTokenInStub(await erc1155Note.getCommitmentPreimage()),
+      ).to.be.revertedWith('RailgunLogic: ERC1155 not yet supported');
+    }
+  });
+
+  it('Should fail on non-transferring tokens', async () => {
+    const { railgunLogic, nonTransferringERC20, nonTransferringERC721 } =
+      await loadFixture(deploy);
+
+    // Create random viewing and spending keys
+    const spendingKey = randomBytes(32);
+    const viewingKey = randomBytes(32);
+
+    const tokenDataERC20 = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: nonTransferringERC20.address,
+      tokenSubID: 0n,
+    };
+
+    // Check non-transferring ERC20 gets reverted
+    await nonTransferringERC20.mint(await railgunLogic.signer.getAddress(), 2n ** 128n - 1n);
+
+    const erc20Note = new Note(
+      spendingKey,
+      viewingKey,
+      10n ** 18n,
+      randomBytes(16),
+      tokenDataERC20,
+      '',
+    );
+
+    await expect(
+      railgunLogic.transferTokenInStub(await erc20Note.getCommitmentPreimage()),
+    ).to.be.revertedWith('RailgunLogic: ERC20 transfer failed');
+
+    // Check non-transferring ERC721 gets reverted
+    await nonTransferringERC721.mint(railgunLogic.signer.getAddress(), 0n);
+
+    const tokenDataERC721 = {
+      tokenType: TokenType.ERC721,
+      tokenAddress: nonTransferringERC721.address,
+      tokenSubID: 0n,
+    };
+
+    const erc721Note = new Note(spendingKey, viewingKey, 1n, randomBytes(16), tokenDataERC721, '');
+
+    await expect(
+      railgunLogic.transferTokenInStub(await erc721Note.getCommitmentPreimage()),
+    ).to.be.revertedWith("RailgunLogic: ERC721 didn't transfer");
   });
 });

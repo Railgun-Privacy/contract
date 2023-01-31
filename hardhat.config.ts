@@ -21,9 +21,12 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1600,
+            runs: 200,
           },
-          viaIR: true,
+          // Enable in future if contract size is an issue
+          // Not enabling now because hardhat stack traces and
+          // coverage reporting don't yet support it
+          // viaIR: true,
           outputSelection: {
             '*': {
               '*': ['storageLayout'],

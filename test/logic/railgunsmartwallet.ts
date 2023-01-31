@@ -204,7 +204,7 @@ describe('Logic/RailgunSmartWallet', () => {
           transferNotes.outputs,
         ),
       ]),
-    ).to.be.revertedWith('RailgunSmartWallet: Note already spent');
+    ).to.be.revertedWith('RailgunLogic: Note already spent');
 
     // Check lastEventBlock updated
     expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(
@@ -382,7 +382,7 @@ describe('Logic/RailgunSmartWallet', () => {
           transferNotes.outputs,
         ),
       ]),
-    ).to.be.revertedWith('RailgunSmartWallet: Note already spent');
+    ).to.be.revertedWith('RailgunLogic: Note already spent');
 
     // Scan transaction
     await merkletree.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);

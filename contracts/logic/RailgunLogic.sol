@@ -262,8 +262,17 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       // Set adjusted preimage
       adjustedNote = CommitmentPreimage({ npk: _note.npk, value: base, token: _note.token });
 
+      // Get balance before
+      uint256 balanceBefore = token.balanceOf(address(this));
+
       // Transfer base to contract address
       token.safeTransferFrom(address(msg.sender), address(this), base);
+
+      // Get balance after
+      uint256 balanceAfter = token.balanceOf(address(this));
+
+      // Check ERC20 tokens transferred
+      require(balanceAfter - balanceBefore == base, "RailgunLogic: ERC20 transfer failed");
 
       // Transfer fee to treasury
       token.safeTransferFrom(address(msg.sender), treasury, fee);
@@ -284,6 +293,12 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Transfer NFT to contract address
       token.transferFrom(address(msg.sender), address(this), _note.token.tokenSubID);
+
+      // Check ERC721 transferred
+      require(
+        token.ownerOf(_note.token.tokenSubID) == address(this),
+        "RailgunLogic: ERC721 didn't transfer"
+      );
     } else {
       // ERC1155 token
       revert("RailgunLogic: ERC1155 not yet supported");
@@ -421,20 +436,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     if (!Commitments.rootHistory[_transaction.boundParams.treeNumber][_transaction.merkleRoot])
       return (false, "Invalid Merkle Root");
 
-    // Loop through each nullifier
-    for (
-      uint256 nullifierIter = 0;
-      nullifierIter < _transaction.nullifiers.length;
-      nullifierIter += 1
-    ) {
-      // If nullifier has been seen before return false
-      if (
-        Commitments.nullifiers[_transaction.boundParams.treeNumber][
-          _transaction.nullifiers[nullifierIter]
-        ]
-      ) return (false, "Note already spent");
-    }
-
     if (_transaction.boundParams.unshield != UnshieldType.NONE) {
       // Ensure ciphertext length matches the commitments length (minus 1 for unshield output)
       if (
@@ -492,6 +493,14 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
       nullifierIter < _transaction.nullifiers.length;
       nullifierIter += 1
     ) {
+      // If nullifier has been seen before revert
+      require(
+        !Commitments.nullifiers[_transaction.boundParams.treeNumber][
+          _transaction.nullifiers[nullifierIter]
+        ],
+        "RailgunLogic: Note already spent"
+      );
+
       // Set nullifier to seen
       Commitments.nullifiers[_transaction.boundParams.treeNumber][
         _transaction.nullifiers[nullifierIter]

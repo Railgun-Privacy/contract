@@ -50,3 +50,21 @@ contract AdminERC20 is ERC20, Ownable {
     _burn(_from, _amount);
   }
 }
+
+contract NonTransferringERC20 is TestERC20 {
+  function transfer(address to, uint256 amount) public virtual override returns (bool) {
+    return true;
+  }
+
+  function transferFrom(
+    address from,
+    address to,
+    uint256 amount
+  ) public virtual override returns (bool) {
+    return true;
+  }
+}
+
+contract NonTransferringERC721 is TestERC721 {
+  function transferFrom(address from, address to, uint256 tokenId) public override {}
+}
