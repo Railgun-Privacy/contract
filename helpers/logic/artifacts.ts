@@ -1,5 +1,5 @@
-import artifacts from 'railgun-artifacts-node';
-import type { Artifact, VKey } from 'railgun-artifacts-node';
+import artifacts from '@railgun-community/circuit-artifacts';
+import type { Artifact, VKey } from '@railgun-community/circuit-artifacts';
 import { Verifier } from '../../typechain-types';
 
 export interface SolidityG1Point {
@@ -39,6 +39,29 @@ export interface FormattedArtifact extends Artifact {
   solidityVKey: SolidityVKey;
   eventVKeyMatcher: EventVKeyMatcher;
 }
+
+const circuitList = [
+  {
+    nullifiers: 1,
+    commitments: 2,
+  },
+  {
+    nullifiers: 1,
+    commitments: 3,
+  },
+  {
+    nullifiers: 2,
+    commitments: 2,
+  },
+  {
+    nullifiers: 2,
+    commitments: 3,
+  },
+  {
+    nullifiers: 8,
+    commitments: 2,
+  },
+];
 
 /**
  * Formats vkey for solidity input
@@ -170,12 +193,7 @@ function formatVKeyMatcher(vkey: VKey): EventVKeyMatcher {
  */
 function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
   // Get artifact or undefined
-  const artifact = artifacts[nullifiers]?.[commitments];
-
-  // Throw if undefined
-  if (!artifact) {
-    throw new Error('Artifact not found');
-  }
+  const artifact = artifacts.getArtifact(nullifiers, commitments);
 
   // Get format solidity vkey
   const artifactFormatted: FormattedArtifact = {
@@ -194,21 +212,22 @@ function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
  */
 function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
   // Map each existing artifact to formatted artifact
-  return artifacts.map((nullifierList) =>
-    nullifierList?.map((artifact): FormattedArtifact | undefined => {
-      if (!artifact) {
-        return undefined;
-      }
+  const circuitArtifacts: (undefined | (undefined | FormattedArtifact)[])[] = [];
 
-      const artifactFormatted = {
-        ...artifact,
-        solidityVKey: formatVKey(artifact.vkey),
-        eventVKeyMatcher: formatVKeyMatcher(artifact.vkey),
-      };
+  circuitList.forEach((circuit) => {
+    if (!circuitArtifacts[circuit.nullifiers]) circuitArtifacts[circuit.nullifiers] = [];
 
-      return artifactFormatted;
-    }),
-  );
+    const artifact = artifacts.getArtifact(circuit.nullifiers, circuit.commitments);
+
+    // @ts-expect-error will always be set above
+    circuitArtifacts[circuit.nullifiers][circuit.commitments] = {
+      ...artifact,
+      solidityVKey: formatVKey(artifact.vkey),
+      eventVKeyMatcher: formatVKeyMatcher(artifact.vkey),
+    };
+  });
+
+  return circuitArtifacts;
 }
 
 /**
@@ -217,17 +236,7 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
  * @returns artifact configs
  */
 function availableArtifacts() {
-  const artifactsList: { nullifiers: number; commitments: number }[] = [];
-
-  artifacts.forEach((nullifierList, nullifiers) =>
-    nullifierList?.forEach((artifact, commitments) => {
-      if (artifact) {
-        artifactsList.push({ nullifiers, commitments });
-      }
-    }),
-  );
-
-  return artifactsList;
+  return circuitList;
 }
 
 /**
