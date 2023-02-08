@@ -36,12 +36,13 @@ const config: HardhatUserConfig = {
       },
     ],
     overrides: {
-      'contracts/proxy/Proxy.sol': {
-        version: '0.8.17',
-        settings: {
-          viaIR: false,
-        },
-      },
+      // Enable this to turn of viaIR for proxy contract
+      // 'contracts/proxy/Proxy.sol': {
+      //   version: '0.8.17',
+      //   settings: {
+      //     viaIR: false,
+      //   },
+      // },
     },
   },
   mocha: mocharc,

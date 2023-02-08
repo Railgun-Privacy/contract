@@ -9,22 +9,22 @@ import { Delegator } from "./Delegator.sol";
 import { Verifier, VerifyingKey } from "../logic/Verifier.sol";
 
 /**
- * @title VkeySetter
+ * @title VKeySetter
  * @author Railgun Contributors
  * @notice
  */
-contract VkeySetter is Ownable {
+contract VKeySetter is Ownable {
   Delegator public delegator;
   Verifier public verifier;
 
   // Lock adding new vKeys once this boolean is flipped
-  enum VkeySetterState {
+  enum VKeySetterState {
     SETTING,
     WAITING,
     COMMITTING
   }
 
-  VkeySetterState public state;
+  VKeySetterState public state;
 
   // Nullifiers => Commitments => Verification Key
   mapping(uint256 => mapping(uint256 => VerifyingKey)) private verificationKeys;
@@ -35,22 +35,22 @@ contract VkeySetter is Ownable {
   // Owner can only change contract to setting state when in committing state
 
   modifier onlySetting() {
-    require(state == VkeySetterState.SETTING, "VkeySetter: Contract is not in setting state");
+    require(state == VKeySetterState.SETTING, "VKeySetter: Contract is not in setting state");
     _;
   }
 
   // modifier onlyWaiting() {
-  //   require(state == VkeySetterState.WAITING, "VkeySetter: Contract is not in waiting state");
+  //   require(state == VKeySetterState.WAITING, "VKeySetter: Contract is not in waiting state");
   //   _;
   // }
 
   modifier onlyCommitting() {
-    require(state == VkeySetterState.COMMITTING, "VkeySetter: Contract is not in committing state");
+    require(state == VKeySetterState.COMMITTING, "VKeySetter: Contract is not in committing state");
     _;
   }
 
   modifier onlyDelegator() {
-    require(msg.sender == address(delegator), "VkeySetter: Caller isn't governance");
+    require(msg.sender == address(delegator), "VKeySetter: Caller isn't governance");
     _;
   }
 
@@ -149,20 +149,20 @@ contract VkeySetter is Ownable {
    * @notice Set state to 'setting'
    */
   function stateToSetting() external onlyOwner onlyCommitting {
-    state = VkeySetterState.WAITING;
+    state = VKeySetterState.WAITING;
   }
 
   /**
    * @notice Set state to 'waiting'
    */
   function stateToWaiting() external onlyOwner {
-    state = VkeySetterState.WAITING;
+    state = VKeySetterState.WAITING;
   }
 
   /**
    * @notice Set state to 'committing'
    */
   function stateToCommitting() external onlyDelegator {
-    state = VkeySetterState.COMMITTING;
+    state = VKeySetterState.COMMITTING;
   }
 }
