@@ -210,7 +210,7 @@ describe('Governance/VKeySetter', () => {
     // Set to committing
     await vKeyDelegator.stateToCommitting();
 
-    // Check state is comitting
+    // Check state is committing
     expect(await vKeySetter.state()).to.equal(2);
 
     // Only owner should be able to go back to setting

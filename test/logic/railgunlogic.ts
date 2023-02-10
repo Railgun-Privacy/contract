@@ -1205,8 +1205,7 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should fail on non-transferring tokens', async () => {
-    const { railgunLogic, nonTransferringERC20, nonTransferringERC721 } =
-      await loadFixture(deploy);
+    const { railgunLogic, nonTransferringERC20, nonTransferringERC721 } = await loadFixture(deploy);
 
     // Create random viewing and spending keys
     const spendingKey = randomBytes(32);

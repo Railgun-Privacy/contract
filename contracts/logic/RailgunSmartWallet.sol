@@ -34,7 +34,9 @@ contract RailgunSmartWallet is RailgunLogic {
       require(valid, string.concat("RailgunSmartWallet: ", reason));
 
       // Process shield request and store adjusted note
-      (commitments[notesIter], fees[notesIter]) = RailgunLogic.transferTokenIn(_shieldRequests[notesIter].preimage);
+      (commitments[notesIter], fees[notesIter]) = RailgunLogic.transferTokenIn(
+        _shieldRequests[notesIter].preimage
+      );
 
       // Hash note for merkle tree insertion
       insertionLeaves[notesIter] = RailgunLogic.hashCommitment(commitments[notesIter]);
@@ -44,7 +46,13 @@ contract RailgunSmartWallet is RailgunLogic {
     }
 
     // Emit Shield events (for wallets) for the commitments
-    emit Shield(Commitments.treeNumber, Commitments.nextLeafIndex, commitments, shieldCiphertext, fees);
+    emit Shield(
+      Commitments.treeNumber,
+      Commitments.nextLeafIndex,
+      commitments,
+      shieldCiphertext,
+      fees
+    );
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);

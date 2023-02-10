@@ -53,6 +53,8 @@ contract AdminERC20 is ERC20, Ownable {
 
 contract NonTransferringERC20 is TestERC20 {
   function transfer(address to, uint256 amount) public virtual override returns (bool) {
+    to;
+    amount;
     return true;
   }
 
@@ -61,6 +63,9 @@ contract NonTransferringERC20 is TestERC20 {
     address to,
     uint256 amount
   ) public virtual override returns (bool) {
+    from;
+    to;
+    amount;
     return true;
   }
 }
