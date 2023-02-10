@@ -62,12 +62,16 @@ async function execute(chainConfig: ChainConfig) {
 
   for (let i = 0; i < artifacts.length; i += ARTIFACT_BATCH_SIZE) {
     const chunk = artifacts.slice(i, i + ARTIFACT_BATCH_SIZE);
-    transactions.push((await vkeySetter.batchSetVerificationKey(
-      chunk.map((artifact) => artifact.nullifiers),
-      chunk.map((artifact) => artifact.commitments),
-      chunk.map((artifact) => artifact.contractVKey as VerifyingKeyStruct),
-      { nonce },
-    )).wait());
+    transactions.push(
+      (
+        await vkeySetter.batchSetVerificationKey(
+          chunk.map((artifact) => artifact.nullifiers),
+          chunk.map((artifact) => artifact.commitments),
+          chunk.map((artifact) => artifact.contractVKey as VerifyingKeyStruct),
+          { nonce },
+        )
+      ).wait(),
+    );
     nonce += 1;
   }
 
