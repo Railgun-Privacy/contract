@@ -149,7 +149,7 @@ contract VKeySetter is Ownable {
    * @notice Set state to 'setting'
    */
   function stateToSetting() external onlyOwner onlyCommitting {
-    state = VKeySetterState.WAITING;
+    state = VKeySetterState.SETTING;
   }
 
   /**
