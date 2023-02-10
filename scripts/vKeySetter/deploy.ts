@@ -7,7 +7,7 @@ import { ChainConfig } from '@railgun-community/deployments/dist/types';
 
 import artifacts from './artifacts.json';
 import { VerifyingKeyStruct } from '../../typechain-types/contracts/logic/RailgunLogic';
-const ARTIFACT_BATCH_SIZE = 10;
+const ARTIFACT_BATCH_SIZE = 5;
 
 // Store new deployments here as contract name : address KV pairs
 const NEW_DEPLOYMENTS: Record<string, string> = {};
@@ -57,14 +57,21 @@ async function execute(chainConfig: ChainConfig) {
 
   NEW_DEPLOYMENTS.vkeySetter = vkeySetter.address;
 
+  let nonce = await vkeySetter.signer.getTransactionCount();
+  const transactions = [];
+
   for (let i = 0; i < artifacts.length; i += ARTIFACT_BATCH_SIZE) {
     const chunk = artifacts.slice(i, i + ARTIFACT_BATCH_SIZE);
-    await vkeySetter.batchSetVerificationKey(
+    transactions.push((await vkeySetter.batchSetVerificationKey(
       chunk.map((artifact) => artifact.nullifiers),
       chunk.map((artifact) => artifact.commitments),
       chunk.map((artifact) => artifact.contractVKey as VerifyingKeyStruct),
-    );
+      { nonce },
+    )).wait());
+    nonce += 1;
   }
+
+  await Promise.all(transactions);
 }
 
 /**
