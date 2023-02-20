@@ -9,7 +9,7 @@ import {
 import * as weth9artifact from '@ethereum-artifacts/weth9';
 
 import { getAdaptParams, transactWithAdaptParams } from '../../helpers/adapt/relay';
-import { loadAllArtifacts } from '../../helpers/logic/artifacts';
+import { loadAvailableArtifacts } from '../../helpers/logic/artifacts';
 import { dummyTransact, UnshieldType } from '../../helpers/logic/transaction';
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import { Wallet } from '../../helpers/logic/wallet';
@@ -84,7 +84,7 @@ describe('Adapt/Relay', () => {
     const relayAdaptAdmin = relayAdapt.connect(adminAccount);
 
     // Load verification keys
-    await loadAllArtifacts(railgunSmartWalletAdmin);
+    await loadAvailableArtifacts(railgunSmartWalletAdmin);
 
     // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');

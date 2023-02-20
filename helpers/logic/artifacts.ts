@@ -240,12 +240,31 @@ function availableArtifacts() {
 }
 
 /**
- * Loads all available artifacts into verifier contract
+ * Loads all artifacts into verifier contract
  *
  * @param verifierContract - verifier Contract
  * @returns complete
  */
 async function loadAllArtifacts(verifierContract: Verifier) {
+  for (const artifactConfig of artifacts.listArtifacts()) {
+    const artifact = getKeys(artifactConfig.nullifiers, artifactConfig.commitments);
+    await (
+      await verifierContract.setVerificationKey(
+        artifactConfig.nullifiers,
+        artifactConfig.commitments,
+        artifact.solidityVKey,
+      )
+    ).wait();
+  }
+}
+
+/**
+ * Loads available artifacts into verifier contract
+ *
+ * @param verifierContract - verifier Contract
+ * @returns complete
+ */
+async function loadAvailableArtifacts(verifierContract: Verifier) {
   for (const artifactConfig of availableArtifacts()) {
     const artifact = getKeys(artifactConfig.nullifiers, artifactConfig.commitments);
     await (
@@ -265,4 +284,5 @@ export {
   allArtifacts,
   availableArtifacts,
   loadAllArtifacts,
+  loadAvailableArtifacts,
 };

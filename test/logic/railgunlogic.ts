@@ -20,7 +20,7 @@ import { getTokenID, Note, TokenType, UnshieldNote } from '../../helpers/logic/n
 import { randomBytes } from '../../helpers/global/crypto';
 import { arrayToHexString } from '../../helpers/global/bytes';
 import { MerkleTree } from '../../helpers/logic/merkletree';
-import { loadAllArtifacts } from '../../helpers/logic/artifacts';
+import { loadAvailableArtifacts } from '../../helpers/logic/artifacts';
 
 describe('Logic/RailgunLogic', () => {
   /**
@@ -77,7 +77,7 @@ describe('Logic/RailgunLogic', () => {
     const railgunLogicAdmin = railgunLogic.connect(adminAccount);
 
     // Load verification keys
-    await loadAllArtifacts(railgunLogicAdmin);
+    await loadAvailableArtifacts(railgunLogicAdmin);
 
     // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');

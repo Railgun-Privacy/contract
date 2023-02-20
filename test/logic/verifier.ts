@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-import { availableArtifacts, getKeys, loadAllArtifacts } from '../../helpers/logic/artifacts';
+import { availableArtifacts, getKeys, loadAvailableArtifacts } from '../../helpers/logic/artifacts';
 import { TokenType, CommitmentCiphertext, Note } from '../../helpers/logic/note';
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import {
@@ -103,7 +103,7 @@ describe('Logic/Verifier', () => {
   it('Should verify dummy proofs', async () => {
     const { chainID, verifier, verifierBypassSigner } = await loadFixture(deploy);
 
-    await loadAllArtifacts(verifier);
+    await loadAvailableArtifacts(verifier);
 
     // Loop through each circuit artifact
     for (const artifactConfig of availableArtifacts()) {
@@ -181,7 +181,7 @@ describe('Logic/Verifier', () => {
 
     const { chainID, verifier } = await loadFixture(deploy);
 
-    await loadAllArtifacts(verifier);
+    await loadAvailableArtifacts(verifier);
 
     // Loop through each circuit artifact
     for (const artifactConfig of availableArtifacts()) {
