@@ -112,11 +112,11 @@ async function testProposalUpgrade(chainConfig: ChainConfig) {
  */
 async function becomeWhale(chainConfig: ChainConfig) {
   // Set balance of governance token to 100 million
-  await hre.run('set-token-balance', [
-    (await ethers.getSigners())[0].address,
-    chainConfig.rail.address,
-    (100000000n * 10n ** 18n).toString(),
-  ]);
+  await hre.run('set-token-balance', {
+    address: (await ethers.getSigners())[0].address,
+    token: chainConfig.rail.address,
+    balance: (100000000n * 10n ** 18n).toString(),
+  });
 }
 
 /**
