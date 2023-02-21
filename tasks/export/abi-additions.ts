@@ -134,6 +134,83 @@ const additions: Record<string, object[]> = {
       name: 'Nullifiers',
       type: 'event',
     },
+    {
+      anonymous: false,
+      inputs: [
+        {
+          indexed: false,
+          internalType: 'uint256',
+          name: 'treeNumber',
+          type: 'uint256',
+        },
+        {
+          indexed: false,
+          internalType: 'uint256',
+          name: 'startPosition',
+          type: 'uint256',
+        },
+        {
+          components: [
+            {
+              internalType: 'bytes32',
+              name: 'npk',
+              type: 'bytes32',
+            },
+            {
+              components: [
+                {
+                  internalType: 'enum TokenType',
+                  name: 'tokenType',
+                  type: 'uint8',
+                },
+                {
+                  internalType: 'address',
+                  name: 'tokenAddress',
+                  type: 'address',
+                },
+                {
+                  internalType: 'uint256',
+                  name: 'tokenSubID',
+                  type: 'uint256',
+                },
+              ],
+              internalType: 'struct TokenData',
+              name: 'token',
+              type: 'tuple',
+            },
+            {
+              internalType: 'uint120',
+              name: 'value',
+              type: 'uint120',
+            },
+          ],
+          indexed: false,
+          internalType: 'struct CommitmentPreimage[]',
+          name: 'commitments',
+          type: 'tuple[]',
+        },
+        {
+          components: [
+            {
+              internalType: 'bytes32[3]',
+              name: 'encryptedBundle',
+              type: 'bytes32[3]',
+            },
+            {
+              internalType: 'bytes32',
+              name: 'shieldKey',
+              type: 'bytes32',
+            },
+          ],
+          indexed: false,
+          internalType: 'struct ShieldCiphertext[]',
+          name: 'shieldCiphertext',
+          type: 'tuple[]',
+        },
+      ],
+      name: 'Shield',
+      type: 'event',
+    },
   ],
 };
 
