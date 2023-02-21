@@ -10,7 +10,8 @@ const ARTIFACT_BATCH_SIZE = 5;
 
 // Store new deployments here as contract name : address KV pairs
 const NEW_DEPLOYMENTS: Record<string, string> = {
-  vkeySetter: '0xD1760AA0FCD9e64bA4ea43399Ad789CFd63C7809',
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  vkeySetter: process.env.VKEYSETTER!,
 };
 
 /**
@@ -22,14 +23,16 @@ const NEW_DEPLOYMENTS: Record<string, string> = {
 async function execute(chainConfig: ChainConfig) {
   const vkeySetter = await ethers.getContractAt('VKeySetter', NEW_DEPLOYMENTS.vkeySetter);
 
+  const votingAddress = chainConfig.voting.address !== '' ? chainConfig.voting.address : chainConfig.L2Executor.address;
+
   /* BEGIN HARDHAT TEST OVERRIDES */
   // Simulating state changes of proposal for dev
   await impersonateAccount(chainConfig.delegator.address);
   await setBalance(chainConfig.delegator.address, 10n ** 18n);
-  await impersonateAccount(chainConfig.voting.address);
-  await setBalance(chainConfig.voting.address, 10n ** 18n);
+  await impersonateAccount(votingAddress);
+  await setBalance(votingAddress, 10n ** 18n);
   const delegator = await ethers.getSigner(chainConfig.delegator.address);
-  const voting = await ethers.getSigner(chainConfig.voting.address);
+  const voting = await ethers.getSigner(votingAddress);
   const delegatorVoting = await ethers.getContractAt(
     'Delegator',
     chainConfig.delegator.address,
