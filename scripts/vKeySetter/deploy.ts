@@ -73,6 +73,7 @@ async function execute(chainConfig: ChainConfig) {
       ).wait(),
     );
     nonce += 1;
+    await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
   }
 
   await Promise.all(transactions);
