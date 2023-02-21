@@ -23,7 +23,8 @@ const NEW_DEPLOYMENTS: Record<string, string> = {
 async function execute(chainConfig: ChainConfig) {
   const vkeySetter = await ethers.getContractAt('VKeySetter', NEW_DEPLOYMENTS.vkeySetter);
 
-  const votingAddress = chainConfig.voting.address !== '' ? chainConfig.voting.address : chainConfig.L2Executor.address;
+  const votingAddress =
+    chainConfig.voting.address !== '' ? chainConfig.voting.address : chainConfig.L2Executor.address;
 
   /* BEGIN HARDHAT TEST OVERRIDES */
   // Simulating state changes of proposal for dev
