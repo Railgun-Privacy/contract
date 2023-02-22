@@ -8,6 +8,7 @@ task('deploy:VKeySetter:commit', 'Commits artifacts from VKeySetter to Verifier'
   .addOptionalParam('priorityFee', 'Priority fee in gwei', '0')
   .addOptionalParam('legacyFee', 'Legacy transaction type fee in gwei', '0')
   .addOptionalParam('chunkSize', 'Chunk size of artifact deployment transactions', '5')
+  .addOptionalParam('gasLimit', 'Gas limit of transactions', '4000000')
   .setAction(async function (
     {
       vKeySetter,
@@ -15,12 +16,14 @@ task('deploy:VKeySetter:commit', 'Commits artifacts from VKeySetter to Verifier'
       baseFee,
       legacyFee,
       priorityFee,
+      gasLimit,
     }: {
       vKeySetter: string;
       chunkSize: string;
       baseFee: string;
       priorityFee: string;
       legacyFee: string;
+      gasLimit: string;
     },
     hre,
   ) {
@@ -32,10 +35,15 @@ task('deploy:VKeySetter:commit', 'Commits artifacts from VKeySetter to Verifier'
     const baseFeeParsed = BigInt(baseFee) * GWEI;
     const priorityFeeParsed = BigInt(priorityFee) * GWEI;
     const legacyFeeFeeParsed = BigInt(legacyFee) * GWEI;
+    const gasLimitParsed = BigInt(gasLimit);
 
     // Check if XOR of legacy or eip1559 fee arguments are set and construct fee object
-    const feeObject: { gasPrice?: bigint; maxFeePerGas?: bigint; maxPriorityFeePerGas?: bigint } =
-      {};
+    const feeObject: {
+      gasPrice?: bigint;
+      maxFeePerGas?: bigint;
+      maxPriorityFeePerGas?: bigint;
+      gasLimit: bigint;
+    } = { gasLimit: gasLimitParsed };
 
     if (legacyFeeFeeParsed === 0n && baseFeeParsed === 0n && priorityFeeParsed === 0n)
       throw new Error('No transaction fee specified');
