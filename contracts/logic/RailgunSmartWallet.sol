@@ -18,7 +18,7 @@ contract RailgunSmartWallet is RailgunLogic {
    * @notice Shields requested amount and token, creates a commitment hash from supplied values and adds to tree
    * @param _shieldRequests - list of commitments to shield
    */
-  function shield(ShieldRequest[] calldata _shieldRequests) external payable {
+  function shield(ShieldRequest[] calldata _shieldRequests) external {
     // Insertion and event arrays
     bytes32[] memory insertionLeaves = new bytes32[](_shieldRequests.length);
     CommitmentPreimage[] memory commitments = new CommitmentPreimage[](_shieldRequests.length);
@@ -65,7 +65,7 @@ contract RailgunSmartWallet is RailgunLogic {
    * @notice Execute batch of Railgun snark transactions
    * @param _transactions - Transactions to execute
    */
-  function transact(Transaction[] calldata _transactions) external payable {
+  function transact(Transaction[] calldata _transactions) external {
     uint256 commitmentsCount = RailgunLogic.sumCommitments(_transactions);
 
     // Create accumulators
