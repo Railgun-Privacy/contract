@@ -8,7 +8,7 @@ task('deploy:VKeySetter:load', 'Loads artifacts into VKeySetter contract')
   .addOptionalParam('baseFee', 'Base fee in gwei', '0')
   .addOptionalParam('priorityFee', 'Priority fee in gwei', '0')
   .addOptionalParam('legacyFee', 'Legacy transaction type fee in gwei', '0')
-  .addOptionalParam('chunkSize', 'Chunk size of artifact deployment transactions', '5')
+  .addOptionalParam('chunkSize', 'Chunk size of artifact deployment transactions', '3')
   .addOptionalParam('gasLimit', 'Gas limit of transactions', '4000000')
   .setAction(async function (
     {
