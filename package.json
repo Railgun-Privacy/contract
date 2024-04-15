@@ -6,8 +6,10 @@
   "scripts": {
     "lint": "cspell --no-progress '**'; solhint 'contracts/**/*.sol'; prettier --check './**'; eslint .",
     "lint:fix": "cspell --no-progress '**'; npx prettier --write './**'; npx solhint --fix 'contracts/**/*.sol'",
-    "clean": "hardhat clean",
-    "compile": "npm run clean && npm run lint && hardhat compile",
+    "clean": "hardhat clean && rm -rf cache storage-layouts",
+    "compile": "npm run clean && hardhat compile",
+    "node": "hardhat node",
+    "deploy": "hardhat deploy:test --network localhost",
     "test": "hardhat test",
     "test:extra": "hardhat test --longtests extra",
     "test:complete": "hardhat test --longtests complete",

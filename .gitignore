@@ -4,7 +4,6 @@ package-lock.json
 .npm
 
 # Yarn
-yarn.lock
 .yarn
 .yarnrc.yml
 .pnp.*
