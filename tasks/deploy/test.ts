@@ -1,6 +1,6 @@
 import { task } from 'hardhat/config';
 
-import * as weth9artifact from '@ethereum-artifacts/weth9';
+import * as weth9artifact from '../../externalArtifacts/weth9';
 
 import { loadAllArtifacts } from '../../helpers/logic/artifacts';
 import type { Contract } from 'ethers';
@@ -146,8 +146,8 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
 
   // Deploy WETH9
   const WETH9 = new ethers.ContractFactory(
-    weth9artifact.WETH9.abi,
-    weth9artifact.WETH9.bytecode,
+    weth9artifact.abi,
+    weth9artifact.bytecode,
     (await ethers.getSigners())[0],
   );
   const weth9 = await WETH9.deploy();

@@ -16,7 +16,6 @@
     "analyze": "npm run clean; hardhat compile; npm run lint; ./slither.sh"
   },
   "devDependencies": {
-    "@ethereum-artifacts/weth9": "^1.1.0",
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/bytes": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
@@ -61,5 +60,6 @@
     "@arbitrum/nitro-contracts": "1.0.0-beta.8",
     "@openzeppelin/contracts": "^4.8.1",
     "@openzeppelin/contracts-upgradeable": "^4.8.1"
-  }
+  },
+  "packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
 }
