@@ -6,7 +6,7 @@ import {
   impersonateAccount,
 } from '@nomicfoundation/hardhat-network-helpers';
 
-import * as weth9artifact from '../../externalArtifacts/weth9';
+import * as weth9artifact from '../../externalArtifacts/WETH9';
 
 import { getAdaptParams, transactWithAdaptParams } from '../../helpers/adapt/relay';
 import { loadAvailableArtifacts } from '../../helpers/logic/artifacts';
@@ -67,8 +67,8 @@ describe('Adapt/Relay', () => {
 
     // Deploy WETH9
     const WETH9 = new ethers.ContractFactory(
-      weth9artifact.abi,
-      weth9artifact.bytecode,
+      weth9artifact.WETH9.abi,
+      weth9artifact.WETH9.bytecode,
       (await ethers.getSigners())[0],
     );
     const weth9 = await WETH9.deploy();
