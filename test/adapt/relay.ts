@@ -666,36 +666,6 @@ describe('Adapt/Relay', () => {
           .slice(2)}`,
       );
 
-    // Should throw on internal contract failure regardless of require success
-    await expect(
-      relayAdapt.multicall(false, [
-        {
-          to: relayAdapt.address,
-          data: relayAdapt.interface.encodeFunctionData('transfer', [
-            [
-              {
-                to: primaryAccount.address,
-                value: 10n ** 18n,
-                token: {
-                  tokenType: TokenType.ERC1155,
-                  tokenAddress: testERC20Tokens[0].address,
-                  tokenSubID: 0n,
-                },
-              },
-            ],
-          ]),
-          value: 0n,
-        },
-      ]),
-    )
-      .to.be.revertedWithCustomError(relayAdapt, 'CallFailed')
-      .withArgs(
-        0,
-        `0x08c379a0${ethers.utils.defaultAbiCoder
-          .encode(['bytes'], [fromUTF8String('RelayAdapt: ERC1155 not yet supported')])
-          .slice(2)}`,
-      );
-
     const MaliciousReentrant = await ethers.getContractFactory('MaliciousReentrant');
     const maliciousReentrant = await MaliciousReentrant.deploy();
 

@@ -58,13 +58,16 @@ contract RelayAdapt {
    * @notice only allows self calls to these contracts if contract is executing
    */
   modifier onlySelfIfExecuting() {
-    require(
-      !isExecuting || msg.sender == address(this),
-      "RelayAdapt: External call to onlySelf function"
-    );
-    isExecuting = true;
+    assembly {
+      if tload(0) { revert(0, 0) }
+      tstore(0, 1)
+    }
     _;
-    isExecuting = false;
+    // Unlocks the guard, making the pattern composable.
+    // After the function exits, it can be called again, even in the same transaction.
+    assembly {
+      tstore(0, 0)
+    }
   }
 
   /**
@@ -236,21 +239,21 @@ contract RelayAdapt {
       // Retrieve call
       Call calldata call = _calls[i];
 
-      // Don't allow calls to Railgun contract in multicall
-      if (call.to == address(railgun)) {
-        revert CallFailed(i, bytes("RelayAdapt: Refusing to call Railgun contract"));
-      }
+      bool success = false;
+      bytes memory returned;
 
-      // Execute call
-      // solhint-disable-next-line avoid-low-level-calls
-      (bool success, bytes memory returned) = call.to.call{ value: call.value }(call.data);
+      // Don't allow calls to Railgun contract in multicall
+      if (call.to != address(railgun)) {
+        // Execute call
+        // solhint-disable-next-line avoid-low-level-calls
+        (success, returned) = call.to.call{ value: call.value }(call.data);
+      }
 
       if (success) {
         continue;
       }
 
-      bool isInternalCall = call.to == address(this);
-      bool requireSuccess = _requireSuccess || isInternalCall;
+      bool requireSuccess = _requireSuccess;
 
       // If requireSuccess is true, throw on failure
       if (requireSuccess) {
