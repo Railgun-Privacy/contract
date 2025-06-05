@@ -58,16 +58,13 @@ contract RelayAdapt {
    * @notice only allows self calls to these contracts if contract is executing
    */
   modifier onlySelfIfExecuting() {
-    assembly {
-      if tload(0) { revert(0, 0) }
-      tstore(0, 1)
-    }
+    require(
+      !isExecuting || msg.sender == address(this),
+      "RelayAdapt: External call to onlySelf function"
+    );
+    isExecuting = true;
     _;
-    // Unlocks the guard, making the pattern composable.
-    // After the function exits, it can be called again, even in the same transaction.
-    assembly {
-      tstore(0, 0)
-    }
+    isExecuting = false;
   }
 
   /**
