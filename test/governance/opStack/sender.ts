@@ -1,10 +1,7 @@
 import hre from 'hardhat';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import {
-  loadFixture,
-  setCode,
-} from '@nomicfoundation/hardhat-network-helpers';
+import { loadFixture, setCode } from '@nomicfoundation/hardhat-network-helpers';
 import { Contract } from 'ethers';
 
 import { hash } from '../../../helpers/global/crypto';
@@ -37,12 +34,14 @@ describe('Governance/OpStack/Sender', () => {
     );
 
     // Deploy CrossDomainMessenger stub
-    const CrossDomainMessengerStubArtifact = await hre.artifacts.readArtifact('CrossDomainMessengerStub');
+    const CrossDomainMessengerStubArtifact = await hre.artifacts.readArtifact(
+      'CrossDomainMessengerStub',
+    );
     await setCode(crossDomainMessengerAddress, CrossDomainMessengerStubArtifact.deployedBytecode);
-    const crossDomainMessengerStub = await ethers.getContractAt(
+    const crossDomainMessengerStub = (await ethers.getContractAt(
       'CrossDomainMessengerStub',
       crossDomainMessengerAddress,
-    ) as CrossDomainMessengerStub;
+    )) as CrossDomainMessengerStub;
 
     // Deploy sender
     const Sender = await ethers.getContractFactory('OPStackSender');
@@ -69,9 +68,8 @@ describe('Governance/OpStack/Sender', () => {
   }
 
   it('Should send ready task message', async () => {
-    const { senderAdmin, crossDomainMessengerStub, executorL2address, OPStackExecutor } = await loadFixture(
-      deploy,
-    );
+    const { senderAdmin, crossDomainMessengerStub, executorL2address, OPStackExecutor } =
+      await loadFixture(deploy);
 
     // Send ETH to sender
     await senderAdmin.signer.sendTransaction({

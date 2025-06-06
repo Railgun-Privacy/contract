@@ -58,10 +58,10 @@ describe('Governance/OpStack/Executor', () => {
     // Deploy CrossDomainMessenger stub
     const CrossDomainMessengerStub = await hre.artifacts.readArtifact('CrossDomainMessengerStub');
     await setCode(crossDomainMessengerAddress, CrossDomainMessengerStub.deployedBytecode);
-    const crossDomainMessengerStub = await ethers.getContractAt(
+    const crossDomainMessengerStub = (await ethers.getContractAt(
       'CrossDomainMessengerStub',
       crossDomainMessengerAddress,
-    ) as CrossDomainMessengerStub;
+    )) as CrossDomainMessengerStub;
 
     // Deploy delegator
     const Delegator = await ethers.getContractFactory('Delegator');
