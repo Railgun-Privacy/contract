@@ -28,7 +28,7 @@ task('deploy:opstack:l2_governance', 'Creates L2 governance deployment for opsta
   .addParam('delegator', 'Address of the delegator contract on L2')
   .addParam('messenger', 'Address of the OP stack messenger contract on L2')
   .setAction(async function (
-    { senderL1, delegator, messenger }: { senderL1: string; delegator: string, messenger: string },
+    { senderL1, delegator, messenger }: { senderL1: string; delegator: string; messenger: string },
     hre,
   ) {
     const { ethers } = hre;
