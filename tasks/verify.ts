@@ -13,7 +13,15 @@ task('verify:deployment', 'Verifies deployment parameters on chain')
   .addParam('treasuryProxy', 'Address of treasury proxy')
   .addParam('treasuryImplementation', 'Address of treasury implementation')
   .setAction(async function (
-    addresses: { governanceRoot: string; delegator: string; proxyAdmin: string; proxy: string, implementation: string, treasuryProxy: string, treasuryImplementation: string },
+    addresses: {
+      governanceRoot: string;
+      delegator: string;
+      proxyAdmin: string;
+      proxy: string;
+      implementation: string;
+      treasuryProxy: string;
+      treasuryImplementation: string;
+    },
     hre,
   ) {
     const { ethers } = hre;
@@ -98,5 +106,10 @@ task('verify:deployment', 'Verifies deployment parameters on chain')
     console.log(
       `Ensuring treasury (${addresses.treasuryProxy}) is owned by delegator (${addresses.delegator})`,
     );
-    expect(treasury.callStatic.hasRole(await treasury.callStatic.DEFAULT_ADMIN_ROLE(), addresses.delegator)).to.eventually.equal(true);
+    expect(
+      treasury.callStatic.hasRole(
+        await treasury.callStatic.DEFAULT_ADMIN_ROLE(),
+        addresses.delegator,
+      ),
+    ).to.eventually.equal(true);
   });
