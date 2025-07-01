@@ -535,4 +535,175 @@ describe('Logic/RailgunSmartWallet', () => {
     expect(await railgunSmartWallet.treeNumber()).to.equal(0);
     expect(await railgunSmartWallet.nextLeafIndex()).to.equal(0);
   });
+
+  it("Shouln't transfer anything out if ERC721 unshield value = 0", async () => {
+    const { chainID, secondaryAccount, railgunSmartWalletSnarkBypass, testERC721 } =
+      await loadFixture(deploy);
+
+    // Create merkle tree and wallets
+    const merkletree = await MerkleTree.createTree();
+    const wallet = new Wallet(randomBytes(32), randomBytes(32));
+
+    // Shield a note
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC721,
+      tokenAddress: testERC721.address,
+      tokenSubID: 10n,
+    };
+
+    await testERC721.mint(await railgunSmartWalletSnarkBypass.signer.getAddress(), 10);
+
+    wallet.tokens.push(tokenData);
+
+    const shieldNote = new Note(
+      wallet.spendingKey,
+      wallet.viewingKey,
+      1n,
+      randomBytes(16),
+      tokenData,
+      '',
+    );
+
+    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield([
+      await shieldNote.encryptForShield(),
+    ]);
+
+    // Scan transaction
+    await merkletree.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+
+    // Check balances
+    expect(await wallet.getBalance(merkletree, tokenData)).to.equal(1);
+
+    // Unshield tokens between shielded balances
+    const unshieldNotes = padWithDummyNotes(
+      await wallet.getTestTransactionInputs(
+        merkletree,
+        1,
+        1,
+        secondaryAccount.address,
+        tokenData,
+        wallet.spendingKey,
+        wallet.viewingKey,
+      ),
+      2,
+    );
+
+    unshieldNotes.outputs[0].value = 1n;
+    unshieldNotes.outputs[1].value = 0n;
+
+    const unshieldtx = await dummyTransact(
+      merkletree,
+      0n,
+      UnshieldType.NORMAL,
+      chainID,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      unshieldNotes.inputs,
+      unshieldNotes.outputs,
+    );
+
+    await expect(railgunSmartWalletSnarkBypass.transact([unshieldtx])).to.be.revertedWith(
+      'RailgunSmartWallet: Invalid Note Value',
+    );
+  });
+
+  it("Shouln't transfer anything out if ERC20 unshield value = 0", async function () {
+    this.timeout(9999999999999999999999999);
+    const {
+      chainID,
+      treasuryAccount,
+      secondaryAccount,
+      railgunSmartWalletSnarkBypass,
+      railgunSmartWalletAdmin,
+      testERC20,
+    } = await loadFixture(deploy);
+
+    // Create merkle tree and wallets
+    const merkletree = await MerkleTree.createTree();
+    const wallet = new Wallet(randomBytes(32), randomBytes(32));
+
+    // Shield notes
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0n,
+    };
+
+    wallet.tokens.push(tokenData);
+
+    const shieldNotes = [
+      new Note(wallet.spendingKey, wallet.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet.spendingKey, wallet.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet.spendingKey, wallet.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet.spendingKey, wallet.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet.spendingKey, wallet.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+    ];
+
+    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield([
+      ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
+    ]);
+
+    // Check lastEventBlock updated
+    expect(await railgunSmartWalletSnarkBypass.lastEventBlock()).to.equal(
+      shieldTransaction.blockNumber,
+    );
+
+    const totalShielded = shieldNotes
+      .map((note) => note.value)
+      .reduce((left, right) => left + right);
+
+    // Calculate shield amounts
+    const shieldAmounts = getFee(
+      totalShielded,
+      true,
+      (await railgunSmartWalletSnarkBypass.shieldFee()).toBigInt(),
+    );
+
+    // Check tokens amounts moved correctly
+    await expect(shieldTransaction).to.changeTokenBalances(
+      testERC20,
+      [
+        await railgunSmartWalletSnarkBypass.signer.getAddress(),
+        railgunSmartWalletSnarkBypass.address,
+        treasuryAccount.address,
+      ],
+      [-totalShielded, shieldAmounts.base, shieldAmounts.fee],
+    );
+
+    // Scan transaction
+    await merkletree.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+
+    // Check balances
+    expect(await wallet.getBalance(merkletree, tokenData)).to.equal(shieldAmounts.base);
+
+    // Unshield tokens between shielded balances
+    const unshieldNotes = await wallet.getTestTransactionInputs(
+      merkletree,
+      2,
+      3,
+      secondaryAccount.address,
+      tokenData,
+      wallet.spendingKey,
+      wallet.viewingKey,
+    );
+
+    unshieldNotes.outputs[2].value = 0n;
+
+    const unshieldtx = await dummyTransact(
+      merkletree,
+      0n,
+      UnshieldType.NORMAL,
+      chainID,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      unshieldNotes.inputs,
+      unshieldNotes.outputs,
+    );
+
+    await expect(railgunSmartWalletSnarkBypass.transact([unshieldtx])).to.be.revertedWith(
+      'RailgunSmartWallet: Invalid Note Value',
+    );
+  });
 });

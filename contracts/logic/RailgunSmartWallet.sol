@@ -45,14 +45,14 @@ contract RailgunSmartWallet is RailgunLogic {
       shieldCiphertext[notesIter] = _shieldRequests[notesIter].ciphertext;
     }
 
+    // Get insertion parameters
+    (
+      uint256 insertionTreeNumber,
+      uint256 insertionStartIndex
+    ) = getInsertionTreeNumberAndStartingIndex(commitments.length);
+
     // Emit Shield events (for wallets) for the commitments
-    emit Shield(
-      Commitments.treeNumber,
-      Commitments.nextLeafIndex,
-      commitments,
-      shieldCiphertext,
-      fees
-    );
+    emit Shield(insertionTreeNumber, insertionStartIndex, commitments, shieldCiphertext, fees);
 
     // Push new commitments to merkle tree
     Commitments.insertLeaves(insertionLeaves);
@@ -102,6 +102,12 @@ contract RailgunSmartWallet is RailgunLogic {
     ) {
       // If unshield is specified, process
       if (_transactions[transactionIter].boundParams.unshield != UnshieldType.NONE) {
+        // Check note is valid
+        (bool valid, string memory reason) = RailgunLogic.validateCommitmentPreimage(
+          _transactions[transactionIter].unshieldPreimage
+        );
+        require(valid, string.concat("RailgunSmartWallet: ", reason));
+
         RailgunLogic.transferTokenOut(_transactions[transactionIter].unshieldPreimage);
       }
     }
