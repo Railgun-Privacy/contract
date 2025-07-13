@@ -6,7 +6,7 @@ import {
   impersonateAccount,
 } from '@nomicfoundation/hardhat-network-helpers';
 
-import * as weth9artifact from '../../externalArtifacts/WETH9';
+import * as weth9artifact from '../../externalArtifacts/WETH9.json';
 
 import { getAdaptParams, transactWithAdaptParams } from '../../helpers/adapt/relay';
 import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
@@ -67,8 +67,8 @@ describe('Adapt/Relay', () => {
 
     // Deploy WETH9
     const WETH9 = new ethers.ContractFactory(
-      weth9artifact.WETH9.abi,
-      weth9artifact.WETH9.bytecode,
+      weth9artifact.abi,
+      weth9artifact.bytecode,
       (await ethers.getSigners())[0],
     );
     const weth9 = await WETH9.deploy();
@@ -144,7 +144,7 @@ describe('Adapt/Relay', () => {
 
   it('Should calculate adapt parameters', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    let loops = process.env.SKIP_LONG_TESTS ? 5n : 10n;
+    const loops = process.env.SKIP_LONG_TESTS ? 5n : 10n;
 
     const { chainID, relayAdapt } = await loadFixture(deploy);
 

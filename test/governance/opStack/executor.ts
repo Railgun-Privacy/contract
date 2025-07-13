@@ -25,7 +25,7 @@ interface Call {
 }
 
 interface CrossDomainMessengerStub extends Contract {
-  callAs(sender: string, target: string, data: string): Promise<any>;
+  callAs(sender: string, target: string, data: string): Promise<unknown>;
 }
 
 describe('Governance/OpStack/Executor', () => {

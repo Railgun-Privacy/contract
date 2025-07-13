@@ -74,7 +74,7 @@ describe('Logic/Verifier', () => {
     this.timeout(5 * 60 * 60 * 1000);
     const { chainID, verifier } = await loadFixture(deploy);
 
-    let loops = process.env.SKIP_LONG_TESTS ? 2 : 10;
+    const loops = process.env.SKIP_LONG_TESTS ? 2 : 10;
 
     for (let i = 0; i < loops; i += 1) {
       const vector: BoundParams = {

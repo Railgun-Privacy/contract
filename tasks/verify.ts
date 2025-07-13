@@ -1,8 +1,6 @@
 import { task } from 'hardhat/config';
 
-import type { Contract } from 'ethers';
 import { expect } from 'chai';
-import { allArtifacts } from '../helpers/logic/artifacts';
 
 task('verify:deployment', 'Verifies deployment parameters on chain')
   .addParam('governanceRoot', 'Address of voting or L2 executor contract')
@@ -106,7 +104,7 @@ task('verify:deployment', 'Verifies deployment parameters on chain')
     console.log(
       `Ensuring treasury (${addresses.treasuryProxy}) is owned by delegator (${addresses.delegator})`,
     );
-    expect(
+    await expect(
       treasury.callStatic.hasRole(
         await treasury.callStatic.DEFAULT_ADMIN_ROLE(),
         addresses.delegator,

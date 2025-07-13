@@ -9,7 +9,7 @@ import { fromUTF8String, arrayToHexString } from '../../../helpers/global/bytes'
 
 // Define the interface for our CrossDomainMessengerStub
 interface CrossDomainMessengerStub extends Contract {
-  sendMessage(target: string, message: string, minGasLimit: number): Promise<any>;
+  sendMessage(target: string, message: string, minGasLimit: number): Promise<unknown>;
   getLastMessageDetails(): Promise<[string, string, number]>;
 }
 

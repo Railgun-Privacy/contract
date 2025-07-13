@@ -250,6 +250,7 @@ function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
     // Loop through each preimage and check if they match
     const preimagesMatched = contractPreimages.map((preimage, index): boolean => {
       if (preimage.npk !== arrayToHexString(commitmentPreimages[index].npk, true)) return false;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       if (preimage.token.tokenType !== commitmentPreimages[index].token.tokenType) return false;
       if (preimage.token.tokenAddress !== commitmentPreimages[index].token.tokenAddress)
         return false;
@@ -273,6 +274,7 @@ function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
 function tokenDataMatcher(tokenData: TokenData) {
   return (contractTokenData: TokenDataStructOutput): boolean => {
     if (contractTokenData.tokenAddress !== tokenData.tokenAddress) return false;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (contractTokenData.tokenType !== tokenData.tokenType) return false;
     if (contractTokenData.tokenSubID.toBigInt() !== tokenData.tokenSubID) return false;
     return true;
@@ -501,7 +503,7 @@ async function dummyTransact(
   notesOut: (Note | UnshieldNote)[],
 ): Promise<PublicInputs> {
   // Get required ciphertext length
-  const ciphertextLength = unshield === 0 ? notesOut.length : notesOut.length - 1;
+  const ciphertextLength = unshield === UnshieldType.NONE ? notesOut.length : notesOut.length - 1;
 
   // Get sender viewing private key
   const senderViewingPrivateKey = notesIn[0].viewingKey;
@@ -554,7 +556,7 @@ async function transact(
   const artifact = getKeys(notesIn.length, notesOut.length);
 
   // Get required ciphertext length
-  const ciphertextLength = unshield === 0 ? notesOut.length : notesOut.length - 1;
+  const ciphertextLength = unshield === UnshieldType.NONE ? notesOut.length : notesOut.length - 1;
 
   // Get sender viewing private key
   const senderViewingPrivateKey = notesIn[0].viewingKey;

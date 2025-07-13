@@ -609,15 +609,9 @@ describe('Logic/RailgunSmartWallet', () => {
   });
 
   it("Shouln't transfer anything out if ERC20 unshield value = 0", async function () {
-    this.timeout(9999999999999999999999999);
-    const {
-      chainID,
-      treasuryAccount,
-      secondaryAccount,
-      railgunSmartWalletSnarkBypass,
-      railgunSmartWalletAdmin,
-      testERC20,
-    } = await loadFixture(deploy);
+    this.timeout(5 * 60 * 60 * 1000);
+    const { chainID, treasuryAccount, secondaryAccount, railgunSmartWalletSnarkBypass, testERC20 } =
+      await loadFixture(deploy);
 
     // Create merkle tree and wallets
     const merkletree = await MerkleTree.createTree();

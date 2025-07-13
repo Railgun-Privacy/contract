@@ -63,7 +63,7 @@ describe('Logic/Commitments', () => {
   });
 
   it('Should hash left/right pairs', async () => {
-    let loops = process.env.SKIP_LONG_TESTS ? 2 : 10;
+    const loops = process.env.SKIP_LONG_TESTS ? 2 : 10;
 
     const { commitments } = await loadFixture(deploy);
 
@@ -81,7 +81,7 @@ describe('Logic/Commitments', () => {
   });
 
   it('Should incrementally insert elements', async function () {
-    let loops = process.env.SKIP_LONG_TESTS ? 2 : 10;
+    const loops = process.env.SKIP_LONG_TESTS ? 2 : 10;
 
     const { commitments } = await loadFixture(deploy);
 

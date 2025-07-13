@@ -45,10 +45,7 @@ task(TASK_CLEAN).setAction(async (taskArguments, hre, runSuper) => {
 });
 
 task(TASK_TEST, 'Runs test suite')
-  .addFlag(
-    'skipLongTests',
-    'Skips or runs shorter versions of long tests',
-  )
+  .addFlag('skipLongTests', 'Skips or runs shorter versions of long tests')
   .setAction(async (taskArguments: { skipLongTests: string | undefined }, hre, runSuper) => {
     // Set SKIP_LONG_TESTS env to true if flag is set
     if (taskArguments.skipLongTests) process.env.SKIP_LONG_TESTS = 'true';

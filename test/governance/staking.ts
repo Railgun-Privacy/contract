@@ -78,7 +78,7 @@ describe('Governance/Staking', () => {
 
   it('Should return correct snapshot regardless of hint', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    let loops = process.env.SKIP_LONG_TESTS ? 5n : 10n;
+    const loops = process.env.SKIP_LONG_TESTS ? 5n : 10n;
 
     const { staking } = await loadFixture(deploy);
 

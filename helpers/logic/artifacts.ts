@@ -229,7 +229,8 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
 /**
  * Loads artifact list into verifier contract
  *
- * @param verifierContract - verifier Contract
+ * @param verifierContract - verifier contract
+ * @param artifactList - artifact list to load into contract
  * @returns complete
  */
 async function loadArtifacts(verifierContract: Verifier, artifactList: ArtifactConfig[]) {
@@ -247,6 +248,11 @@ async function loadArtifacts(verifierContract: Verifier, artifactList: ArtifactC
 
 const listArtifacts = artifacts.listArtifacts;
 
+/**
+ * List only testing subset of artifacts
+ *
+ * @returns artifacts list
+ */
 function listTestingSubsetArtifacts() {
   return testingSubsetArtifacts;
 }
