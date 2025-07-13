@@ -1,5 +1,5 @@
-import artifacts from '@railgun-community/circuit-artifacts';
-import type { Artifact, VKey } from '@railgun-community/circuit-artifacts';
+import artifacts from 'railgun-circuit-test-artifacts';
+import type { Artifact, ArtifactConfig, VKey } from 'railgun-circuit-test-artifacts';
 import { Verifier } from '../../typechain-types';
 
 export interface SolidityG1Point {
@@ -40,17 +40,9 @@ export interface FormattedArtifact extends Artifact {
   eventVKeyMatcher: EventVKeyMatcher;
 }
 
-const circuitList = [
+const testingSubsetArtifacts = [
   {
     nullifiers: 1,
-    commitments: 2,
-  },
-  {
-    nullifiers: 1,
-    commitments: 3,
-  },
-  {
-    nullifiers: 2,
     commitments: 2,
   },
   {
@@ -59,6 +51,10 @@ const circuitList = [
   },
   {
     nullifiers: 8,
+    commitments: 4,
+  },
+  {
+    nullifiers: 12,
     commitments: 2,
   },
 ];
@@ -214,7 +210,7 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
   // Map each existing artifact to formatted artifact
   const circuitArtifacts: (undefined | (undefined | FormattedArtifact)[])[] = [];
 
-  circuitList.forEach((circuit) => {
+  artifacts.listArtifacts().forEach((circuit) => {
     if (!circuitArtifacts[circuit.nullifiers]) circuitArtifacts[circuit.nullifiers] = [];
 
     const artifact = artifacts.getArtifact(circuit.nullifiers, circuit.commitments);
@@ -231,22 +227,13 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
 }
 
 /**
- * Lists all artifacts available
- *
- * @returns artifact configs
- */
-function availableArtifacts() {
-  return circuitList;
-}
-
-/**
- * Loads all artifacts into verifier contract
+ * Loads artifact list into verifier contract
  *
  * @param verifierContract - verifier Contract
  * @returns complete
  */
-async function loadAllArtifacts(verifierContract: Verifier) {
-  for (const artifactConfig of artifacts.listArtifacts()) {
+async function loadArtifacts(verifierContract: Verifier, artifactList: ArtifactConfig[]) {
+  for (const artifactConfig of artifactList) {
     const artifact = getKeys(artifactConfig.nullifiers, artifactConfig.commitments);
     await (
       await verifierContract.setVerificationKey(
@@ -258,23 +245,10 @@ async function loadAllArtifacts(verifierContract: Verifier) {
   }
 }
 
-/**
- * Loads available artifacts into verifier contract
- *
- * @param verifierContract - verifier Contract
- * @returns complete
- */
-async function loadAvailableArtifacts(verifierContract: Verifier) {
-  for (const artifactConfig of availableArtifacts()) {
-    const artifact = getKeys(artifactConfig.nullifiers, artifactConfig.commitments);
-    await (
-      await verifierContract.setVerificationKey(
-        artifactConfig.nullifiers,
-        artifactConfig.commitments,
-        artifact.solidityVKey,
-      )
-    ).wait();
-  }
+const listArtifacts = artifacts.listArtifacts;
+
+function listTestingSubsetArtifacts() {
+  return testingSubsetArtifacts;
 }
 
 export {
@@ -282,7 +256,7 @@ export {
   formatVKeyMatcher,
   getKeys,
   allArtifacts,
-  availableArtifacts,
-  loadAllArtifacts,
-  loadAvailableArtifacts,
+  listArtifacts,
+  listTestingSubsetArtifacts,
+  loadArtifacts,
 };

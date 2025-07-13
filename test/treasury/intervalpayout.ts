@@ -34,16 +34,12 @@ describe('Treasury/IntervalPayout', () => {
   }
 
   it('Should payout on interval', async function () {
+    this.timeout(5 * 60 * 60 * 1000);
     const { treasury } = await loadFixture(deploy);
 
-    let totalPayouts = 1;
+    let totalPayouts = process.env.SKIP_LONG_TESTS ? 1 : 10;
     const amount = 100;
     const intervalTime = 10000;
-
-    if (process.env.LONG_TESTS === 'yes') {
-      this.timeout(5 * 60 * 60 * 1000);
-      totalPayouts = 10;
-    }
 
     // Deploy and setup interval payout contract
     const IntervalPayouts = await ethers.getContractFactory('IntervalPayouts');

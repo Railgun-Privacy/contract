@@ -8,7 +8,7 @@ import {
 
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import { Wallet } from '../../helpers/logic/wallet';
-import { loadAvailableArtifacts } from '../../helpers/logic/artifacts';
+import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
 import { randomBytes } from '../../helpers/global/crypto';
 import { getTokenID, Note, TokenData, TokenType } from '../../helpers/logic/note';
 import {
@@ -67,7 +67,7 @@ describe('Logic/RailgunSmartWallet', () => {
     const railgunSmartWalletAdmin = railgunSmartWallet.connect(adminAccount);
 
     // Load verification keys
-    await loadAvailableArtifacts(railgunSmartWalletAdmin);
+    await loadArtifacts(railgunSmartWalletAdmin, listArtifacts());
 
     // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');

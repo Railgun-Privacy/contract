@@ -2,7 +2,12 @@ import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-import { availableArtifacts, getKeys, loadAvailableArtifacts } from '../../helpers/logic/artifacts';
+import {
+  getKeys,
+  listArtifacts,
+  listTestingSubsetArtifacts,
+  loadArtifacts,
+} from '../../helpers/logic/artifacts';
 import { TokenType, CommitmentCiphertext, Note } from '../../helpers/logic/note';
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import {
@@ -66,14 +71,10 @@ describe('Logic/Verifier', () => {
   });
 
   it('Should hash bound parameters', async function () {
+    this.timeout(5 * 60 * 60 * 1000);
     const { chainID, verifier } = await loadFixture(deploy);
 
-    let loops = 2;
-
-    if (process.env.LONG_TESTS === 'yes') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 10;
-    }
+    let loops = process.env.SKIP_LONG_TESTS ? 2 : 10;
 
     for (let i = 0; i < loops; i += 1) {
       const vector: BoundParams = {
@@ -100,13 +101,18 @@ describe('Logic/Verifier', () => {
     }
   });
 
-  it('Should verify dummy proofs', async () => {
+  it('Should verify dummy proofs', async function () {
+    this.timeout(5 * 60 * 60 * 1000);
     const { chainID, verifier, verifierBypassSigner } = await loadFixture(deploy);
 
-    await loadAvailableArtifacts(verifier);
+    const artifactsList = process.env.SKIP_LONG_TESTS
+      ? listTestingSubsetArtifacts()
+      : listArtifacts();
+
+    await loadArtifacts(verifier, artifactsList);
 
     // Loop through each circuit artifact
-    for (const artifactConfig of availableArtifacts()) {
+    for (const artifactConfig of artifactsList) {
       // Get placeholder values
       const spendingKey = randomBytes(32);
       const viewingKey = randomBytes(32);
@@ -177,14 +183,14 @@ describe('Logic/Verifier', () => {
 
   it('Should verify proofs', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    if (process.env.LONG_TESTS === 'no') this.skip();
+    if (process.env.SKIP_LONG_TESTS) return;
 
     const { chainID, verifier } = await loadFixture(deploy);
 
-    await loadAvailableArtifacts(verifier);
+    await loadArtifacts(verifier, listArtifacts());
 
     // Loop through each circuit artifact
-    for (const artifactConfig of availableArtifacts()) {
+    for (const artifactConfig of listArtifacts()) {
       // Get placeholder values
       const spendingKey = randomBytes(32);
       const viewingKey = randomBytes(32);
@@ -251,9 +257,6 @@ describe('Logic/Verifier', () => {
   });
 
   it("Should throw error if circuit artifacts don't exist", async function () {
-    this.timeout(5 * 60 * 60 * 1000);
-    if (process.env.LONG_TESTS === 'no') this.skip();
-
     const { chainID, verifierBypassSigner } = await loadFixture(deploy);
 
     const limit = 3;

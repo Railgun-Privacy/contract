@@ -20,7 +20,7 @@ import { getTokenID, Note, TokenType, UnshieldNote } from '../../helpers/logic/n
 import { randomBytes } from '../../helpers/global/crypto';
 import { arrayToHexString } from '../../helpers/global/bytes';
 import { MerkleTree } from '../../helpers/logic/merkletree';
-import { loadAvailableArtifacts } from '../../helpers/logic/artifacts';
+import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
 
 describe('Logic/RailgunLogic', () => {
   /**
@@ -77,7 +77,7 @@ describe('Logic/RailgunLogic', () => {
     const railgunLogicAdmin = railgunLogic.connect(adminAccount);
 
     // Load verification keys
-    await loadAvailableArtifacts(railgunLogicAdmin);
+    await loadArtifacts(railgunLogicAdmin, listArtifacts());
 
     // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');
@@ -768,7 +768,7 @@ describe('Logic/RailgunLogic', () => {
       }),
     ).to.deep.equal([false, 'Invalid Withdraw Note']);
 
-    if (process.env.LONG_TESTS === 'yes') {
+    if (!process.env.SKIP_LONG_TESTS) {
       // Generate SNARK proof
       const transaction = await transact(
         tree,

@@ -1,6 +1,6 @@
 import { task } from 'hardhat/config';
 
-import { loadAllArtifacts } from '../../helpers/logic/artifacts';
+import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
 import type { Contract } from 'ethers';
 
 /**
@@ -131,7 +131,7 @@ task('deploy:full', 'Creates full deployment')
 
     // Set artifacts
     console.log('\nSetting Artifacts');
-    await loadAllArtifacts(railgun);
+    await loadArtifacts(railgun, listArtifacts());
 
     // Transfer contract ownerships
     console.log('\nTransferring ownerships');

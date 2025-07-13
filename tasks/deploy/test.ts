@@ -2,7 +2,7 @@ import { task } from 'hardhat/config';
 
 import * as weth9artifact from '../../externalArtifacts/WETH9';
 
-import { loadAllArtifacts } from '../../helpers/logic/artifacts';
+import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
 import type { Contract } from 'ethers';
 
 /**
@@ -125,7 +125,7 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
 
   // Set artifacts
   console.log('\nSetting Artifacts');
-  await loadAllArtifacts(railgun);
+  await loadArtifacts(railgun, listArtifacts());
 
   // Give deployer address full permissions
   console.log(`\nGiving full governance permissions to ${(await ethers.getSigners())[0].address}`);

@@ -9,7 +9,7 @@ import {
 import * as weth9artifact from '../../externalArtifacts/WETH9';
 
 import { getAdaptParams, transactWithAdaptParams } from '../../helpers/adapt/relay';
-import { loadAvailableArtifacts } from '../../helpers/logic/artifacts';
+import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
 import { dummyTransact, UnshieldType } from '../../helpers/logic/transaction';
 import { MerkleTree } from '../../helpers/logic/merkletree';
 import { Wallet } from '../../helpers/logic/wallet';
@@ -84,7 +84,7 @@ describe('Adapt/Relay', () => {
     const relayAdaptAdmin = relayAdapt.connect(adminAccount);
 
     // Load verification keys
-    await loadAvailableArtifacts(railgunSmartWalletAdmin);
+    await loadArtifacts(railgunSmartWalletAdmin, listArtifacts());
 
     // Deploy test ERC20 and approve for shield
     const TestERC20 = await ethers.getContractFactory('TestERC20');
@@ -143,12 +143,8 @@ describe('Adapt/Relay', () => {
   }
 
   it('Should calculate adapt parameters', async function () {
-    let loops = 5n;
-
-    if (process.env.LONG_TESTS === 'yes') {
-      this.timeout(5 * 60 * 60 * 1000);
-      loops = 10n;
-    }
+    this.timeout(5 * 60 * 60 * 1000);
+    let loops = process.env.SKIP_LONG_TESTS ? 5n : 10n;
 
     const { chainID, relayAdapt } = await loadFixture(deploy);
 

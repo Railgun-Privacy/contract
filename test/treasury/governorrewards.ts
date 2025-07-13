@@ -168,12 +168,8 @@ describe('Treasury/GovernorRewards', () => {
   });
 
   it('Should retrieve snapshot sequence', async function () {
-    let intervals = 50;
-
-    if (process.env.LONG_TESTS === 'yes') {
-      this.timeout(5 * 60 * 60 * 1000);
-      intervals = 100;
-    }
+    this.timeout(5 * 60 * 60 * 1000);
+    let intervals = process.env.SKIP_LONG_TESTS ? 50 : 100;
 
     const {
       stakingInterval,
@@ -296,12 +292,8 @@ describe('Treasury/GovernorRewards', () => {
   });
 
   it('Should precalculate global snapshots', async function () {
-    let intervals = 50;
-
-    if (process.env.LONG_TESTS === 'yes') {
-      this.timeout(5 * 60 * 60 * 1000);
-      intervals = 100;
-    }
+    this.timeout(5 * 60 * 60 * 1000);
+    let intervals = process.env.SKIP_LONG_TESTS ? 50 : 100;
 
     const {
       stakingInterval,

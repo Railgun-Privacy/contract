@@ -1,6 +1,6 @@
 import { groth16 } from 'snarkjs';
 import type { SnarkjsProof } from 'snarkjs';
-import type { Artifact } from '@railgun-community/circuit-artifacts';
+import type { Artifact } from 'railgun-circuit-test-artifacts';
 
 export interface SolidityProof {
   a: {

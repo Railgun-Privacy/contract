@@ -45,15 +45,13 @@ task(TASK_CLEAN).setAction(async (taskArguments, hre, runSuper) => {
 });
 
 task(TASK_TEST, 'Runs test suite')
-  .addOptionalParam(
-    'longtests',
-    'no = execute shorter tests; no = full test suite enabled (default: yes)',
+  .addFlag(
+    'skipLongTests',
+    'Skips or runs shorter versions of long tests',
   )
-  .setAction(async (taskArguments: { longtests: string }, hre, runSuper) => {
-    if (taskArguments.longtests === 'no' || taskArguments.longtests === 'yes') {
-      process.env.LONG_TESTS = taskArguments.longtests;
-    } else if (process.env.LONG_TESTS !== 'no') {
-      process.env.LONG_TESTS = 'yes';
-    }
+  .setAction(async (taskArguments: { skipLongTests: string | undefined }, hre, runSuper) => {
+    // Set SKIP_LONG_TESTS env to true if flag is set
+    if (taskArguments.skipLongTests) process.env.SKIP_LONG_TESTS = 'true';
+
     await runSuper();
   });

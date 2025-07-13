@@ -763,13 +763,6 @@
   resolved "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-4.5.0.tgz"
   integrity sha512-fdkzKPYMjrRiPK6K4y64e6GzULR7R7RwxSigHS8DDp7aWDeoReqsQI+cxHV1UuhAqX69L1lAaWDxenfP+xiqzA==
 
-"@railgun-community/circuit-artifacts@https://npm.railgun.org/railgun-community-circuit-artifacts-0.0.1.tgz":
-  version "0.0.1"
-  resolved "https://npm.railgun.org/railgun-community-circuit-artifacts-0.0.1.tgz"
-  integrity sha512-Dj9za3+mJP8FBWSwhTfOU4uM0gjnC+1+XnTkMz+xGogZU2NYcviC1Tr20d9g5Go17dPEt4F0q9CvGnefQF9rBA==
-  dependencies:
-    brotli "^1.3.2"
-
 "@railgun-community/deployments@^0.4.7":
   version "0.4.9"
   resolved "https://registry.npmjs.org/@railgun-community/deployments/-/deployments-0.4.9.tgz"
@@ -4438,6 +4431,13 @@ r1csfile@0.0.41:
     "@iden3/binfileutils" "0.0.11"
     fastfile "0.0.20"
     ffjavascript "0.2.56"
+
+"railgun-circuit-test-artifacts@https://ipfs-lb.com/ipfs/QmPvs6Lws1MS4CTMAQ6P3WfyFpWFKGu7o6cSbWCu3vgXLW/railgun-circuit-test-artifacts-0.0.1.tgz":
+  version "0.0.1"
+  resolved "https://ipfs-lb.com/ipfs/QmPvs6Lws1MS4CTMAQ6P3WfyFpWFKGu7o6cSbWCu3vgXLW/railgun-circuit-test-artifacts-0.0.1.tgz"
+  integrity sha512-97uCx9npLeJS8VeBtpaeAX3Xe3d/i251l1RcMqHP1wPEEAE+Zb3nXlP3CvBhEPYRStb8wcOerk0d3BDzg5F2qw==
+  dependencies:
+    brotli "^1.3.2"
 
 randombytes@^2.1.0:
   version "2.1.0"
