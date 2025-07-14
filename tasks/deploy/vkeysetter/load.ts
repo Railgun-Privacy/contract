@@ -1,68 +1,77 @@
-import { task } from 'hardhat/config';
+import { task, types } from 'hardhat/config';
 
-import artifacts from './artifacts.json';
-import { VerifyingKeyStruct } from '../../../typechain-types/contracts/logic/RailgunLogic';
+import { diffVkeys } from './shared';
+import { allArtifacts, getKeys } from '../../../helpers/logic/artifacts';
 
 task('deploy:VKeySetter:load', 'Loads artifacts into VKeySetter contract')
   .addParam('vKeySetter', 'Address of VKeySetter contract')
-  .addOptionalParam('baseFee', 'Base fee in gwei', '0')
-  .addOptionalParam('priorityFee', 'Priority fee in gwei', '0')
-  .addOptionalParam('legacyFee', 'Legacy transaction type fee in gwei', '0')
-  .addOptionalParam('chunkSize', 'Chunk size of artifact deployment transactions', '3')
-  .addOptionalParam('gasLimit', 'Gas limit of transactions', '4000000')
+  .addParam('limit', 'Largest nullifier and commitment count to check diff for', 50, types.int)
+  .addParam('chunkSize', 'Chunk size of artifact deployment transactions', 3, types.int)
+  .addParam('legacyFeeGwei', 'Legacy transaction type fee in gwei', 0, types.float)
+  .addParam('baseFeeGwei', 'Base fee in gwei', 0, types.float)
+  .addParam('priorityFeeGwei', 'Priority fee in gwei', 0, types.float)
+  .addParam('gasLimit', 'Gas limit of transactions', undefined, types.int)
   .setAction(async function (
     {
       vKeySetter,
+      limit,
       chunkSize,
-      baseFee,
-      legacyFee,
-      priorityFee,
+      legacyFeeGwei,
+      baseFeeGwei,
+      priorityFeeGwei,
       gasLimit,
     }: {
       vKeySetter: string;
-      chunkSize: string;
-      baseFee: string;
-      priorityFee: string;
-      legacyFee: string;
-      gasLimit: string;
+      limit: number;
+      chunkSize: number;
+      legacyFeeGwei: number;
+      baseFeeGwei: number;
+      priorityFeeGwei: number;
+      gasLimit: number;
     },
     hre,
   ) {
     const { ethers } = hre;
-    const GWEI = 1000000000n;
+    const GWEI = 1000000000;
 
-    // Parse arguments
-    const chunkSizeParsed = parseInt(chunkSize);
-    const baseFeeParsed = BigInt(baseFee) * GWEI;
-    const priorityFeeParsed = BigInt(priorityFee) * GWEI;
-    const legacyFeeFeeParsed = BigInt(legacyFee) * GWEI;
-    const gasLimitParsed = BigInt(gasLimit);
-
-    // Check if XOR of legacy or eip1559 fee arguments are set and construct fee object
+    // Construct fee object
     const feeObject: {
-      gasPrice?: bigint;
-      maxFeePerGas?: bigint;
-      maxPriorityFeePerGas?: bigint;
-      gasLimit: bigint;
-    } = { gasLimit: gasLimitParsed };
+      gasPrice?: number;
+      maxFeePerGas?: number;
+      maxPriorityFeePerGas?: number;
+      gasLimit: number;
+    } = { gasLimit };
 
-    if (legacyFeeFeeParsed === 0n && baseFeeParsed === 0n && priorityFeeParsed === 0n)
-      throw new Error('No transaction fee specified');
-    else if (legacyFeeFeeParsed > 0n) {
-      if (baseFeeParsed !== 0n || priorityFeeParsed !== 0n)
-        throw new Error('Only one type of fee should be set');
-
-      feeObject.gasPrice = legacyFeeFeeParsed;
-    } else {
-      if (baseFeeParsed === 0n || priorityFeeParsed === 0n)
-        throw new Error('Both base and priority fee should be set for EIP1559 transactions');
-
-      feeObject.maxFeePerGas = baseFeeParsed;
-      feeObject.maxPriorityFeePerGas = priorityFeeParsed;
+    // Logical XNOR of legacyFeeGwei and baseFeeGwei set, only one should be set
+    if (!legacyFeeGwei == !baseFeeGwei) {
+      throw new Error(
+        'Specify legacy tx fee (--legacy-fee-gwei) or eip1559 (--base-fee-gwei, --priority-fee-gwei) but not both',
+      );
     }
+
+    // Set legacy fee if specified
+    if (legacyFeeGwei) feeObject.gasPrice = legacyFeeGwei * GWEI;
+
+    // Set eip1559 fee if specified
+    if (baseFeeGwei) {
+      if (!priorityFeeGwei) throw new Error('Priority fee not set (--priority-fee-gwei)');
+
+      feeObject.maxFeePerGas = baseFeeGwei * GWEI;
+      feeObject.maxPriorityFeePerGas = priorityFeeGwei * GWEI;
+    }
+
+    // Get artifacts
+    const artifacts = allArtifacts();
 
     // Get contract interface
     const vKeySetterContract = await ethers.getContractAt('VKeySetter', vKeySetter);
+
+    // Get diff betweeen artifacts and contract values
+    const diff = await diffVkeys(artifacts, vKeySetterContract, limit, true);
+
+    console.log(
+      `GENERATING TX'S TO RESOLVE THE FOLLOWING DIFF: ${JSON.stringify(diff, undefined, 2)}`,
+    );
 
     // Get current nonce
     let nonce = await vKeySetterContract.signer.getTransactionCount();
@@ -71,23 +80,38 @@ task('deploy:VKeySetter:load', 'Loads artifacts into VKeySetter contract')
     const transactions = [];
 
     // Loop and generate transactions
-    for (let i = 0; i < artifacts.length; i += chunkSizeParsed) {
-      const chunk = artifacts.slice(i, i + chunkSizeParsed);
+    for (let i = 0; i < diff.length; i += chunkSize) {
+      // Fetch chunk
+      const diffChunk = diff.slice(i, i + chunkSize);
+
+      console.log(`Generating tx for diff chunk ${JSON.stringify(diffChunk, undefined, 2)}`);
+
+      const chunk = diffChunk.map((config) => ({
+        ...config,
+        contractVKey: getKeys(config.nullifiers, config.commitments).solidityVKey,
+      }));
+
+      // Generate batch set call from chunk
       transactions.push(
         (
           await vKeySetterContract.batchSetVerificationKey(
             chunk.map((artifact) => artifact.nullifiers),
             chunk.map((artifact) => artifact.commitments),
-            chunk.map((artifact) => artifact.contractVKey as VerifyingKeyStruct),
+            chunk.map((artifact) => artifact.contractVKey),
             { nonce, ...feeObject },
           )
         ).wait(),
       );
+
+      // Increment nonce
       nonce += 1;
+
+      // Wait 100ms between submissions to avoid flooding RPC
       await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 100ms
     }
 
     console.log('GENERATED TRANSACTIONS');
 
+    // Await all generated transactions
     await Promise.all(transactions);
   });

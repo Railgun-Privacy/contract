@@ -1,4 +1,5 @@
 import artifacts from 'railgun-circuit-test-artifacts';
+import { getIPFSHash } from './artifactsIPFSHashes';
 import type { Artifact, ArtifactConfig, VKey } from 'railgun-circuit-test-artifacts';
 import { Verifier } from '../../typechain-types';
 
@@ -40,7 +41,7 @@ export interface FormattedArtifact extends Artifact {
   eventVKeyMatcher: EventVKeyMatcher;
 }
 
-const testingSubsetArtifacts = [
+const testingSubsetArtifactsConfigs = [
   {
     nullifiers: 1,
     commitments: 2,
@@ -63,12 +64,13 @@ const testingSubsetArtifacts = [
  * Formats vkey for solidity input
  *
  * @param vkey - verification key to format
+ * @param artifactsIPFSHash - IPFS hash of circuit artifact
  * @returns formatted vkey
  */
-function formatVKey(vkey: VKey): SolidityVKey {
+function formatVKey(vkey: VKey, artifactsIPFSHash: string): SolidityVKey {
   // Parse points to X,Y coordinate bigints and return
   return {
-    artifactsIPFSHash: '',
+    artifactsIPFSHash,
     alpha1: {
       x: BigInt(vkey.vk_alpha_1[0]),
       y: BigInt(vkey.vk_alpha_1[1]),
@@ -132,10 +134,11 @@ function matchG2Point(point1: Record<string, unknown>, point2: SolidityG2Point) 
  * Formats vkey for solidity event checking
  *
  * @param vkey - verification key to format
+ * @param artifactsIPFSHash - IPFS hash of circuit artifact
  * @returns formatted vkey
  */
-function formatVKeyMatcher(vkey: VKey): EventVKeyMatcher {
-  const vkeySolidity = formatVKey(vkey);
+function formatVKeyMatcher(vkey: VKey, artifactsIPFSHash: string): EventVKeyMatcher {
+  const vkeySolidity = formatVKey(vkey, artifactsIPFSHash);
 
   return (i: unknown): boolean => {
     // Check type
@@ -191,11 +194,14 @@ function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
   // Get artifact or undefined
   const artifact = artifacts.getArtifact(nullifiers, commitments);
 
+  // Get artifact IPFS hash
+  const artifactIPFSHash = getIPFSHash(nullifiers, commitments);
+
   // Get format solidity vkey
   const artifactFormatted: FormattedArtifact = {
     ...artifact,
-    solidityVKey: formatVKey(artifact.vkey),
-    eventVKeyMatcher: formatVKeyMatcher(artifact.vkey),
+    solidityVKey: formatVKey(artifact.vkey, artifactIPFSHash),
+    eventVKeyMatcher: formatVKeyMatcher(artifact.vkey, artifactIPFSHash),
   };
 
   return artifactFormatted;
@@ -213,14 +219,33 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
   artifacts.listArtifacts().forEach((circuit) => {
     if (!circuitArtifacts[circuit.nullifiers]) circuitArtifacts[circuit.nullifiers] = [];
 
-    const artifact = artifacts.getArtifact(circuit.nullifiers, circuit.commitments);
+    // @ts-expect-error will always be set above
+    circuitArtifacts[circuit.nullifiers][circuit.commitments] = getKeys(
+      circuit.nullifiers,
+      circuit.commitments,
+    );
+  });
+
+  return circuitArtifacts;
+}
+
+/**
+ * Returns testing subset artifacts
+ *
+ * @returns nullifier -\> commitments -\> keys
+ */
+function testingSubsetArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
+  // Map each existing artifact to formatted artifact
+  const circuitArtifacts: (undefined | (undefined | FormattedArtifact)[])[] = [];
+
+  testingSubsetArtifactsConfigs.forEach((circuit) => {
+    if (!circuitArtifacts[circuit.nullifiers]) circuitArtifacts[circuit.nullifiers] = [];
 
     // @ts-expect-error will always be set above
-    circuitArtifacts[circuit.nullifiers][circuit.commitments] = {
-      ...artifact,
-      solidityVKey: formatVKey(artifact.vkey),
-      eventVKeyMatcher: formatVKeyMatcher(artifact.vkey),
-    };
+    circuitArtifacts[circuit.nullifiers][circuit.commitments] = getKeys(
+      circuit.nullifiers,
+      circuit.commitments,
+    );
   });
 
   return circuitArtifacts;
@@ -254,14 +279,17 @@ const listArtifacts = artifacts.listArtifacts;
  * @returns artifacts list
  */
 function listTestingSubsetArtifacts() {
-  return testingSubsetArtifacts;
+  return testingSubsetArtifactsConfigs;
 }
 
 export {
+  matchG1Point,
+  matchG2Point,
   formatVKey,
   formatVKeyMatcher,
   getKeys,
   allArtifacts,
+  testingSubsetArtifacts,
   listArtifacts,
   listTestingSubsetArtifacts,
   loadArtifacts,
