@@ -1,4 +1,6 @@
 import { task } from 'hardhat/config';
+import fs from 'fs';
+import path from 'path';
 
 import * as weth9artifact from '../../externalArtifacts/WETH9.json';
 
@@ -43,6 +45,8 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   const TestERC20 = await ethers.getContractFactory('TestERC20');
   const TestERC721 = await ethers.getContractFactory('TestERC721');
   const RelayAdapt = await ethers.getContractFactory('RelayAdapt');
+  const RelayAdapt7702 = await ethers.getContractFactory('RelayAdapt7702');
+  const Adapt7702Deployer = await ethers.getContractFactory('RelayAdapt7702Deployer');
   const Staking = await ethers.getContractFactory('Staking');
   const TreasuryImplementation = await ethers.getContractFactory('Treasury');
   const Voting = await ethers.getContractFactory('Voting');
@@ -156,13 +160,30 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   // Deploy RelayAdapt
   const relayAdapt = await RelayAdapt.deploy(proxy.address, weth9.address);
   await logVerify('Relay Adapt', relayAdapt, [proxy.address, weth9.address]);
-
+  
   // Deploy test tokens
   const testERC20 = await TestERC20.deploy();
   await logVerify('Test ERC20', testERC20, []);
-
+  
   const testERC721 = await TestERC721.deploy();
   await logVerify('Test ERC721', testERC721, []);
+
+  // Deploy Adapt7702Deployer
+  const adapt7702Deployer = await Adapt7702Deployer.deploy((await ethers.getSigners())[0].address);
+  await logVerify('Adapt 7702 Deployer', adapt7702Deployer, [(await ethers.getSigners())[0].address]);
+
+  // Deploy RelayAdapt7702 via Deployer
+  const relayAdapt7702DeployTx = RelayAdapt7702.getDeployTransaction(proxy.address, weth9.address);
+  const relayAdapt7702Bytecode = relayAdapt7702DeployTx.data;
+  const salt = ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32); // Use a simple salt
+
+  const deployTx = await adapt7702Deployer.deploy(relayAdapt7702Bytecode, salt);
+  const receipt = await deployTx.wait();
+  const deployedEvent = receipt.events?.find((e: any) => e.event === 'Deployed');
+  const relayAdapt7702Address = deployedEvent?.args?.deployment;
+  
+  console.log(`\nRelay Adapt 7702 deployed at ${relayAdapt7702Address}`);
+  const relayAdapt7702 = RelayAdapt7702.attach(relayAdapt7702Address);
 
   console.log('\nDEPLOY CONFIG:');
   console.log({
@@ -181,5 +202,7 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
     voting: voting.address,
     weth9: weth9.address,
     relayAdapt: relayAdapt.address,
-  });
+    relayAdapt7702: relayAdapt7702.address,
+    adapt7702Deployer: adapt7702Deployer.address,
+    });
 });

@@ -8,6 +8,8 @@ const defaultContractABIExports = [
   // Logic
   'contracts/logic/RailgunSmartWallet.sol:RailgunSmartWallet',
   'contracts/adapt/Relay.sol:RelayAdapt',
+  'contracts/adapt/RelayAdapt7702.sol:RelayAdapt7702',
+  'contracts/adapt/RelayAdapt7702Deployer.sol:RelayAdapt7702Deployer',
   // Governance
   'contracts/governance/Getters.sol:Getters',
   'contracts/governance/Staking.sol:Staking',
