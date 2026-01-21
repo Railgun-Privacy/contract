@@ -2,6 +2,79 @@ import artifacts from 'railgun-circuit-test-artifacts';
 import { getIPFSHash } from './artifactsIPFSHashes';
 import type { Artifact, ArtifactConfig, VKey } from 'railgun-circuit-test-artifacts';
 import { Verifier } from '../../typechain-types';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// ============ LOCAL CIRCUIT CONFIGURATION ============
+const USE_LOCAL_CIRCUITS = process.env.USE_LOCAL_CIRCUITS === 'true';
+const LOCAL_CIRCUITS_PATH = process.env.LOCAL_CIRCUITS_PATH || path.join(__dirname, '../../../circuits-v2');
+
+// Local circuit configs (same as circuitConfigs.js in circuits-v2)
+const localCircuitConfigs: ArtifactConfig[] = [];
+for (let nullifiers = 1; nullifiers <= 14; nullifiers += 1) {
+  for (let commitments = 1; commitments <= 14 - nullifiers; commitments += 1) {
+    localCircuitConfigs.push({ nullifiers, commitments });
+  }
+}
+
+/**
+ * Get circuit name from nullifiers and commitments count
+ */
+function circuitConfigToName(nullifiers: number, commitments: number): string {
+  return `${nullifiers.toString().padStart(2, '0')}x${commitments.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Load artifact from local compiled circuits
+ */
+function getLocalArtifact(nullifiers: number, commitments: number): Artifact {
+  const name = circuitConfigToName(nullifiers, commitments);
+  const buildDir = path.join(LOCAL_CIRCUITS_PATH, 'build');
+  const zkeyDir = path.join(LOCAL_CIRCUITS_PATH, 'zkeys');
+
+  const wasmPath = path.join(buildDir, `${name}_js/${name}.wasm`);
+  const zkeyPath = path.join(zkeyDir, `${name}.zkey`);
+  const vkeyPath = path.join(zkeyDir, `${name}.vkey.json`);
+
+  // Check files exist
+  if (!fs.existsSync(wasmPath)) {
+    throw new Error(`Local circuit WASM not found: ${wasmPath}\nRun: cd circuits-v2 && npm run build`);
+  }
+  if (!fs.existsSync(zkeyPath)) {
+    throw new Error(`Local circuit zkey not found: ${zkeyPath}\nRun: cd circuits-v2 && npm run ceremony`);
+  }
+  if (!fs.existsSync(vkeyPath)) {
+    throw new Error(`Local circuit vkey not found: ${vkeyPath}\nRun the vkey export step`);
+  }
+
+  return {
+    wasm: fs.readFileSync(wasmPath),
+    zkey: fs.readFileSync(zkeyPath),
+    vkey: JSON.parse(fs.readFileSync(vkeyPath, 'utf-8')) as VKey,
+  };
+}
+
+/**
+ * Get artifact - uses local or IPFS based on USE_LOCAL_CIRCUITS env var
+ */
+function getArtifact(nullifiers: number, commitments: number): Artifact {
+  if (USE_LOCAL_CIRCUITS) {
+    console.log(`📁 Circuit Source LOCAL, Loading circuit ${circuitConfigToName(nullifiers, commitments)}`);
+    return getLocalArtifact(nullifiers, commitments);
+  }
+  console.log(`🌐 Circuit Source: IPFS (node_modules), Loading circuit ${circuitConfigToName(nullifiers, commitments)}`);
+  return artifacts.getArtifact(nullifiers, commitments);
+}
+
+/**
+ * List available artifacts
+ */
+function getListArtifacts(): ArtifactConfig[] {
+  if (USE_LOCAL_CIRCUITS) {
+    return localCircuitConfigs;
+  }
+  return artifacts.listArtifacts();
+}
 
 export interface SolidityG1Point {
   x: bigint;
@@ -191,11 +264,13 @@ function formatVKeyMatcher(vkey: VKey, artifactsIPFSHash: string): EventVKeyMatc
  * @returns keys
  */
 function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
-  // Get artifact or undefined
-  const artifact = artifacts.getArtifact(nullifiers, commitments);
+  // Get artifact (local or IPFS based on USE_LOCAL_CIRCUITS)
+  const artifact = getArtifact(nullifiers, commitments);
 
-  // Get artifact IPFS hash
-  const artifactIPFSHash = getIPFSHash(nullifiers, commitments);
+  // Get artifact IPFS hash (use placeholder for local circuits)
+  const artifactIPFSHash = USE_LOCAL_CIRCUITS
+    ? `local:${circuitConfigToName(nullifiers, commitments)}`
+    : getIPFSHash(nullifiers, commitments);
 
   // Get format solidity vkey
   const artifactFormatted: FormattedArtifact = {
@@ -271,7 +346,7 @@ async function loadArtifacts(verifierContract: Verifier, artifactList: ArtifactC
   }
 }
 
-const listArtifacts = artifacts.listArtifacts;
+const listArtifacts = getListArtifacts;
 
 /**
  * List only testing subset of artifacts

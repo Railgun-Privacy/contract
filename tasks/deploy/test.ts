@@ -1,4 +1,6 @@
 import { task } from 'hardhat/config';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import * as weth9artifact from '../../externalArtifacts/WETH9.json';
 
@@ -164,8 +166,7 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   const testERC721 = await TestERC721.deploy();
   await logVerify('Test ERC721', testERC721, []);
 
-  console.log('\nDEPLOY CONFIG:');
-  console.log({
+  const deployConfig = {
     delegator: delegator.address,
     governorRewardsImplementation: '',
     governorRewardsProxy: '',
@@ -181,5 +182,15 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
     voting: voting.address,
     weth9: weth9.address,
     relayAdapt: relayAdapt.address,
-  });
+    poseidonT3: poseidonT3.address,
+    poseidonT4: poseidonT4.address,
+  };
+
+  console.log('\nDEPLOY CONFIG:');
+  console.log(deployConfig);
+
+  // Write to JSON file
+  const configPath = path.join(__dirname, '../../deployments.json');
+  fs.writeFileSync(configPath, JSON.stringify(deployConfig, null, 2));
+  console.log(`\n✅ Deployment config saved to: ${configPath}`);
 });
