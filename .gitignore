@@ -30,3 +30,5 @@ storage-layouts
 
 # Temporary Files
 scripts/ephemeral
+node.out
+deployments.json
