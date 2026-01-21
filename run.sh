@@ -18,6 +18,8 @@ nvm install 22
 yarn install
 
 #1. start anvil (local ethereum node)
+# Kill any existing process on port 8545
+lsof -ti :8545 | xargs kill 2>/dev/null || true
 anvil &
 ANVIL_PID=$!
 # Auto cleanup anvil when script exits
