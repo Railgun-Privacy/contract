@@ -2,7 +2,10 @@
 
 # Copy .env.demo to .env if .env does not exist
 [ ! -f ".env" ] && cp .env.demo .env
+# Export all variables from .env
+set -a
 source .env
+set +a
 
 if [ "$USE_LOCAL_CIRCUITS" = "true" ]; then
     pushd "$CIRCUITS_V2_DIR" > /dev/null
