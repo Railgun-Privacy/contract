@@ -32,3 +32,4 @@ storage-layouts
 scripts/ephemeral
 node.out
 deployments.json
+.env

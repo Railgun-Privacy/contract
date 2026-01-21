@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Copy .env.demo to .env if .env does not exist
+[ ! -f ".env" ] && cp .env.demo .env
+source .env
+
+if [ "$USE_LOCAL_CIRCUITS" = "true" ]; then
+    pushd "$CIRCUITS_V2_DIR" > /dev/null
+    ./run.sh
+    popd > /dev/null
+fi
+
 # stop the existing node
 lsof -ti :8545 | xargs kill
 rm -f node.out
