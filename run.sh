@@ -10,10 +10,6 @@ if [ "$USE_LOCAL_CIRCUITS" = "true" ]; then
     popd > /dev/null
 fi
 
-# stop the existing node
-lsof -ti :8545 | xargs kill
-rm -f node.out
-
 # prepare environment
 export NVM_DIR="$HOME/.nvm"
 [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"
@@ -21,8 +17,11 @@ export NVM_DIR="$HOME/.nvm"
 nvm install 22
 yarn install
 
-#1. start a local node
-nohup yarn run node 2>&1 > node.out &
+#1. start anvil (local ethereum node)
+anvil &
+ANVIL_PID=$!
+# Auto cleanup anvil when script exits
+trap "kill $ANVIL_PID 2>/dev/null" EXIT
 sleep 3
 
 #2. deploy railgun contracts
