@@ -20,7 +20,7 @@ yarn install
 #1. start anvil (local ethereum node)
 # Kill any existing process on port 8545
 lsof -ti :8545 | xargs kill 2>/dev/null || true
-anvil &
+anvil > anvil.log 2>&1 &
 ANVIL_PID=$!
 # Auto cleanup anvil when script exits
 trap "kill $ANVIL_PID 2>/dev/null" EXIT
