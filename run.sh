@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Copy .env.demo to .env if .env does not exist
-[ ! -f ".env" ] && cp .env.demo .env
+[ ! -f ".env" ] && cp .env.example .env
 # Export all variables from .env
 set -a
 source .env
