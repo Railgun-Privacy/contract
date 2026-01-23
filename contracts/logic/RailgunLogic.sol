@@ -52,6 +52,18 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   // Last event block - to assist with scanning
   uint256 public lastEventBlock;
 
+  // ========== RelayAdapt Integration ==========
+  // RelayAdapt contract address - only this address can call shield and transact
+  address public relayAdapt;
+
+  /**
+   * @notice Modifier to restrict access to RelayAdapt contract only
+   */
+  modifier onlyRelayAdapt() {
+    require(msg.sender == relayAdapt, "RailgunLogic: Only RelayAdapt");
+    _;
+  }
+
   // Treasury events
   event TreasuryChange(address treasury);
   event FeeChange(uint256 shieldFee, uint256 unshieldFee, uint256 nftFee);
@@ -76,6 +88,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   event Nullified(uint16 treeNumber, bytes32[] nullifier);
 
+  // Event for RelayAdapt initialization
+  event RelayAdaptInitialized(address relayAdapt);
+
   /**
    * @notice Initialize Railgun contract
    * @dev OpenZeppelin initializer ensures this can only be called once
@@ -84,6 +99,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    * @param _shieldFee - Shield fee
    * @param _unshieldFee - Unshield fee
    * @param _nftFee - Flat fee in wei that applies to NFT transactions
+   * @param _relayAdapt - Address of the RelayAdapt contract
    * @param _owner - governance contract
    */
   function initializeRailgunLogic(
@@ -91,6 +107,7 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     uint120 _shieldFee,
     uint120 _unshieldFee,
     uint256 _nftFee,
+    address _relayAdapt,
     address _owner
   ) public initializer {
     // Call initializers
@@ -100,6 +117,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     // Set treasury and fee
     changeTreasury(_treasury);
     changeFee(_shieldFee, _unshieldFee, _nftFee);
+
+    // Set RelayAdapt
+    require(_relayAdapt != address(0), "RailgunLogic: Invalid RelayAdapt address");
+    relayAdapt = _relayAdapt;
+    emit RelayAdaptInitialized(_relayAdapt);
 
     // Change Owner
     OwnableUpgradeable.transferOwnership(_owner);
@@ -533,5 +555,6 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
     return _commitmentsStartOffset + _transaction.boundParams.commitmentCiphertext.length;
   }
 
-  uint256[43] private __gap;
+  // Storage gap for future upgrades
+  uint256[50] private __gap;
 }

@@ -16,9 +16,10 @@ contract RailgunLogicStub is RailgunLogic {
     uint120 _shieldFee,
     uint120 _unshieldFee,
     uint256 _nftFee,
+    address _relayAdapt,
     address _owner
   ) external {
-    RailgunLogic.initializeRailgunLogic(_treasury, _shieldFee, _unshieldFee, _nftFee, _owner);
+    RailgunLogic.initializeRailgunLogic(_treasury, _shieldFee, _unshieldFee, _nftFee, _relayAdapt, _owner);
   }
 
   function setMerkleRoot(uint256 _treeNumber, bytes32 _root, bool _setting) external {

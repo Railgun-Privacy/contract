@@ -6,22 +6,48 @@ pragma abicoder v2;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { IWBase } from "./IWBase.sol";
-import { VERIFICATION_BYPASS, Transaction, ShieldRequest, ShieldCiphertext, CommitmentPreimage, TokenData, TokenType } from "../logic/Globals.sol";
+import { VERIFICATION_BYPASS, Transaction, ShieldRequest, ShieldCiphertext, CommitmentPreimage, TokenData, TokenType, DelegateShieldRequest } from "../logic/Globals.sol";
 import { RailgunSmartWallet } from "../logic/RailgunSmartWallet.sol";
 
 /**
  * @title Relay Adapt
  * @author Railgun Contributors
  * @notice Multicall adapt contract for Railgun with relayer support
+ * @dev Modified to support permissioned broadcaster, delegate shield with signature verification, and upgradeable proxy pattern
  */
 
-contract RelayAdapt {
+contract RelayAdapt is Initializable, OwnableUpgradeable {
   using SafeERC20 for IERC20;
+  using ECDSA for bytes32;
+
+  // NOTE: The order of state variables MUST stay the same across upgrades
+  // Add new variables to the bottom of the list
+  // See https://docs.openzeppelin.com/learn/upgrading-smart-contracts#upgrading
 
   // Set to true if contract is executing
-  bool private isExecuting = false;
+  bool private isExecuting;
+
+  // ============ Access Control ============
+  address public broadcaster;
+
+  // ============ EIP-712 ============
+  bytes32 public DOMAIN_SEPARATOR;
+  
+  // Precomputed keccak256 of the type string:
+  // "DelegateShield(bytes32 npk,address tokenAddress,uint8 tokenType,uint256 tokenSubID,uint120 value,bytes32 encryptedBundle0,bytes32 encryptedBundle1,bytes32 encryptedBundle2,bytes32 shieldKey,address from,uint256 nonce,uint256 deadline)"
+  bytes32 public constant DELEGATE_SHIELD_TYPEHASH = 0x58a91d330450e7ba858f6960fb3e96c52192c87ce9e2a095353df43ad3d1db6d;
+
+  // User nonces for replay protection
+  mapping(address => uint256) public nonces;
+
+  // External contract addresses
+  RailgunSmartWallet public railgun;
+  IWBase public wBase;
 
   struct Call {
     address to;
@@ -49,10 +75,8 @@ contract RelayAdapt {
 
   // Events
   event CallError(uint256 callIndex, bytes revertReason);
-
-  // External contract addresses
-  RailgunSmartWallet public railgun;
-  IWBase public wBase;
+  event BroadcasterChange(address indexed newBroadcaster);
+  event DelegateShieldExecuted(address indexed from, address indexed token, uint120 value);
 
   /**
    * @notice only allows self calls to these contracts if contract is executing
@@ -68,11 +92,55 @@ contract RelayAdapt {
   }
 
   /**
-   * @notice Sets Railgun contract and wBase address
+   * @notice Modifier to restrict access to broadcaster only
    */
-  constructor(RailgunSmartWallet _railgun, IWBase _wBase) {
+  modifier onlyBroadcaster() {
+    require(msg.sender == broadcaster, "RelayAdapt: Only broadcaster");
+    _;
+  }
+
+  /**
+   * @notice Initialize RelayAdapt contract
+   * @dev OpenZeppelin initializer ensures this can only be called once
+   * @param _railgun - RailgunSmartWallet contract address
+   * @param _wBase - Wrapped base token (e.g., WETH) address
+   * @param _broadcaster - Initial broadcaster address
+   * @param _owner - Owner address for access control
+   */
+  function initialize(
+    RailgunSmartWallet _railgun,
+    IWBase _wBase,
+    address _broadcaster,
+    address _owner
+  ) public initializer {
+    // Set owner directly using internal function (no need to call __Ownable_init first)
+    _transferOwnership(_owner);
+
+    // Set contract addresses
     railgun = _railgun;
     wBase = _wBase;
+    broadcaster = _broadcaster;
+
+    // Initialize EIP-712 domain separator
+    DOMAIN_SEPARATOR = keccak256(
+      abi.encode(
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+        keccak256("RelayAdapt"),
+        keccak256("1"),
+        block.chainid,
+        address(this)
+      )
+    );
+  }
+
+  /**
+   * @notice Set broadcaster address
+   * @param _broadcaster - New broadcaster address
+   */
+  function setBroadcaster(address _broadcaster) external onlyOwner {
+    require(_broadcaster != address(0), "RelayAdapt: Invalid broadcaster address");
+    broadcaster = _broadcaster;
+    emit BroadcasterChange(_broadcaster);
   }
 
   /**
@@ -306,7 +374,7 @@ contract RelayAdapt {
   function relay(
     Transaction[] calldata _transactions,
     ActionData calldata _actionData
-  ) external payable onlySelfIfExecuting {
+  ) external payable onlySelfIfExecuting onlyBroadcaster {
     // ~55000 gas needs to be added above the minGasLimit value as this amount will be
     // consumed by the time we reach this check
     require(gasleft() > _actionData.minGasLimit, "RelayAdapt: Not enough gas supplied");
@@ -334,7 +402,140 @@ contract RelayAdapt {
     // contract at the end of your calls array.
   }
 
+  // ============ Delegate Shield Functions ============
+
+  /**
+   * @notice Hash a DelegateShieldRequest for EIP-712 signature verification
+   * @param _request - The delegate shield request to hash
+   * @return The EIP-712 struct hash
+   */
+  function _hashDelegateShieldRequest(
+    DelegateShieldRequest calldata _request
+  ) internal pure returns (bytes32) {
+    return keccak256(abi.encode(
+      keccak256("DelegateShield(bytes32 npk,address tokenAddress,uint8 tokenType,uint256 tokenSubID,uint120 value,bytes32 encryptedBundle0,bytes32 encryptedBundle1,bytes32 encryptedBundle2,bytes32 shieldKey,address from,uint256 nonce,uint256 deadline)"),
+      _request.shieldRequest.preimage.npk,
+      _request.shieldRequest.preimage.token.tokenAddress,
+      uint8(_request.shieldRequest.preimage.token.tokenType),
+      _request.shieldRequest.preimage.token.tokenSubID,
+      _request.shieldRequest.preimage.value,
+      _request.shieldRequest.ciphertext.encryptedBundle[0],
+      _request.shieldRequest.ciphertext.encryptedBundle[1],
+      _request.shieldRequest.ciphertext.encryptedBundle[2],
+      _request.shieldRequest.ciphertext.shieldKey,
+      _request.from,
+      _request.nonce,
+      _request.deadline
+    ));
+  }
+
+  /**
+   * @notice Get the EIP-712 digest for a DelegateShieldRequest
+   * @param _request - The delegate shield request
+   * @return The EIP-712 digest to be signed
+   */
+  function getDelegateShieldDigest(
+    DelegateShieldRequest calldata _request
+  ) public view returns (bytes32) {
+    return keccak256(abi.encodePacked(
+      "\x19\x01",
+      DOMAIN_SEPARATOR,
+      _hashDelegateShieldRequest(_request)
+    ));
+  }
+
+  /**
+   * @notice Execute delegate shield with EIP-712 signature verification
+   * @dev Broadcaster calls this to shield tokens on behalf of users who signed the requests
+   * @param _requests - Array of delegate shield requests
+   * @param _signatures - Array of EIP-712 signatures corresponding to each request
+   */
+  function delegateShield(
+    DelegateShieldRequest[] calldata _requests,
+    bytes[] calldata _signatures
+  ) external onlyBroadcaster {
+    require(_requests.length == _signatures.length, "RelayAdapt: Length mismatch");
+    require(_requests.length > 0, "RelayAdapt: Empty requests");
+
+    ShieldRequest[] memory shieldRequests = new ShieldRequest[](_requests.length);
+    
+    // Track unique tokens and their cumulative amounts for approval
+    address[] memory tokenAddresses = new address[](_requests.length);
+    uint256[] memory tokenAmounts = new uint256[](_requests.length);
+    uint256 uniqueTokenCount = 0;
+
+    for (uint256 i = 0; i < _requests.length; i++) {
+      DelegateShieldRequest calldata req = _requests[i];
+
+      // 1. Verify deadline
+      require(block.timestamp <= req.deadline, "RelayAdapt: Signature expired");
+
+      // 2. Verify and increment nonce
+      require(nonces[req.from] == req.nonce, "RelayAdapt: Invalid nonce");
+      nonces[req.from]++;
+
+      // 3. Verify signature
+      bytes32 digest = getDelegateShieldDigest(req);
+      address signer = digest.recover(_signatures[i]);
+      require(signer == req.from, "RelayAdapt: Invalid signature");
+
+      // 4. Only ERC20 supported for delegate shield
+      require(
+        req.shieldRequest.preimage.token.tokenType == TokenType.ERC20,
+        "RelayAdapt: Only ERC20 supported"
+      );
+
+      address tokenAddress = req.shieldRequest.preimage.token.tokenAddress;
+      uint120 value = req.shieldRequest.preimage.value;
+
+      // 5. Transfer tokens from user to this contract
+      IERC20(tokenAddress).safeTransferFrom(req.from, address(this), value);
+
+      // 6. Accumulate token amounts for batch approval
+      bool found = false;
+      for (uint256 j = 0; j < uniqueTokenCount; j++) {
+        if (tokenAddresses[j] == tokenAddress) {
+          tokenAmounts[j] += value;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        tokenAddresses[uniqueTokenCount] = tokenAddress;
+        tokenAmounts[uniqueTokenCount] = value;
+        uniqueTokenCount++;
+      }
+
+      // 7. Store shield request
+      shieldRequests[i] = req.shieldRequest;
+
+      emit DelegateShieldExecuted(req.from, tokenAddress, value);
+    }
+
+    // 8. Batch approve all tokens to RailgunSmartWallet
+    for (uint256 i = 0; i < uniqueTokenCount; i++) {
+      IERC20 token = IERC20(tokenAddresses[i]);
+      token.safeApprove(address(railgun), 0);
+      token.safeApprove(address(railgun), tokenAmounts[i]);
+    }
+
+    // 9. Execute batch shield
+    railgun.shield(shieldRequests);
+  }
+  /**
+   * @notice Get the current nonce for a user
+   * @param _user - User address
+   * @return Current nonce
+   */
+  function getNonce(address _user) external view returns (uint256) {
+    return nonces[_user];
+  }
+
   // Allow wBase contract unwrapping to pay us
   // solhint-disable-next-line no-empty-blocks
   receive() external payable {}
+
+  // Storage gap for future upgrades
+  // See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+  uint256[50] private __gap;
 }

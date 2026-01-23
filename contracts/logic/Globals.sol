@@ -99,3 +99,12 @@ struct SnarkProof {
   G2Point b;
   G1Point c;
 }
+
+// ============ Delegate Shield Structs ============
+
+struct DelegateShieldRequest {
+  ShieldRequest shieldRequest;  // Original shield request
+  address from;                  // Token source address (user)
+  uint256 nonce;                 // Anti-replay nonce
+  uint256 deadline;              // Signature expiration timestamp
+}
