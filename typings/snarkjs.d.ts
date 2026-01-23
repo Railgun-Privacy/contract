@@ -7,6 +7,7 @@ declare module 'snarkjs' {
     pi_b: (string | bigint)[][];
     pi_c: (string | bigint)[];
     protocol: Protocols;
+    curve?: Curves;
   }
 
   export type PublicSignals = (string | bigint)[];
@@ -41,5 +42,14 @@ declare module 'snarkjs' {
       proof: SnarkjsProof,
       logger?: unknown,
     ): Promise<boolean>;
+  }
+
+  namespace wtns {
+    declare function calculate(
+      inputs: unknown,
+      wasm: string | Uint8Array,
+      wtnsFileName: string,
+      logger?: unknown,
+    ): Promise<void>;
   }
 }

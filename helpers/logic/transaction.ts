@@ -1,5 +1,7 @@
 import { ethers } from 'hardhat';
 import { ProofBundle, prove, SolidityProof } from './prover';
+
+const DEBUG_TIMING = process.env.DEBUG_TIMING === 'true';
 import {
   CommitmentCiphertext,
   CommitmentPreimage,
@@ -552,8 +554,12 @@ async function transact(
   notesIn: Note[],
   notesOut: (Note | UnshieldNote)[],
 ): Promise<PublicInputs> {
+  let t0 = Date.now();
+
   // Get artifact
   const artifact = getKeys(notesIn.length, notesOut.length);
+  const tKeys = Date.now() - t0;
+  t0 = Date.now();
 
   // Get required ciphertext length
   const ciphertextLength = unshield === UnshieldType.NONE ? notesOut.length : notesOut.length - 1;
@@ -565,6 +571,8 @@ async function transact(
   const commitmentCiphertext = await Promise.all(
     notesOut.slice(0, ciphertextLength).map((note) => note.encrypt(senderViewingPrivateKey, false)),
   );
+  const tEncrypt = Date.now() - t0;
+  t0 = Date.now();
 
   // Get circuit inputs
   const inputs = await formatCircuitInputs(
@@ -578,12 +586,16 @@ async function transact(
     notesOut,
     commitmentCiphertext,
   );
+  const tFormat = Date.now() - t0;
+  t0 = Date.now();
 
   // Generate proof
   const proof = await prove(artifact, inputs);
+  const tProve = Date.now() - t0;
+  t0 = Date.now();
 
-  // Return public inputs
-  return formatPublicInputs(
+  // Format public inputs
+  const result = await formatPublicInputs(
     proof,
     merkletree,
     minGasPrice,
@@ -595,6 +607,14 @@ async function transact(
     notesOut,
     commitmentCiphertext,
   );
+  const tPublic = Date.now() - t0;
+
+  if (DEBUG_TIMING) {
+    const total = tKeys + tEncrypt + tFormat + tProve + tPublic;
+    console.log(`   ⏱️  transact: keys=${tKeys}ms, encrypt=${tEncrypt}ms, format=${tFormat}ms, prove=${tProve}ms, public=${tPublic}ms (total ${total}ms)`);
+  }
+
+  return result;
 }
 
 /**

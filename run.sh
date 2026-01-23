@@ -7,17 +7,22 @@ set -a
 source .env
 set +a
 
+# Auto-install rapidsnark if USE_RAPIDSNARK=true and not installed
+if [ "$USE_RAPIDSNARK" = "true" ]; then
+    if [ ! -x "/usr/local/bin/rapidsnark" ]; then
+        echo "⚡ USE_RAPIDSNARK=true but rapidsnark not found, installing..."
+        ./install_rapidsnark.sh
+    else
+        echo "⚡ rapidsnark already installed: /usr/local/bin/rapidsnark"
+    fi
+fi
+
 if [ "$USE_LOCAL_CIRCUITS" = "true" ]; then
     pushd "$CIRCUITS_V2_DIR" > /dev/null
     ./run.sh
     popd > /dev/null
 fi
 
-# prepare environment
-export NVM_DIR="$HOME/.nvm"
-[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"
-[ -s "$HOME/.nvm/nvm.sh" ] && \. "$HOME/.nvm/nvm.sh"
-nvm install 22
 yarn install
 
 #1. start anvil (local ethereum node)
