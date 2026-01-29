@@ -8,7 +8,7 @@ import {
 
 import * as weth9artifact from '../../externalArtifacts/WETH9.json';
 
-import { getAdaptParams, transactWithAdaptParams } from '../../helpers/adapt/relay';
+import { transactWithAdaptParams } from '../../helpers/adapt/relay';
 import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
 import { dummyTransact, UnshieldType } from '../../helpers/logic/transaction';
 import { MerkleTree } from '../../helpers/logic/merkletree';
@@ -23,7 +23,117 @@ import {
 } from '../../helpers/global/bytes';
 
 describe('Adapt/RelayAdapt7702', () => {
-  const EXECUTE_SIGNATURE = 'execute((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[],(bytes31,bool,uint256,(address,bytes,uint256)[]),bytes)';
+  const EXECUTE_SIGNATURE = 'execute((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[],(bool,uint256,(address,bytes,uint256)[]),bytes)';
+  const ZERO_ADAPT_PARAMS = arrayToHexString(new Uint8Array(32), true);
+
+  const serializeTokenData = (token: {
+    tokenType: number;
+    tokenAddress: string;
+    tokenSubID: bigint;
+  }) => [token.tokenType, token.tokenAddress, token.tokenSubID];
+
+  const serializeCommitmentPreimage = (preimage: {
+    npk: Uint8Array | string;
+    token: {
+      tokenType: number;
+      tokenAddress: string;
+      tokenSubID: bigint;
+    };
+    value: bigint;
+  }) => [
+    typeof preimage.npk === 'string'
+      ? preimage.npk
+      : arrayToHexString(preimage.npk, true),
+    serializeTokenData(preimage.token),
+    preimage.value,
+  ];
+
+  const serializeCommitmentCiphertext = (ciphertext: {
+    ciphertext: [Uint8Array, Uint8Array, Uint8Array, Uint8Array];
+    blindedSenderViewingKey: Uint8Array;
+    blindedReceiverViewingKey: Uint8Array;
+    annotationData: Uint8Array;
+    memo: Uint8Array;
+  }) => [
+    ciphertext.ciphertext.map((value) => arrayToHexString(value, true)),
+    arrayToHexString(ciphertext.blindedSenderViewingKey, true),
+    arrayToHexString(ciphertext.blindedReceiverViewingKey, true),
+    arrayToHexString(ciphertext.annotationData, true),
+    arrayToHexString(ciphertext.memo, true),
+  ];
+
+  const serializeTransaction = (transaction: any) => [
+    [
+      [transaction.proof.a.x, transaction.proof.a.y],
+      [transaction.proof.b.x, transaction.proof.b.y],
+      [transaction.proof.c.x, transaction.proof.c.y],
+    ],
+    transaction.merkleRoot,
+    transaction.nullifiers,
+    transaction.commitments,
+    [
+      transaction.boundParams.treeNumber,
+      transaction.boundParams.minGasPrice,
+      transaction.boundParams.unshield,
+      transaction.boundParams.chainID,
+      transaction.boundParams.adaptContract,
+      transaction.boundParams.adaptParams,
+      transaction.boundParams.commitmentCiphertext.map(serializeCommitmentCiphertext),
+    ],
+    serializeCommitmentPreimage(transaction.unshieldPreimage),
+  ];
+
+  const serializeCall = (call: { to: string; data: string | Uint8Array; value: bigint }) => [
+    call.to,
+    typeof call.data === 'string' ? call.data : arrayToHexString(call.data, true),
+    call.value,
+  ];
+
+  const serializeActionData = (actionData: {
+    requireSuccess: boolean;
+    minGasLimit: bigint;
+    calls: { to: string; data: string | Uint8Array; value: bigint }[];
+  }) => [
+    actionData.requireSuccess,
+    actionData.minGasLimit,
+    actionData.calls.map(serializeCall),
+  ];
+
+  const serializeShieldRequest = (shieldRequest: any) => [
+    serializeCommitmentPreimage(shieldRequest.preimage),
+    [
+      shieldRequest.ciphertext.encryptedBundle.map((value: Uint8Array) =>
+        arrayToHexString(value, true),
+      ),
+      arrayToHexString(shieldRequest.ciphertext.shieldKey, true),
+    ],
+  ];
+
+  const serializeTokenTransfer = (transfer: any) => [
+    serializeTokenData(transfer.token),
+    transfer.to,
+    transfer.value,
+  ];
+
+  const encodeRelayAdaptFunctionData = (
+    relayAdapt7702: any,
+    functionName: string,
+    args: any[],
+  ) => (relayAdapt7702.interface as any).encodeFunctionData(functionName, args);
+
+  const executeRelayAdapt = (
+    relayAdapt7702: any,
+    transactions: any[],
+    actionData: any,
+    signature: string,
+    overrides?: any,
+  ) => {
+    if (overrides) {
+      return relayAdapt7702[EXECUTE_SIGNATURE](transactions, actionData, signature, overrides);
+    }
+
+    return relayAdapt7702[EXECUTE_SIGNATURE](transactions, actionData, signature);
+  };
 
   const getRelayAdapt7702Signature = async (
     signer: any,
@@ -31,8 +141,6 @@ describe('Adapt/RelayAdapt7702', () => {
     transactions: any[],
     actionData: any,
   ) => {
-    const adaptParams = getAdaptParams(transactions, actionData);
-    
     const domain = {
       name: 'RelayAdapt7702',
       version: '1',
@@ -41,13 +149,21 @@ describe('Adapt/RelayAdapt7702', () => {
     };
 
     const types = {
-      Relay: [
-        { name: 'adaptParams', type: 'bytes32' },
+      Execute: [
+        { name: 'payloadHash', type: 'bytes32' },
       ],
     };
 
     const value = {
-      adaptParams: arrayToHexString(adaptParams, true),
+      payloadHash: ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          [
+            'tuple(((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,tuple(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[]',
+            'tuple(bool,uint256,tuple(address,bytes,uint256)[])',
+          ],
+          [transactions.map(serializeTransaction), serializeActionData(actionData)],
+        ),
+      ),
     };
 
     return signer._signTypedData(domain, types, value);
@@ -68,22 +184,18 @@ describe('Adapt/RelayAdapt7702', () => {
     };
 
     const types = {
-      Call: [
-        { name: 'to', type: 'address' },
-        { name: 'data', type: 'bytes' },
-        { name: 'value', type: 'uint256' },
-      ],
       Multicall: [
-        { name: 'requireSuccess', type: 'bool' },
-        { name: 'calls', type: 'Call[]' },
-        { name: 'nonce', type: 'uint256' },
+        { name: 'payloadHash', type: 'bytes32' },
       ],
     };
 
     const value = {
-      requireSuccess,
-      calls,
-      nonce,
+      payloadHash: ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['bool', 'tuple(address,bytes,uint256)[]', 'uint256'],
+          [requireSuccess, calls.map(serializeCall), nonce],
+        ),
+      ),
     };
 
     return signer._signTypedData(domain, types, value);
@@ -141,26 +253,23 @@ describe('Adapt/RelayAdapt7702', () => {
     );
     const weth9 = await WETH9.deploy();
 
-    // Deploy RelayAdapt7702Deployer
-    const RelayAdapt7702Deployer = await ethers.getContractFactory('RelayAdapt7702Deployer');
-    const relayAdapt7702Deployer = await RelayAdapt7702Deployer.deploy(primaryAccount.address);
-    await relayAdapt7702Deployer.deployed();
+    // Deploy RailgunRegistry mock
+    const RailgunRegistry = await ethers.getContractFactory('RailgunRegistry');
+    const railgunRegistry = await RailgunRegistry.deploy(primaryAccount.address);
+    await railgunRegistry.deployed();
 
-    // Deploy RelayAdapt7702 Template via Deployer
+    // Deploy RelayAdapt7702 Template directly
     const RelayAdapt7702 = await ethers.getContractFactory('RelayAdapt7702');
-    // console.log("\nDeploying Relay Adapt 7702 via Deployer...", RelayAdapt7702);
-    const relayAdapt7702DeployTx = RelayAdapt7702.getDeployTransaction(railgunSmartWallet.address, weth9.address);
-    const relayAdapt7702Bytecode = relayAdapt7702DeployTx.data;
-    const salt = ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32);
-
-    const deployTx = await relayAdapt7702Deployer.deploy(relayAdapt7702Bytecode, salt);
-    const receipt = await deployTx.wait();
-    const deployedEvent = receipt.events?.find((e: any) => e.event === 'Deployed');
-    const relayAdapt7702Address = deployedEvent?.args?.deployment;
+    const relayAdapt7702Template = await RelayAdapt7702.deploy(railgunSmartWallet.address, weth9.address);
+    await relayAdapt7702Template.deployed();
+    const relayAdapt7702Address = relayAdapt7702Template.address;
     console.log(`\nRelay Adapt 7702 deployed at ${relayAdapt7702Address}`);
     
-    const relayAdapt7702Template = RelayAdapt7702.attach(relayAdapt7702Address);
-
+    // Register the current RelayAdapt7702 in the mock registry
+    await railgunRegistry.setContract('RelayAdapt7702', relayAdapt7702Address, 1);
+    expect(await railgunRegistry.isMock()).to.equal(true);
+    expect(await railgunRegistry.getContractAddress('RelayAdapt7702')).to.equal(relayAdapt7702Address);
+    
     // --- EIP-7702 Simulation ---
     // Get the runtime bytecode (which has immutables set)
     const code = await ethers.provider.getCode(relayAdapt7702Template.address);
@@ -240,90 +349,6 @@ describe('Adapt/RelayAdapt7702', () => {
     };
   }
 
-  it('Should calculate adapt parameters', async function () {
-    this.timeout(5 * 60 * 60 * 1000);
-    const loops = process.env.SKIP_LONG_TESTS ? 5n : 10n;
-
-    const { chainID, relayAdapt7702 } = await loadFixture(deploy);
-
-    for (let i = 1; i < loops; i += 1) {
-      // Get test transactions
-      const tokenData = {
-        tokenType: TokenType.ERC20,
-        tokenAddress: arrayToHexString(randomBytes(20), true),
-        tokenSubID: 0n,
-      };
-
-      const merkletree = await MerkleTree.createTree();
-
-      const notesIn = new Array(i)
-        .fill(1)
-        .map(
-          () =>
-            new Note(
-              randomBytes(32),
-              randomBytes(32),
-              arrayToBigInt(randomBytes(5)),
-              randomBytes(16),
-              tokenData,
-              '',
-            ),
-        );
-
-      const notesOut = new Array(i)
-        .fill(1)
-        .map(
-          () =>
-            new Note(
-              randomBytes(32),
-              randomBytes(32),
-              arrayToBigInt(randomBytes(5)),
-              randomBytes(16),
-              tokenData,
-              '',
-            ),
-        );
-
-      await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), 0);
-
-      const transactions = await Promise.all(
-        new Array(i)
-          .fill(1)
-          .map(() =>
-            dummyTransact(
-              merkletree,
-              arrayToBigInt(randomBytes(5)),
-              UnshieldType.NONE,
-              chainID,
-              relayAdapt7702.address,
-              randomBytes(32),
-              notesIn,
-              notesOut,
-            ),
-          ),
-      );
-
-      // Get test action data
-      const calls = new Array(i).fill(1).map(() => ({
-        to: arrayToHexString(randomBytes(20), true),
-        data: randomBytes(i * 32),
-        value: arrayToBigInt(randomBytes(5)),
-      }));
-
-      const actionData = {
-        random: randomBytes(31),
-        requireSuccess: i % 2 === 1,
-        minGasLimit: arrayToBigInt(randomBytes(5)),
-        calls,
-      };
-
-      // Check contract and js output matches
-      expect(await relayAdapt7702.getAdaptParams(transactions, actionData)).to.equal(
-        arrayToHexString(getAdaptParams(transactions, actionData), true),
-      );
-    }
-  });
-
   it('Should execute a transaction with valid signature', async () => {
     const {
       railgunSmartWallet,
@@ -364,15 +389,14 @@ describe('Adapt/RelayAdapt7702', () => {
 
     // 2. Prepare Action Data
     const actionData = {
-      random: randomBytes(31),
       requireSuccess: true,
       minGasLimit: BigInt(10000),
       calls: [],
     };
 
-    // 3. Calculate Adapt Params
-    const adaptParams = getAdaptParams(transactions, actionData);
-    transactions[0].boundParams.adaptParams = arrayToHexString(adaptParams, true);
+    transactions[0].boundParams.adaptParams = new Uint8Array(32);
+    const serializedTransactions = transactions.map(serializeTransaction);
+    const serializedActionData = serializeActionData(actionData);
 
     // 4. Sign Payload
     const signature = await getRelayAdapt7702Signature(
@@ -385,7 +409,7 @@ describe('Adapt/RelayAdapt7702', () => {
     // 5. Execute
     // Call from snarkBypassSigner (Relayer)
     await expect(
-        relayAdapt7702Bypass[EXECUTE_SIGNATURE](transactions, actionData, signature),
+      executeRelayAdapt(relayAdapt7702Bypass as any, serializedTransactions, serializedActionData, signature),
     ).to.not.be.reverted;
   });
 
@@ -427,11 +451,13 @@ describe('Adapt/RelayAdapt7702', () => {
     ];
 
     const actionData = {
-      random: randomBytes(31),
       requireSuccess: true,
       minGasLimit: BigInt(10000),
       calls: [],
     };
+    transactions[0].boundParams.adaptParams = new Uint8Array(32);
+    const serializedTransactions = transactions.map(serializeTransaction);
+    const serializedActionData = serializeActionData(actionData);
 
     // 4. Sign Payload with WRONG signer (primaryAccount instead of secondaryAccount)
     const signature = await getRelayAdapt7702Signature(
@@ -443,7 +469,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
     // 5. Execute
     await expect(
-        relayAdapt7702Relayer[EXECUTE_SIGNATURE](transactions, actionData, signature),
+      executeRelayAdapt(relayAdapt7702Relayer as any, serializedTransactions, serializedActionData, signature),
     ).to.be.revertedWith('RelayAdapt: Invalid signature');
   });
 
@@ -489,12 +515,11 @@ describe('Adapt/RelayAdapt7702', () => {
     // Prepare Shield Call
     const shieldCall = {
         to: relayAdapt7702.address,
-        data: relayAdapt7702.interface.encodeFunctionData('shield', [[shieldRequest]]),
+      data: encodeRelayAdaptFunctionData(relayAdapt7702, 'shield', [[serializeShieldRequest(shieldRequest)]]),
         value: 0n,
     };
 
     const actionData = {
-        random: randomBytes(31),
         requireSuccess: true,
         minGasLimit: BigInt(10000),
         calls: [shieldCall],
@@ -507,9 +532,15 @@ describe('Adapt/RelayAdapt7702', () => {
         [],
         actionData,
     );
+    const serializedActionData = serializeActionData(actionData);
 
     // Execute Shield
-    const shieldTransaction = await relayAdapt7702Relayer[EXECUTE_SIGNATURE]([], actionData, signature);
+    const shieldTransaction = await executeRelayAdapt(
+      relayAdapt7702Relayer as any,
+      [],
+      serializedActionData,
+      signature,
+    );
 
     // Check tokens moved
     await expect(shieldTransaction).to.changeTokenBalances(
@@ -544,12 +575,15 @@ describe('Adapt/RelayAdapt7702', () => {
     // Prepare Shield Call
     const shieldCall = {
         to: relayAdapt7702.address,
-        data: relayAdapt7702.interface.encodeFunctionData('shield', [[shieldRequest, shieldRequest, shieldRequest]]),
+        data: encodeRelayAdaptFunctionData(relayAdapt7702, 'shield', [[
+          serializeShieldRequest(shieldRequest),
+          serializeShieldRequest(shieldRequest),
+          serializeShieldRequest(shieldRequest),
+        ]]),
         value: 0n,
     };
 
     const actionData = {
-        random: randomBytes(31),
         requireSuccess: true,
         minGasLimit: BigInt(10000),
         calls: [shieldCall],
@@ -562,9 +596,10 @@ describe('Adapt/RelayAdapt7702', () => {
         [],
         actionData,
     );
+    const serializedActionData = serializeActionData(actionData);
 
     // Execute Shield
-    await relayAdapt7702Relayer[EXECUTE_SIGNATURE]([], actionData, signature);
+    await executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, signature);
 
     // No additions to the merkle tree should have been made
     expect(await railgunSmartWallet.nextLeafIndex()).to.equal(0);
@@ -597,12 +632,11 @@ describe('Adapt/RelayAdapt7702', () => {
     // Prepare Shield Call
     const shieldCall = {
         to: relayAdapt7702.address,
-        data: relayAdapt7702.interface.encodeFunctionData('shield', [[shieldRequest]]),
+      data: encodeRelayAdaptFunctionData(relayAdapt7702, 'shield', [[serializeShieldRequest(shieldRequest)]]),
         value: 0n,
     };
 
     const actionData = {
-        random: randomBytes(31),
         requireSuccess: true,
         minGasLimit: BigInt(10000),
         calls: [shieldCall],
@@ -615,9 +649,10 @@ describe('Adapt/RelayAdapt7702', () => {
         [],
         actionData,
     );
+    const serializedActionData = serializeActionData(actionData);
 
     // Execute Shield
-    await relayAdapt7702Relayer[EXECUTE_SIGNATURE]([], actionData, signature);
+    await executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, signature);
 
     // Check tokens moved
     expect(await testERC721.ownerOf(10n)).to.equal(railgunSmartWallet.address);
@@ -646,12 +681,11 @@ describe('Adapt/RelayAdapt7702', () => {
     // Prepare Shield Call
     const shieldCall = {
         to: relayAdapt7702.address,
-        data: relayAdapt7702.interface.encodeFunctionData('shield', [[shieldRequest]]),
+      data: encodeRelayAdaptFunctionData(relayAdapt7702, 'shield', [[serializeShieldRequest(shieldRequest)]]),
         value: 0n,
     };
 
     const actionData = {
-        random: randomBytes(31),
         requireSuccess: true,
         minGasLimit: BigInt(10000),
         calls: [shieldCall],
@@ -664,10 +698,11 @@ describe('Adapt/RelayAdapt7702', () => {
         [],
         actionData,
     );
+    const serializedActionData = serializeActionData(actionData);
 
     // Execute Shield
     await expect(
-        relayAdapt7702Relayer[EXECUTE_SIGNATURE]([], actionData, signature)
+      executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, signature)
     ).to.be.revertedWithCustomError(relayAdapt7702, 'CallFailed')
     .withArgs(
         0,
@@ -693,8 +728,8 @@ describe('Adapt/RelayAdapt7702', () => {
     // Prepare Transfer Call
     const transferCall = {
         to: relayAdapt7702.address,
-        data: relayAdapt7702.interface.encodeFunctionData('transfer', [[
-            {
+      data: encodeRelayAdaptFunctionData(relayAdapt7702, 'transfer', [[
+            serializeTokenTransfer({
                 to: primaryAccount.address,
                 value: 100n,
                 token: {
@@ -702,8 +737,8 @@ describe('Adapt/RelayAdapt7702', () => {
                   tokenAddress: ethers.constants.AddressZero,
                   tokenSubID: 0n,
                 },
-            },
-            {
+            }),
+            serializeTokenTransfer({
                 to: primaryAccount.address,
                 value: 0n,
                 token: {
@@ -711,8 +746,8 @@ describe('Adapt/RelayAdapt7702', () => {
                   tokenAddress: ethers.constants.AddressZero,
                   tokenSubID: 0n,
                 },
-            },
-            {
+            }),
+            serializeTokenTransfer({
                 to: primaryAccount.address,
                 value: 10n ** 18n,
                 token: {
@@ -720,8 +755,8 @@ describe('Adapt/RelayAdapt7702', () => {
                   tokenAddress: testERC20Tokens[0].address,
                   tokenSubID: 0n,
                 },
-            },
-            {
+            }),
+            serializeTokenTransfer({
                 to: primaryAccount.address,
                 value: 0n,
                 token: {
@@ -729,8 +764,8 @@ describe('Adapt/RelayAdapt7702', () => {
                   tokenAddress: testERC20Tokens[1].address,
                   tokenSubID: 0n,
                 },
-            },
-            {
+            }),
+            serializeTokenTransfer({
                 to: primaryAccount.address,
                 value: 0n,
                 token: {
@@ -738,13 +773,12 @@ describe('Adapt/RelayAdapt7702', () => {
                   tokenAddress: testERC721.address,
                   tokenSubID: 10n,
                 },
-            },
-        ]]),
+            }),
+          ]]),
         value: 0n,
     };
 
     const actionData = {
-        random: randomBytes(31),
         requireSuccess: true,
         minGasLimit: BigInt(10000),
         calls: [transferCall],
@@ -757,9 +791,15 @@ describe('Adapt/RelayAdapt7702', () => {
         [],
         actionData,
     );
+    const serializedActionData = serializeActionData(actionData);
 
     // Execute Transfer
-    const transferTX = await relayAdapt7702Relayer[EXECUTE_SIGNATURE]([], actionData, signature);
+    const transferTX = await executeRelayAdapt(
+      relayAdapt7702Relayer as any,
+      [],
+      serializedActionData,
+      signature,
+    );
 
     // Check tokens transferred
     await expect(transferTX).to.changeEtherBalances(
@@ -796,7 +836,6 @@ describe('Adapt/RelayAdapt7702', () => {
     };
 
     const actionDataWrap = {
-        random: randomBytes(31),
         requireSuccess: true,
         minGasLimit: BigInt(10000),
         calls: [wrapCall],
@@ -809,9 +848,15 @@ describe('Adapt/RelayAdapt7702', () => {
         [],
         actionDataWrap,
     );
+    const serializedActionDataWrap = serializeActionData(actionDataWrap);
 
     // Execute Wrap
-    const wrapTX = await relayAdapt7702Relayer[EXECUTE_SIGNATURE]([], actionDataWrap, signature);
+    const wrapTX = await executeRelayAdapt(
+      relayAdapt7702Relayer as any,
+      [],
+      serializedActionDataWrap,
+      signature,
+    );
 
     await expect(wrapTX).to.changeEtherBalances([relayAdapt7702.address, weth9.address], [-100, 100]);
     await expect(wrapTX).to.changeTokenBalance(weth9, relayAdapt7702.address, 100);
@@ -824,7 +869,6 @@ describe('Adapt/RelayAdapt7702', () => {
     };
 
     const actionDataUnwrap = {
-        random: randomBytes(31),
         requireSuccess: true,
         minGasLimit: BigInt(10000),
         calls: [unwrapCall],
@@ -837,9 +881,15 @@ describe('Adapt/RelayAdapt7702', () => {
         [],
         actionDataUnwrap,
     );
+    const serializedActionDataUnwrap = serializeActionData(actionDataUnwrap);
 
     // Execute Unwrap
-    const unwrapTX = await relayAdapt7702Relayer[EXECUTE_SIGNATURE]([], actionDataUnwrap, signatureUnwrap);
+    const unwrapTX = await executeRelayAdapt(
+      relayAdapt7702Relayer as any,
+      [],
+      serializedActionDataUnwrap,
+      signatureUnwrap,
+    );
 
     await expect(unwrapTX).to.changeEtherBalances([relayAdapt7702.address, weth9.address], [100, -100]);
     await expect(unwrapTX).to.changeTokenBalance(weth9, relayAdapt7702.address, -100);
@@ -873,7 +923,7 @@ describe('Adapt/RelayAdapt7702', () => {
       value: 0n,
     };
 
-    let nonce = await relayAdapt7702.nonce();
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
     let signature = await getRelayAdapt7702MulticallSignature(
       secondaryAccount,
       chainID,
@@ -892,9 +942,9 @@ describe('Adapt/RelayAdapt7702', () => {
 
     const callInternal = {
       to: relayAdapt7702.address,
-      data: relayAdapt7702.interface.encodeFunctionData('transfer', [
+      data: encodeRelayAdaptFunctionData(relayAdapt7702, 'transfer', [
         [
-          {
+          serializeTokenTransfer({
             to: primaryAccount.address,
             value: 10n ** 18n,
             token: {
@@ -902,13 +952,13 @@ describe('Adapt/RelayAdapt7702', () => {
               tokenAddress: testERC20Tokens[0].address,
               tokenSubID: 0n,
             },
-          },
+          }),
         ],
       ]),
       value: 0n,
     };
 
-    nonce = await relayAdapt7702.nonce();
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     signature = await getRelayAdapt7702MulticallSignature(
       secondaryAccount,
       chainID,
@@ -932,7 +982,7 @@ describe('Adapt/RelayAdapt7702', () => {
       value: 0n,
     };
 
-    nonce = await relayAdapt7702.nonce();
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     signature = await getRelayAdapt7702MulticallSignature(
       secondaryAccount,
       chainID,
@@ -953,7 +1003,7 @@ describe('Adapt/RelayAdapt7702', () => {
       );
 
     // 4. Should not throw on external contract failure if require success is false
-    nonce = await relayAdapt7702.nonce();
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     signature = await getRelayAdapt7702MulticallSignature(
       secondaryAccount,
       chainID,
@@ -983,7 +1033,7 @@ describe('Adapt/RelayAdapt7702', () => {
       value: 0n,
     };
 
-    nonce = await relayAdapt7702.nonce();
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     signature = await getRelayAdapt7702MulticallSignature(
       secondaryAccount,
       chainID,
@@ -1003,7 +1053,7 @@ describe('Adapt/RelayAdapt7702', () => {
       value: 0n,
     };
 
-    nonce = await relayAdapt7702.nonce();
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     signature = await getRelayAdapt7702MulticallSignature(
       secondaryAccount,
       chainID,
@@ -1094,19 +1144,6 @@ describe('Adapt/RelayAdapt7702', () => {
       ],
     };
 
-    const transactionsWrongAdaptID = [
-      await dummyTransact(
-        merkletree,
-        0n,
-        UnshieldType.NONE,
-        chainID,
-        secondaryAccount.address,
-        new Uint8Array(32),
-        notesInOut.inputs,
-        notesInOut.outputs,
-      ),
-    ];
-
     const transactions = await transactWithAdaptParams(merkletree, actionData, [
       {
         minGasPrice: 0n,
@@ -1125,31 +1162,28 @@ describe('Adapt/RelayAdapt7702', () => {
       transactions,
       actionData,
     );
+    const serializedTransactions = transactions.map(serializeTransaction);
+    const serializedActionData = serializeActionData(actionData);
 
     // Should reject if not enough gas is supplied
     await expect(
-      relayAdapt7702Relayer[EXECUTE_SIGNATURE](transactions, actionData, signature, { gasLimit: 5000000n }),
+      executeRelayAdapt(
+        relayAdapt7702Relayer as any,
+        serializedTransactions,
+        serializedActionData,
+        signature,
+        { gasLimit: 5000000n },
+      ),
     ).to.be.revertedWith('RelayAdapt: Not enough gas supplied');
 
-    // Should reject if wrong adapt params is supplied
-    // Note: We need to sign the WRONG transactions to pass the signature check,
-    // but fail the adapt params check.
-    const signatureWrong = await getRelayAdapt7702Signature(
-      secondaryAccount,
-      chainID,
-      transactionsWrongAdaptID,
-      actionData,
-    );
-    await expect(
-      relayAdapt7702Relayer[EXECUTE_SIGNATURE](transactionsWrongAdaptID, actionData, signatureWrong, {
-        gasLimit: 11000000n,
-      }),
-    ).to.be.revertedWith('RelayAdapt: AdaptID Parameters Mismatch');
-
     // Submit transaction
-    const relayTX = await relayAdapt7702Relayer[EXECUTE_SIGNATURE](transactions, actionData, signature, {
-      gasLimit: 11000000n,
-    });
+    const relayTX = await executeRelayAdapt(
+      relayAdapt7702Relayer as any,
+      serializedTransactions,
+      serializedActionData,
+      signature,
+      { gasLimit: 11000000n },
+    );
 
     // Check effects have been applied
     expect(await governanceStateChangeTargetStub.greeting()).to.equal('hi');
@@ -1170,7 +1204,6 @@ describe('Adapt/RelayAdapt7702', () => {
     );
 
     const actionDataNoOp = {
-      random: randomBytes(31),
       requireSuccess: false,
       minGasLimit: 0n,
       calls: [],
@@ -1196,9 +1229,16 @@ describe('Adapt/RelayAdapt7702', () => {
       transactionsSnarkBypass,
       actionDataNoOp,
     );
+    const serializedTransactionsSnarkBypass = transactionsSnarkBypass.map(serializeTransaction);
+    const serializedActionDataNoOp = serializeActionData(actionDataNoOp);
 
     await expect(
-      relayAdapt7702Bypass[EXECUTE_SIGNATURE](transactionsSnarkBypass, actionDataNoOp, signatureBypass),
+      executeRelayAdapt(
+        relayAdapt7702Bypass as any,
+        serializedTransactionsSnarkBypass,
+        serializedActionDataNoOp,
+        signatureBypass,
+      ),
     ).to.eventually.be.fulfilled;
   });
 
@@ -1246,8 +1286,8 @@ describe('Adapt/RelayAdapt7702', () => {
     // If this didn't revert, tokens would move.
     const transferCall = {
         to: relayAdapt7702.address,
-        data: relayAdapt7702.interface.encodeFunctionData('transfer', [[
-            {
+      data: encodeRelayAdaptFunctionData(relayAdapt7702, 'transfer', [[
+        serializeTokenTransfer({
                 to: primaryAccount.address,
                 value: 10n ** 18n,
                 token: {
@@ -1255,21 +1295,20 @@ describe('Adapt/RelayAdapt7702', () => {
                   tokenAddress: testERC20Tokens[0].address,
                   tokenSubID: 0n,
                 },
-            },
-        ]]),
+        }),
+      ]]),
         value: 0n,
     };
 
     const actionData = {
-      random: randomBytes(31),
       requireSuccess: true,
       minGasLimit: BigInt(20000000), // Very high gas limit
       calls: [transferCall],
     };
 
-    // 3. Calculate Adapt Params
-    const adaptParams = getAdaptParams(transactions, actionData);
-    transactions[0].boundParams.adaptParams = arrayToHexString(adaptParams, true);
+    transactions[0].boundParams.adaptParams = new Uint8Array(32);
+    const serializedTransactions = transactions.map(serializeTransaction);
+    const serializedActionData = serializeActionData(actionData);
 
     // 4. Sign Payload
     const signature = await getRelayAdapt7702Signature(
@@ -1287,7 +1326,13 @@ describe('Adapt/RelayAdapt7702', () => {
 
     // 6. Execute with insufficient gas and expect revert
     await expect(
-        relayAdapt7702Relayer[EXECUTE_SIGNATURE](transactions, actionData, signature, { gasLimit: 10000000 })
+        executeRelayAdapt(
+          relayAdapt7702Relayer as any,
+          serializedTransactions,
+          serializedActionData,
+          signature,
+          { gasLimit: 10000000 },
+        )
     ).to.be.revertedWith('RelayAdapt: Not enough gas supplied');
 
     // 7. Get balances after
@@ -1303,66 +1348,4 @@ describe('Adapt/RelayAdapt7702', () => {
     expect(merkleRootAfter).to.equal(merkleRootBefore);
   });
 
-  it('Should revert if adapt params mismatch', async () => {
-    const {
-      relayAdapt7702Relayer,
-      secondaryAccount,
-      chainID,
-      railgunSmartWallet,
-    } = await loadFixture(deploy);
-
-    // 1. Prepare Dummy Transaction
-    const merkletree = await MerkleTree.createTree();
-    const tokenData = {
-        tokenType: TokenType.ERC20,
-        tokenAddress: arrayToHexString(randomBytes(20), true),
-        tokenSubID: 0n,
-    };
-    const notesIn = [new Note(randomBytes(32), randomBytes(32), 100n, randomBytes(16), tokenData, '')];
-    const notesOut = [new Note(randomBytes(32), randomBytes(32), 100n, randomBytes(16), tokenData, '')];
-    
-    await merkletree.insertLeaves(await Promise.all(notesIn.map((note) => note.getHash())), 0);
-    await railgunSmartWallet.setMerkleRoot(0, merkletree.root, true);
-
-    const transactions = [
-      await dummyTransact(
-        merkletree,
-        BigInt(0),
-        UnshieldType.NONE,
-        chainID,
-        secondaryAccount.address,
-        randomBytes(32),
-        notesIn,
-        notesOut,
-      ),
-    ];
-
-    // 2. Prepare Action Data
-    const actionData = {
-      random: randomBytes(31),
-      requireSuccess: true,
-      minGasLimit: BigInt(10000),
-      calls: [],
-    };
-
-    // 3. Calculate Adapt Params BUT use wrong one in transaction
-    const adaptParams = getAdaptParams(transactions, actionData);
-    // Tamper with adapt params
-    transactions[0].boundParams.adaptParams = arrayToHexString(randomBytes(32), true);
-
-    // 4. Sign Payload
-    // Note: We sign the TAMPERED transactions to pass the signature check,
-    // but fail the adapt params check.
-    const signature = await getRelayAdapt7702Signature(
-        secondaryAccount,
-        chainID,
-        transactions,
-        actionData,
-    );
-
-    // 5. Execute
-    await expect(
-        relayAdapt7702Relayer[EXECUTE_SIGNATURE](transactions, actionData, signature)
-    ).to.be.revertedWith('RelayAdapt: AdaptID Parameters Mismatch');
-  });
 });

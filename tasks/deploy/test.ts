@@ -46,7 +46,7 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   const TestERC721 = await ethers.getContractFactory('TestERC721');
   const RelayAdapt = await ethers.getContractFactory('RelayAdapt');
   const RelayAdapt7702 = await ethers.getContractFactory('RelayAdapt7702');
-  const Adapt7702Deployer = await ethers.getContractFactory('RelayAdapt7702Deployer');
+  const RailgunRegistry = await ethers.getContractFactory('RailgunRegistry');
   const Staking = await ethers.getContractFactory('Staking');
   const TreasuryImplementation = await ethers.getContractFactory('Treasury');
   const Voting = await ethers.getContractFactory('Voting');
@@ -168,22 +168,20 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   const testERC721 = await TestERC721.deploy();
   await logVerify('Test ERC721', testERC721, []);
 
-  // Deploy Adapt7702Deployer
-  const adapt7702Deployer = await Adapt7702Deployer.deploy((await ethers.getSigners())[0].address);
-  await logVerify('Adapt 7702 Deployer', adapt7702Deployer, [(await ethers.getSigners())[0].address]);
+  // Deploy RailgunRegistry mock
+  const railgunRegistry = await RailgunRegistry.deploy((await ethers.getSigners())[0].address);
+  await logVerify('Railgun Registry Mock', railgunRegistry, [(await ethers.getSigners())[0].address]);
 
-  // Deploy RelayAdapt7702 via Deployer
-  const relayAdapt7702DeployTx = RelayAdapt7702.getDeployTransaction(proxy.address, weth9.address);
-  const relayAdapt7702Bytecode = relayAdapt7702DeployTx.data;
-  const salt = ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32); // Use a simple salt
+  // Deploy RelayAdapt7702 directly
+  const relayAdapt7702 = await RelayAdapt7702.deploy(proxy.address, weth9.address);
+  const relayAdapt7702Address = relayAdapt7702.address;
+  await logVerify('Relay Adapt 7702', relayAdapt7702, [proxy.address, weth9.address]);
 
-  const deployTx = await adapt7702Deployer.deploy(relayAdapt7702Bytecode, salt);
-  const receipt = await deployTx.wait();
-  const deployedEvent = receipt.events?.find((e: any) => e.event === 'Deployed');
-  const relayAdapt7702Address = deployedEvent?.args?.deployment;
+  // Register the current RelayAdapt7702 in the mock registry
+  await railgunRegistry.setContract('RelayAdapt7702', relayAdapt7702Address, 1);
   
   console.log(`\nRelay Adapt 7702 deployed at ${relayAdapt7702Address}`);
-  const relayAdapt7702 = RelayAdapt7702.attach(relayAdapt7702Address);
+  // const relayAdapt7702 = RelayAdapt7702.attach(relayAdapt7702Address);
 
   console.log('\nDEPLOY CONFIG:');
   console.log({
@@ -203,6 +201,6 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
     weth9: weth9.address,
     relayAdapt: relayAdapt.address,
     relayAdapt7702: relayAdapt7702.address,
-    adapt7702Deployer: adapt7702Deployer.address,
+    railgunRegistry: railgunRegistry.address,
     });
 });

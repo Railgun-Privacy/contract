@@ -34,9 +34,6 @@ contract RelayAdapt7702 {
   }
 
   struct ActionData {
-    bytes31 random; // Random value (shouldn't be reused if resubmitting the same transaction
-    // through another relayer or resubmitting on failed transaction - i.e. the same
-    // nullifier:random combination should never be reused)
     bool requireSuccess; // If the transaction should require success on all sub calls
     uint256 minGasLimit; // Minimum gas that should be supplied to this transaction
     Call[] calls; // Array of calls to execute during transaction
@@ -61,11 +58,8 @@ contract RelayAdapt7702 {
   uint256 public nonce;
 
   // EIP-712 Type Hashes
-  bytes32 public constant CALL_TYPEHASH = keccak256("Call(address to,bytes data,uint256 value)");
-  bytes32 public constant ACTION_DATA_TYPEHASH = keccak256("ActionData(bytes31 random,bool requireSuccess,uint256 minGasLimit,Call[] calls)Call(address to,bytes data,uint256 value)");
-  bytes32 public constant RELAY_TYPEHASH = keccak256("Relay(bytes32 adaptParams)");
-  bytes32 public constant TRANSACT_TYPEHASH = keccak256("Transact(bytes32 executionHash)");
-  bytes32 public constant MULTICALL_TYPEHASH = keccak256("Multicall(bool requireSuccess,Call[] calls,uint256 nonce)Call(address to,bytes data,uint256 value)");
+  bytes32 public constant EXECUTE_TYPEHASH = keccak256("Execute(bytes32 payloadHash)");
+  bytes32 public constant MULTICALL_TYPEHASH = keccak256("Multicall(bytes32 payloadHash)");
 
   /**
    * @notice only allows self calls to these contracts
@@ -295,14 +289,8 @@ contract RelayAdapt7702 {
   ) external payable {
     require(_nonce == nonce, "RelayAdapt: Invalid nonce");
 
-    bytes32 structHash = keccak256(
-      abi.encode(
-        MULTICALL_TYPEHASH,
-        _requireSuccess,
-        _hashCalls(_calls),
-        _nonce
-      )
-    );
+    bytes32 multicallPayloadHash = getMulticallPayloadHash(_requireSuccess, _calls, _nonce);
+    bytes32 structHash = keccak256(abi.encode(MULTICALL_TYPEHASH, multicallPayloadHash));
 
     bytes32 hash = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
     require(ECDSA.recover(hash, _signature) == address(this), "RelayAdapt: Invalid signature");
@@ -311,88 +299,63 @@ contract RelayAdapt7702 {
     _multicall(_requireSuccess, _calls);
   }
 
-  function _hashCalls(Call[] calldata _calls) internal pure returns (bytes32) {
-    bytes32[] memory callHashes = new bytes32[](_calls.length);
-    for (uint256 i = 0; i < _calls.length; i++) {
-      callHashes[i] = keccak256(
-        abi.encode(
-          CALL_TYPEHASH,
-          _calls[i].to,
-          keccak256(_calls[i].data),
-          _calls[i].value
-        )
-      );
-    }
-    return keccak256(abi.encodePacked(callHashes));
-  }
-
-  function _hashActionData(ActionData calldata _actionData) internal pure returns (bytes32) {
-    return keccak256(abi.encode(
-      ACTION_DATA_TYPEHASH,
-      _actionData.random,
-      _actionData.requireSuccess,
-      _actionData.minGasLimit,
-      _hashCalls(_actionData.calls)
-    ));
+  /**
+   * @notice Hashes the multicall payload that is authorized by the signer.
+   * @param _requireSuccess - Whether transaction should throw on call failure
+   * @param _calls - multicall array
+   * @param _nonce - Nonce for signature replay protection
+   */
+  function getMulticallPayloadHash(
+    bool _requireSuccess,
+    Call[] calldata _calls,
+    uint256 _nonce
+  ) public pure returns (bytes32) {
+    return keccak256(abi.encode(_requireSuccess, _calls, _nonce));
   }
 
   /**
-   * @notice Get adapt params value for a given set of transactions
-   * and action data
+   * @notice Hashes the execute payload that is authorized by the 7702 signature.
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _actionData - Actions to take in transaction
+   * @param _nonce - Nonce for signature replay protection
    */
-  function getAdaptParams(
+  function getExecutePayloadHash(
     Transaction[] calldata _transactions,
-    ActionData calldata _actionData
+    ActionData calldata _actionData,
+    uint256 _nonce
   ) public pure returns (bytes32) {
-    // Get 2D array of nullifiers of transaction
-    bytes32[][] memory nullifiers = new bytes32[][](_transactions.length);
-
-    for (
-      uint256 transactionIter = 0;
-      transactionIter < _transactions.length;
-      transactionIter += 1
-    ) {
-      nullifiers[transactionIter] = _transactions[transactionIter].nullifiers;
-    }
-
-    // Return keccak hash of parameters
-    return keccak256(abi.encode(nullifiers, _transactions.length, _actionData));
+    return keccak256(abi.encode(_transactions, _actionData, _nonce));
   }
 
   /**
    * @notice Executes a batch of Railgun transactions followed by a multicall.
    * @param _transactions - Batch of Railgun transactions to execute
    * @param _actionData - Actions to take in transaction
+   * @param _nonce - Nonce for signature replay protection (shared with multicall)
    * @param _signature - Signature for transaction authorization
    */
   function execute(
     Transaction[] calldata _transactions,
     ActionData calldata _actionData,
+    uint256 _nonce,
     bytes calldata _signature
   ) external payable {
     // ~55000 gas needs to be added above the minGasLimit value as this amount will be
     // consumed by the time we reach this check
     require(gasleft() > _actionData.minGasLimit, "RelayAdapt: Not enough gas supplied");
 
-    // Get expected adapt parameters
-    bytes32 expectedAdaptParameters = getAdaptParams(_transactions, _actionData);
+    require(_nonce == nonce, "RelayAdapt: Invalid nonce");
+
+    // Hash the execute payload exactly as it is authorized by the signer.
+    bytes32 executePayloadHash = getExecutePayloadHash(_transactions, _actionData, _nonce);
 
     // Signature verification
-    bytes32 structHash = keccak256(abi.encode(RELAY_TYPEHASH, expectedAdaptParameters));
+    bytes32 structHash = keccak256(abi.encode(EXECUTE_TYPEHASH, executePayloadHash));
     bytes32 hash = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
     require(ECDSA.recover(hash, _signature) == address(this), "RelayAdapt: Invalid signature");
 
-    // Loop through each transaction and ensure adapt parameters match
-    for (uint256 i = 0; i < _transactions.length; i += 1) {
-      require(
-        _transactions[i].boundParams.adaptParams == expectedAdaptParameters ||
-          // solhint-disable-next-line avoid-tx-origin
-          tx.origin == VERIFICATION_BYPASS,
-        "RelayAdapt: AdaptID Parameters Mismatch"
-      );
-    }
+    // Consume nonce BEFORE external calls (CEI) to prevent reentrancy-driven replay.
+    nonce++;
 
     // Execute railgun transactions
     railgun.transact(_transactions);
@@ -402,34 +365,6 @@ contract RelayAdapt7702 {
 
     // To execute a multicall and shield or send the resulting tokens, encode a call to the relevant function on this
     // contract at the end of your calls array.
-  }
-
-  /**
-   * @notice Executes a batch of Railgun transactions.
-   * @param _transactions - Batch of Railgun transactions to execute
-   * @param _signature - Signature for transaction authorization
-   */
-  function execute(Transaction[] calldata _transactions, bytes calldata _signature) external payable {
-    // Get 2D array of nullifiers of transaction
-    bytes32[][] memory nullifiers = new bytes32[][](_transactions.length);
-
-    for (
-      uint256 transactionIter = 0;
-      transactionIter < _transactions.length;
-      transactionIter += 1
-    ) {
-      nullifiers[transactionIter] = _transactions[transactionIter].nullifiers;
-    }
-
-    // Calculate execution hash
-    bytes32 executionHash = keccak256(abi.encode(nullifiers, _transactions.length));
-
-    // Signature verification
-    bytes32 structHash = keccak256(abi.encode(TRANSACT_TYPEHASH, executionHash));
-    bytes32 hash = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
-    require(ECDSA.recover(hash, _signature) == address(this), "RelayAdapt: Invalid signature");
-
-    railgun.transact(_transactions);
   }
 
   // Allow wBase contract unwrapping to pay us
