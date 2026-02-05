@@ -164,6 +164,62 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   const testERC721 = await TestERC721.deploy();
   await logVerify('Test ERC721', testERC721, []);
 
+
+  // deploy the registry & fill it with entries. 
+  const RegistryFactory = await ethers.getContractFactory('Registry');
+  const registry = (await RegistryFactory.deploy((await ethers.getSigners())[0].address));
+  await registry.deployed();
+
+  await logVerify('Registry', registry, [(await ethers.getSigners())[0].address]);
+
+  const registryMatrix = [
+    {
+      name: 'Governance', // governance
+      address: delegator.address,
+      version: 1
+    },
+    {
+      name: 'RAIL', // railtoken
+      address: rail.address,
+      version: 1
+    },
+    {
+      name: 'Staking', // staking contract
+      address: staking.address,
+      version: 1
+    },
+    {
+      name: 'Treasury', // treasury
+      address: treasury.address,
+      version: 1
+    },
+    {
+      name: 'Voting', // voting
+      address: voting.address,
+      version: 1
+    },
+    {
+      name: 'Railgun', // proxy
+      address: proxy.address,
+      version: 1
+    },
+    {
+      name: 'RelayAdapt', // relay-adapt
+      address: relayAdapt.address,
+      version: 1
+    },
+  ]
+
+  // update registry from matrix
+  for(const entry of registryMatrix){
+    const { name, address: contractAddress, version } = entry;
+    await registry.setContract(name, contractAddress, version);
+    console.log("Registry SET contract", entry)
+  }
+
+  // transfer ownership to governance.
+  registry.transferOwnership(delegator.address);
+
   console.log('\nDEPLOY CONFIG:');
   console.log({
     delegator: delegator.address,
@@ -181,5 +237,6 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
     voting: voting.address,
     weth9: weth9.address,
     relayAdapt: relayAdapt.address,
+    contractRegistry: registry.address,
   });
 });
