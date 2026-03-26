@@ -5,7 +5,7 @@ pragma abicoder v2;
 import { TokenBlocklist } from "./TokenBlocklist.sol";
 import { Commitments } from "./Commitments.sol";
 import { RailgunLogic } from "./RailgunLogic.sol";
-import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCiphertext, TokenType, UnshieldType, Transaction, ShieldRequest } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD, CommitmentPreimage, CommitmentCiphertext, ShieldCiphertext, TokenType, UnshieldType, Transaction, ShieldRequest, TXConfig } from "./Globals.sol";
 
 /**
  * @title Railgun Smart Wallet
@@ -24,6 +24,10 @@ contract RailgunSmartWallet is RailgunLogic {
     CommitmentPreimage[] memory commitments = new CommitmentPreimage[](_shieldRequests.length);
     ShieldCiphertext[] memory shieldCiphertext = new ShieldCiphertext[](_shieldRequests.length);
     uint256[] memory fees = new uint256[](_shieldRequests.length);
+
+    // Emit action event for the batch of transactions
+    // Shields have no TXConfig, so just emit empty array
+    emit Action(msg.sender, new TXConfig[](0));
 
     // Loop through each note and process
     for (uint256 notesIter = 0; notesIter < _shieldRequests.length; notesIter += 1) {
@@ -72,6 +76,7 @@ contract RailgunSmartWallet is RailgunLogic {
     bytes32[] memory commitments = new bytes32[](commitmentsCount);
     uint256 commitmentsStartOffset = 0;
     CommitmentCiphertext[] memory ciphertext = new CommitmentCiphertext[](commitmentsCount);
+    TXConfig[] memory txconfigs = new TXConfig[](_transactions.length);
 
     // Loop through each transaction, validate, and nullify
     for (
@@ -79,8 +84,8 @@ contract RailgunSmartWallet is RailgunLogic {
       transactionIter < _transactions.length;
       transactionIter += 1
     ) {
-      // Validate transaction
-      (bool valid, string memory reason) = RailgunLogic.validateTransaction(
+      // Validate transaction and get bound params hash
+      (bool valid, string memory reason, bytes32 boundParamsHash) = RailgunLogic.validateTransaction(
         _transactions[transactionIter]
       );
       require(valid, string.concat("RailgunSmartWallet: ", reason));
@@ -92,7 +97,18 @@ contract RailgunSmartWallet is RailgunLogic {
         commitmentsStartOffset,
         ciphertext
       );
+
+      // Create action struct
+      txconfigs[transactionIter] = TXConfig({
+        nullifiersCount: uint128(_transactions[transactionIter].nullifiers.length), // Will be less than 2**128 nullifiers
+        commitmentsCount: uint128(_transactions[transactionIter].commitments.length), // Will be less than 2**128 commitments
+        boundParamsHash: boundParamsHash
+      });
     }
+
+    // Emit action event for the batch of transactions
+    // Emit here to guarantee it will be the first event emitted for this action
+    emit Action(msg.sender, txconfigs);
 
     // Loop through each transaction and process unshields
     for (

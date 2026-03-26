@@ -11,6 +11,12 @@ address constant VERIFICATION_BYPASS = 0x000000000000000000000000000000000000dEa
 
 bytes32 constant ACCEPT_RAILGUN_RESPONSE = keccak256(abi.encodePacked("Accept Railgun Session"));
 
+struct TXConfig {
+  uint128 nullifiersCount;
+  uint128 commitmentsCount;
+  bytes32 boundParamsHash;
+}
+
 struct ShieldRequest {
   CommitmentPreimage preimage;
   ShieldCiphertext ciphertext;

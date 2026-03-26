@@ -10,7 +10,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { SNARK_SCALAR_FIELD, TokenType, UnshieldType, TokenData, ShieldCiphertext, CommitmentCiphertext, CommitmentPreimage, Transaction } from "./Globals.sol";
+import { SNARK_SCALAR_FIELD, TokenType, UnshieldType, TokenData, ShieldCiphertext, CommitmentCiphertext, CommitmentPreimage, Transaction, TXConfig } from "./Globals.sol";
 
 import { Verifier } from "./Verifier.sol";
 import { Commitments } from "./Commitments.sol";
@@ -57,6 +57,11 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
   event FeeChange(uint256 shieldFee, uint256 unshieldFee, uint256 nftFee);
 
   // Transaction events
+  event Action(
+    address caller,
+    TXConfig[] txconfigs
+  );
+
   event Transact(
     uint256 treeNumber,
     uint256 startPosition,
@@ -414,33 +419,33 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
   /**
    * @notice Verifies transaction validity
-   * @return valid, reason
+   * @return valid, reason, bound params hash (if valid is false, bound params hash will be empty)
    */
   function validateTransaction(
     Transaction calldata _transaction
-  ) public view returns (bool, string memory) {
+  ) public view returns (bool, string memory, bytes32) {
     // Gas price of eth transaction should be equal or greater than railgun transaction specified min gas price
     // This will only work correctly for type 0 transactions, set to 0 for EIP-1559 transactions
-    if (tx.gasprice < _transaction.boundParams.minGasPrice) return (false, "Gas price too low");
+    if (tx.gasprice < _transaction.boundParams.minGasPrice) return (false, "Gas price too low", "");
 
     // Adapt contract must either equal 0 or msg.sender
     if (
       _transaction.boundParams.adaptContract != address(0) &&
       _transaction.boundParams.adaptContract != msg.sender
-    ) return (false, "Invalid Adapt Contract as Sender");
+    ) return (false, "Invalid Adapt Contract as Sender", "");
 
     // ChainID should match the current EVM chainID
-    if (_transaction.boundParams.chainID != block.chainid) return (false, "ChainID mismatch");
+    if (_transaction.boundParams.chainID != block.chainid) return (false, "ChainID mismatch", "");
 
     // Merkle root must be a seen historical root
     if (!Commitments.rootHistory[_transaction.boundParams.treeNumber][_transaction.merkleRoot])
-      return (false, "Invalid Merkle Root");
+      return (false, "Invalid Merkle Root", "");
 
     if (_transaction.boundParams.unshield != UnshieldType.NONE) {
       // Ensure ciphertext length matches the commitments length (minus 1 for unshield output)
       if (
         _transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length - 1
-      ) return (false, "Invalid Note Ciphertext Array Length");
+      ) return (false, "Invalid Note Ciphertext Array Length", "");
 
       // Check unshield preimage hash is correct
       bytes32 hash;
@@ -460,17 +465,18 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
 
       // Check hash equals the last commitment in array
       if (hash != _transaction.commitments[_transaction.commitments.length - 1])
-        return (false, "Invalid Withdraw Note");
+        return (false, "Invalid Withdraw Note", "");
     } else {
       // Ensure ciphertext length matches the commitments length
       if (_transaction.boundParams.commitmentCiphertext.length != _transaction.commitments.length)
-        return (false, "Invalid Note Ciphertext Array Length");
+        return (false, "Invalid Note Ciphertext Array Length", "");
     }
 
-    // Verify SNARK proof
-    if (!Verifier.verify(_transaction)) return (false, "Invalid Snark Proof");
+    // Verify SNARK proof and get bound params hash
+    (bool valid, bytes32 boundParamsHash) = Verifier.verify(_transaction);
+    if (!valid) return (false, "Invalid Snark Proof", "");
 
-    return (true, "");
+    return (true, '', boundParamsHash);
   }
 
   /**

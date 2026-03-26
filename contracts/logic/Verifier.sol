@@ -84,7 +84,7 @@ contract Verifier is OwnableUpgradeable {
    * @param _transaction to verify
    * @return transaction validity
    */
-  function verify(Transaction calldata _transaction) public view returns (bool) {
+  function verify(Transaction calldata _transaction) public view returns (bool, bytes32) {
     uint256 nullifiersLength = _transaction.nullifiers.length;
     uint256 commitmentsLength = _transaction.commitments.length;
 
@@ -118,9 +118,9 @@ contract Verifier is OwnableUpgradeable {
     // This is so relayer fees can be calculated without needing to compute a proof
     // solhint-disable-next-line avoid-tx-origin
     if (tx.origin == VERIFICATION_BYPASS) {
-      return true;
+      return (true, bytes32(inputs[1]));
     } else {
-      return validity;
+      return (validity, bytes32(inputs[1]));
     }
   }
 
