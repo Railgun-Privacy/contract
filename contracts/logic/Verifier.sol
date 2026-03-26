@@ -118,9 +118,9 @@ contract Verifier is OwnableUpgradeable {
     // This is so relayer fees can be calculated without needing to compute a proof
     // solhint-disable-next-line avoid-tx-origin
     if (tx.origin == VERIFICATION_BYPASS) {
-      return (true, bytes32(inputs[1]));
+      return (true, bytes32(inputs[1])); // inputs[1] is output of hashBoundParams
     } else {
-      return (validity, bytes32(inputs[1]));
+      return (validity, bytes32(inputs[1])); // inputs[1] is output of hashBoundParams
     }
   }
 

@@ -174,10 +174,16 @@ describe('Logic/Verifier', () => {
       );
 
       // Check that dummy proof check returns true
-      expect(await verifierBypassSigner.verify(tx)).to.equal(true);
+      expect(await verifierBypassSigner.verify(tx)).to.deep.equal([
+        true,
+        arrayToHexString(hashBoundParams(tx.boundParams), true),
+      ]);
 
       // Shouldn't return true if not using bypass
-      expect(await verifier.verify(tx)).to.equal(false);
+      expect(await verifier.verify(tx)).to.deep.equal([
+        false,
+        arrayToHexString(hashBoundParams(tx.boundParams), true),
+      ]);
     }
   });
 

@@ -11,6 +11,7 @@ import {
   commitmentPreimageMatcher,
   dummyTransact,
   getFee,
+  hashBoundParams,
   nullifiersMatcher,
   tokenDataMatcher,
   transact,
@@ -25,7 +26,6 @@ import { loadArtifacts, listArtifacts } from '../../helpers/logic/artifacts';
 describe('Logic/RailgunLogic', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {
@@ -620,69 +620,97 @@ describe('Logic/RailgunLogic', () => {
     // Should return true for valid transactions
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransaction.boundParams), true),
+    ]);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransactionUnshield.boundParams), true),
+    ]);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransactionUnshieldRedirect.boundParams), true),
+    ]);
 
     // Should return false if min gas price is too low
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 10 }),
-    ).to.deep.equal([false, 'Gas price too low']);
+    ).to.deep.equal([false, 'Gas price too low', '']);
 
     // Should return false if adaptContract is set to non-0 and not the submitter's address
     dummyTransaction.boundParams.adaptContract = await railgunLogicSnarkBypass.signer.getAddress();
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransaction.boundParams), true),
+    ]);
 
     dummyTransaction.boundParams.adaptContract = arrayToHexString(randomBytes(20), true);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'Invalid Adapt Contract as Sender']);
+    ).to.deep.equal([false, 'Invalid Adapt Contract as Sender', '']);
 
     dummyTransaction.boundParams.adaptContract = ethers.constants.AddressZero;
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransaction.boundParams), true),
+    ]);
 
     // Should return false if invalid merkle root
     await railgunLogic.setMerkleRoot(0, tree.root, false);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'Invalid Merkle Root']);
+    ).to.deep.equal([false, 'Invalid Merkle Root', '']);
 
     await railgunLogic.setMerkleRoot(0, tree.root, true);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransaction.boundParams), true),
+    ]);
 
     // Should return false if chainID is invalid
     dummyTransaction.boundParams.chainID += 1n;
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'ChainID mismatch']);
+    ).to.deep.equal([false, 'ChainID mismatch', '']);
 
     dummyTransaction.boundParams.chainID -= 1n;
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransaction.boundParams), true),
+    ]);
 
     // Should return false if incorrect number of ciphertext
     dummyTransaction.boundParams.commitmentCiphertext.push({
@@ -703,13 +731,13 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([false, 'Invalid Note Ciphertext Array Length']);
+    ).to.deep.equal([false, 'Invalid Note Ciphertext Array Length', '']);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Invalid Note Ciphertext Array Length']);
+    ).to.deep.equal([false, 'Invalid Note Ciphertext Array Length', '']);
 
     dummyTransaction.boundParams.commitmentCiphertext.pop();
 
@@ -717,13 +745,21 @@ describe('Logic/RailgunLogic', () => {
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransaction.boundParams), true),
+    ]);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([true, '']);
+    ).to.deep.equal([
+      true,
+      '',
+      arrayToHexString(hashBoundParams(dummyTransactionUnshield.boundParams), true),
+    ]);
 
     // Should return false for invalid unshield preimage
     dummyTransactionUnshield.unshieldPreimage.value += 100n;
@@ -733,13 +769,13 @@ describe('Logic/RailgunLogic', () => {
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshield, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Invalid Withdraw Note']);
+    ).to.deep.equal([false, 'Invalid Withdraw Note', '']);
 
     expect(
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Invalid Withdraw Note']);
+    ).to.deep.equal([false, 'Invalid Withdraw Note', '']);
 
     dummyTransactionUnshield.unshieldPreimage.value -= 100n;
     dummyTransactionUnshieldRedirect.unshieldPreimage.value -= 100n;
@@ -766,7 +802,7 @@ describe('Logic/RailgunLogic', () => {
       await railgunLogicSnarkBypass.validateTransaction(dummyTransactionUnshieldRedirect, {
         gasPrice: 100,
       }),
-    ).to.deep.equal([false, 'Invalid Withdraw Note']);
+    ).to.deep.equal([false, 'Invalid Withdraw Note', '']);
 
     if (!process.env.SKIP_LONG_TESTS) {
       // Generate SNARK proof
