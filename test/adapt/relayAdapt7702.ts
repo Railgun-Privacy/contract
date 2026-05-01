@@ -23,7 +23,9 @@ import {
 } from '../../helpers/global/bytes';
 
 describe('Adapt/RelayAdapt7702', () => {
-  const EXECUTE_SIGNATURE = 'execute((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[],(bool,uint256,(address,bytes,uint256)[]),bytes)';
+  // Keep this signature aligned with RelayAdapt7702.sol. ABI drift shows up here as
+  // `Invalid signature` rather than a more obvious encoding failure.
+  const EXECUTE_SIGNATURE = 'execute((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[],(bool,uint256,(address,bytes,uint256)[]),uint256,bytes)';
   const ZERO_ADAPT_PARAMS = arrayToHexString(new Uint8Array(32), true);
 
   const serializeTokenData = (token: {
@@ -83,7 +85,9 @@ describe('Adapt/RelayAdapt7702', () => {
     serializeCommitmentPreimage(transaction.unshieldPreimage),
   ];
 
-  const serializeCall = (call: { to: string; data: string | Uint8Array; value: bigint }) => [
+  const serializeCall = (
+    call: { to: string; data: string | Uint8Array; value: bigint },
+  ): [string, string, bigint] => [
     call.to,
     typeof call.data === 'string' ? call.data : arrayToHexString(call.data, true),
     call.value,
@@ -125,14 +129,21 @@ describe('Adapt/RelayAdapt7702', () => {
     relayAdapt7702: any,
     transactions: any[],
     actionData: any,
+    nonce: bigint,
     signature: string,
     overrides?: any,
   ) => {
     if (overrides) {
-      return relayAdapt7702[EXECUTE_SIGNATURE](transactions, actionData, signature, overrides);
+      return relayAdapt7702[EXECUTE_SIGNATURE](
+        transactions,
+        actionData,
+        nonce,
+        signature,
+        overrides,
+      );
     }
 
-    return relayAdapt7702[EXECUTE_SIGNATURE](transactions, actionData, signature);
+    return relayAdapt7702[EXECUTE_SIGNATURE](transactions, actionData, nonce, signature);
   };
 
   const getRelayAdapt7702Signature = async (
@@ -140,12 +151,14 @@ describe('Adapt/RelayAdapt7702', () => {
     chainID: bigint,
     transactions: any[],
     actionData: any,
+    nonce: bigint,
+    verifyingContract?: string,
   ) => {
     const domain = {
       name: 'RelayAdapt7702',
       version: '1',
       chainId: chainID,
-      verifyingContract: signer.address,
+      verifyingContract: verifyingContract ?? signer.address,
     };
 
     const types = {
@@ -160,8 +173,9 @@ describe('Adapt/RelayAdapt7702', () => {
           [
             'tuple(((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,tuple(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[]',
             'tuple(bool,uint256,tuple(address,bytes,uint256)[])',
+            'uint256',
           ],
-          [transactions.map(serializeTransaction), serializeActionData(actionData)],
+          [transactions.map(serializeTransaction), serializeActionData(actionData), nonce],
         ),
       ),
     };
@@ -175,12 +189,13 @@ describe('Adapt/RelayAdapt7702', () => {
     requireSuccess: boolean,
     calls: any[],
     nonce: bigint,
+    verifyingContract?: string,
   ) => {
     const domain = {
       name: 'RelayAdapt7702',
       version: '1',
       chainId: chainID,
-      verifyingContract: signer.address,
+      verifyingContract: verifyingContract ?? signer.address,
     };
 
     const types = {
@@ -190,6 +205,7 @@ describe('Adapt/RelayAdapt7702', () => {
     };
 
     const value = {
+      // Matches RelayAdapt7702.getMulticallPayloadHash.
       payloadHash: ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(
           ['bool', 'tuple(address,bytes,uint256)[]', 'uint256'],
@@ -216,8 +232,9 @@ describe('Adapt/RelayAdapt7702', () => {
     const chainID = BigInt((await ethers.provider.send('eth_chainId', [])) as string); // Hex string returned
 
     // Get accounts
-    // primary: Relayer
+    // primary: Broadcaster
     // secondary: Ephemeral Account (User)
+    // primaryAccount is the broadcaster. secondaryAccount is the delegated EIP-7702 account.
     const [primaryAccount, treasuryAccount, adminAccount, secondaryAccount] =
       await ethers.getSigners();
 
@@ -271,6 +288,8 @@ describe('Adapt/RelayAdapt7702', () => {
     expect(await railgunRegistry.getContractAddress('RelayAdapt7702')).to.equal(relayAdapt7702Address);
     
     // --- EIP-7702 Simulation ---
+    // Simulate an active EIP-7702 authorization by installing the template runtime code
+    // at the delegated account address.
     // Get the runtime bytecode (which has immutables set)
     const code = await ethers.provider.getCode(relayAdapt7702Template.address);
 
@@ -288,7 +307,8 @@ describe('Adapt/RelayAdapt7702', () => {
     const railgunSmartWalletSnarkBypass = railgunSmartWallet.connect(snarkBypassSigner);
     const railgunSmartWalletAdmin = railgunSmartWallet.connect(adminAccount);
     
-    // Connect to the ephemeral account address, but using the Relayer (primaryAccount) as the caller
+    // Connect to the ephemeral account address, but using the Broadcaster (primaryAccount) as the caller
+    // Calls target the delegated account while using the broadcaster or bypass signer as msg.sender.
     const relayAdapt7702Relayer = relayAdapt7702.connect(primaryAccount);
     const relayAdapt7702Bypass = relayAdapt7702.connect(snarkBypassSigner);
 
@@ -338,8 +358,8 @@ describe('Adapt/RelayAdapt7702', () => {
       relayAdapt7702Relayer,
       relayAdapt7702Bypass,
       weth9,
-      primaryAccount, // Relayer
-      secondaryAccount, // Ephemeral User
+      primaryAccount,
+      secondaryAccount,
       snarkBypassSigner,
       chainID,
       testERC20Tokens,
@@ -357,6 +377,7 @@ describe('Adapt/RelayAdapt7702', () => {
       secondaryAccount,
       chainID,
     } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702Bypass.nonce()).toBigInt();
 
     // 1. Prepare Dummy Transaction
     const merkletree = await MerkleTree.createTree();
@@ -404,12 +425,13 @@ describe('Adapt/RelayAdapt7702', () => {
       chainID,
       transactions,
       actionData,
+      nonce,
     );
 
     // 5. Execute
-    // Call from snarkBypassSigner (Relayer)
+    // Call from snarkBypassSigner (Broadcaster)
     await expect(
-      executeRelayAdapt(relayAdapt7702Bypass as any, serializedTransactions, serializedActionData, signature),
+      executeRelayAdapt(relayAdapt7702Bypass as any, serializedTransactions, serializedActionData, nonce, signature),
     ).to.not.be.reverted;
   });
 
@@ -418,8 +440,10 @@ describe('Adapt/RelayAdapt7702', () => {
       railgunSmartWallet,
       relayAdapt7702Relayer,
       primaryAccount,
+      secondaryAccount,
       chainID,
     } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702Relayer.nonce()).toBigInt();
 
     // 1. Prepare Dummy Transaction
     const merkletree = await MerkleTree.createTree();
@@ -459,17 +483,21 @@ describe('Adapt/RelayAdapt7702', () => {
     const serializedTransactions = transactions.map(serializeTransaction);
     const serializedActionData = serializeActionData(actionData);
 
-    // 4. Sign Payload with WRONG signer (primaryAccount instead of secondaryAccount)
+    // 4. Sign Payload with WRONG signer (primaryAccount instead of secondaryAccount).
+    // Pin the domain to the delegated account so this case isolates signer recovery,
+    // not an EIP-712 domain mismatch.
     const signature = await getRelayAdapt7702Signature(
       primaryAccount,
       chainID,
       transactions,
       actionData,
+      nonce,
+      secondaryAccount.address,
     );
 
     // 5. Execute
     await expect(
-      executeRelayAdapt(relayAdapt7702Relayer as any, serializedTransactions, serializedActionData, signature),
+      executeRelayAdapt(relayAdapt7702Relayer as any, serializedTransactions, serializedActionData, nonce, signature),
     ).to.be.revertedWith('RelayAdapt: Invalid signature');
   });
 
@@ -491,6 +519,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
   it('Should deposit ERC20', async () => {
     const { relayAdapt7702, relayAdapt7702Relayer, railgunSmartWallet, testERC20Tokens, secondaryAccount, primaryAccount, chainID } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Mint test tokens to relayAdapt (ephemeral account)
     await testERC20Tokens[0].mint(relayAdapt7702.address, 10n ** 18n);
@@ -531,6 +560,7 @@ describe('Adapt/RelayAdapt7702', () => {
         chainID,
         [],
         actionData,
+        nonce,
     );
     const serializedActionData = serializeActionData(actionData);
 
@@ -539,8 +569,8 @@ describe('Adapt/RelayAdapt7702', () => {
       relayAdapt7702Relayer as any,
       [],
       serializedActionData,
-      signature,
-    );
+      nonce,
+      signature);
 
     // Check tokens moved
     await expect(shieldTransaction).to.changeTokenBalances(
@@ -552,6 +582,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
   it('Should no-op if no tokens to shield', async () => {
     const { relayAdapt7702, relayAdapt7702Relayer, railgunSmartWallet, testERC20Tokens, secondaryAccount, primaryAccount, chainID } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     const merkletree = await MerkleTree.createTree();
 
@@ -595,11 +626,12 @@ describe('Adapt/RelayAdapt7702', () => {
         chainID,
         [],
         actionData,
+        nonce,
     );
     const serializedActionData = serializeActionData(actionData);
 
     // Execute Shield
-    await executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, signature);
+    await executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, nonce, signature);
 
     // No additions to the merkle tree should have been made
     expect(await railgunSmartWallet.nextLeafIndex()).to.equal(0);
@@ -608,6 +640,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
   it('Should deposit ERC721', async () => {
     const { relayAdapt7702, relayAdapt7702Relayer, railgunSmartWallet, testERC721, secondaryAccount, primaryAccount, chainID } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Mint ERC721 to relay adapt (ephemeral account)
     await testERC721.mint(relayAdapt7702.address, 10n);
@@ -648,11 +681,12 @@ describe('Adapt/RelayAdapt7702', () => {
         chainID,
         [],
         actionData,
+        nonce,
     );
     const serializedActionData = serializeActionData(actionData);
 
     // Execute Shield
-    await executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, signature);
+    await executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, nonce, signature);
 
     // Check tokens moved
     expect(await testERC721.ownerOf(10n)).to.equal(railgunSmartWallet.address);
@@ -660,6 +694,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
   it('Should fail on ERC1155', async () => {
     const { relayAdapt7702, relayAdapt7702Relayer, testERC20Tokens, secondaryAccount, primaryAccount, chainID } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Create deposit note
     const depositNote = new Note(
@@ -697,12 +732,13 @@ describe('Adapt/RelayAdapt7702', () => {
         chainID,
         [],
         actionData,
+        nonce,
     );
     const serializedActionData = serializeActionData(actionData);
 
     // Execute Shield
     await expect(
-      executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, signature)
+      executeRelayAdapt(relayAdapt7702Relayer as any, [], serializedActionData, nonce, signature)
     ).to.be.revertedWithCustomError(relayAdapt7702, 'CallFailed')
     .withArgs(
         0,
@@ -714,6 +750,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
   it('Should transfer tokens', async () => {
     const { primaryAccount, secondaryAccount, relayAdapt7702, relayAdapt7702Relayer, testERC20Tokens, testERC721, chainID } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Mint ETH to relayAdapt (ephemeral account)
     await setBalance(relayAdapt7702.address, '0x01F4');
@@ -790,6 +827,7 @@ describe('Adapt/RelayAdapt7702', () => {
         chainID,
         [],
         actionData,
+        nonce,
     );
     const serializedActionData = serializeActionData(actionData);
 
@@ -798,8 +836,8 @@ describe('Adapt/RelayAdapt7702', () => {
       relayAdapt7702Relayer as any,
       [],
       serializedActionData,
-      signature,
-    );
+      nonce,
+      signature);
 
     // Check tokens transferred
     await expect(transferTX).to.changeEtherBalances(
@@ -824,6 +862,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
   it('Should wrap and unwrap ETH', async () => {
     const { relayAdapt7702, relayAdapt7702Relayer, weth9, secondaryAccount, primaryAccount, chainID } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Mint ETH to relayAdapt
     await setBalance(relayAdapt7702.address, '0x01F4');
@@ -847,6 +886,7 @@ describe('Adapt/RelayAdapt7702', () => {
         chainID,
         [],
         actionDataWrap,
+        nonce,
     );
     const serializedActionDataWrap = serializeActionData(actionDataWrap);
 
@@ -855,8 +895,8 @@ describe('Adapt/RelayAdapt7702', () => {
       relayAdapt7702Relayer as any,
       [],
       serializedActionDataWrap,
-      signature,
-    );
+      nonce,
+      signature);
 
     await expect(wrapTX).to.changeEtherBalances([relayAdapt7702.address, weth9.address], [-100, 100]);
     await expect(wrapTX).to.changeTokenBalance(weth9, relayAdapt7702.address, 100);
@@ -875,11 +915,13 @@ describe('Adapt/RelayAdapt7702', () => {
     };
 
     // Sign Payload for Unwrap
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     const signatureUnwrap = await getRelayAdapt7702Signature(
         secondaryAccount,
         chainID,
         [],
         actionDataUnwrap,
+        nonce,
     );
     const serializedActionDataUnwrap = serializeActionData(actionDataUnwrap);
 
@@ -888,8 +930,8 @@ describe('Adapt/RelayAdapt7702', () => {
       relayAdapt7702Relayer as any,
       [],
       serializedActionDataUnwrap,
-      signatureUnwrap,
-    );
+      nonce,
+      signatureUnwrap);
 
     await expect(unwrapTX).to.changeEtherBalances([relayAdapt7702.address, weth9.address], [100, -100]);
     await expect(unwrapTX).to.changeTokenBalance(weth9, relayAdapt7702.address, -100);
@@ -905,6 +947,7 @@ describe('Adapt/RelayAdapt7702', () => {
       railgunSmartWallet,
       chainID,
     } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Deploy multicall target
     const GovernanceStateChangeTargetStub = await ethers.getContractFactory(
@@ -923,7 +966,7 @@ describe('Adapt/RelayAdapt7702', () => {
       value: 0n,
     };
 
-    let nonce = (await relayAdapt7702.nonce()).toBigInt();
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     let signature = await getRelayAdapt7702MulticallSignature(
       secondaryAccount,
       chainID,
@@ -1044,7 +1087,7 @@ describe('Adapt/RelayAdapt7702', () => {
 
     await expect(
       relayAdapt7702Relayer.multicall(true, [callAttack], nonce, signature),
-    ).to.eventually.be.fulfilled;
+    ).to.not.be.reverted;
 
     // 6. Should fail if call is to core contract
     const callCore = {
@@ -1079,6 +1122,7 @@ describe('Adapt/RelayAdapt7702', () => {
       railgunSmartWallet,
       testERC20Tokens,
     } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Deploy multicall target
     const GovernanceStateChangeTargetStub = await ethers.getContractFactory(
@@ -1155,12 +1199,13 @@ describe('Adapt/RelayAdapt7702', () => {
       },
     ]);
 
-    // Sign Relayer Binding
+    // Sign broadcaster binding
     const signature = await getRelayAdapt7702Signature(
       secondaryAccount,
       chainID,
       transactions,
       actionData,
+      nonce,
     );
     const serializedTransactions = transactions.map(serializeTransaction);
     const serializedActionData = serializeActionData(actionData);
@@ -1171,9 +1216,9 @@ describe('Adapt/RelayAdapt7702', () => {
         relayAdapt7702Relayer as any,
         serializedTransactions,
         serializedActionData,
+        nonce,
         signature,
-        { gasLimit: 5000000n },
-      ),
+        { gasLimit: 5000000n }),
     ).to.be.revertedWith('RelayAdapt: Not enough gas supplied');
 
     // Submit transaction
@@ -1181,9 +1226,9 @@ describe('Adapt/RelayAdapt7702', () => {
       relayAdapt7702Relayer as any,
       serializedTransactions,
       serializedActionData,
+      nonce,
       signature,
-      { gasLimit: 11000000n },
-    );
+      { gasLimit: 11000000n });
 
     // Check effects have been applied
     expect(await governanceStateChangeTargetStub.greeting()).to.equal('hi');
@@ -1222,12 +1267,14 @@ describe('Adapt/RelayAdapt7702', () => {
       ),
     ];
 
-    // Sign Relayer Binding for Bypass Signer
+    // Sign broadcaster binding for bypass signer
+    nonce = (await relayAdapt7702.nonce()).toBigInt();
     const signatureBypass = await getRelayAdapt7702Signature(
       secondaryAccount,
       chainID,
       transactionsSnarkBypass,
       actionDataNoOp,
+      nonce,
     );
     const serializedTransactionsSnarkBypass = transactionsSnarkBypass.map(serializeTransaction);
     const serializedActionDataNoOp = serializeActionData(actionDataNoOp);
@@ -1237,9 +1284,9 @@ describe('Adapt/RelayAdapt7702', () => {
         relayAdapt7702Bypass as any,
         serializedTransactionsSnarkBypass,
         serializedActionDataNoOp,
-        signatureBypass,
-      ),
-    ).to.eventually.be.fulfilled;
+        nonce,
+        signatureBypass),
+    ).to.not.be.reverted;
   });
 
   it('Should revert if not enough gas supplied', async () => {
@@ -1252,6 +1299,7 @@ describe('Adapt/RelayAdapt7702', () => {
       railgunSmartWallet,
       testERC20Tokens,
     } = await loadFixture(deploy);
+    let nonce = (await relayAdapt7702.nonce()).toBigInt();
 
     // Mint tokens to relayAdapt7702 to verify they don't move
     await testERC20Tokens[0].mint(relayAdapt7702.address, 10n ** 18n);
@@ -1316,6 +1364,7 @@ describe('Adapt/RelayAdapt7702', () => {
         chainID,
         transactions,
         actionData,
+        nonce,
     );
 
     // 5. Get balances before
@@ -1330,9 +1379,9 @@ describe('Adapt/RelayAdapt7702', () => {
           relayAdapt7702Relayer as any,
           serializedTransactions,
           serializedActionData,
+          nonce,
           signature,
-          { gasLimit: 10000000 },
-        )
+          { gasLimit: 10000000 })
     ).to.be.revertedWith('RelayAdapt: Not enough gas supplied');
 
     // 7. Get balances after
@@ -1346,6 +1395,367 @@ describe('Adapt/RelayAdapt7702', () => {
     expect(balanceAfterPrimary).to.equal(balanceBeforePrimary);
     expect(nextLeafIndexAfter).to.equal(nextLeafIndexBefore);
     expect(merkleRootAfter).to.equal(merkleRootBefore);
+  });
+
+  describe('Nonce replay protection', () => {
+    const buildEmptyActionData = () => ({
+      requireSuccess: false,
+      minGasLimit: 0n,
+      calls: [] as { to: string; data: string | Uint8Array; value: bigint }[],
+    });
+
+    it('Should reject execute replay with stale nonce', async () => {
+      const { relayAdapt7702, relayAdapt7702Relayer, secondaryAccount, chainID } =
+        await loadFixture(deploy);
+
+      const nonce = (await relayAdapt7702.nonce()).toBigInt();
+      const actionData = buildEmptyActionData();
+      const signature = await getRelayAdapt7702Signature(
+        secondaryAccount,
+        chainID,
+        [],
+        actionData,
+        nonce,
+      );
+      const serializedActionData = serializeActionData(actionData);
+
+      // First call succeeds and consumes the nonce.
+      await executeRelayAdapt(
+        relayAdapt7702Relayer as any,
+        [],
+        serializedActionData,
+        nonce,
+        signature,
+      );
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonce + 1n);
+
+      // Replaying the exact same (payload, nonce, signature) must revert.
+      await expect(
+        executeRelayAdapt(
+          relayAdapt7702Relayer as any,
+          [],
+          serializedActionData,
+          nonce,
+          signature,
+        ),
+      ).to.be.revertedWith('RelayAdapt: Invalid nonce');
+    });
+
+    it('Should reject execute with future nonce (signed but ahead of contract)', async () => {
+      const { relayAdapt7702, relayAdapt7702Relayer, secondaryAccount, chainID } =
+        await loadFixture(deploy);
+
+      const onchainNonce = (await relayAdapt7702.nonce()).toBigInt();
+      const futureNonce = onchainNonce + 1n;
+      const actionData = buildEmptyActionData();
+      const signature = await getRelayAdapt7702Signature(
+        secondaryAccount,
+        chainID,
+        [],
+        actionData,
+        futureNonce,
+      );
+      const serializedActionData = serializeActionData(actionData);
+
+      await expect(
+        executeRelayAdapt(
+          relayAdapt7702Relayer as any,
+          [],
+          serializedActionData,
+          futureNonce,
+          signature,
+        ),
+      ).to.be.revertedWith('RelayAdapt: Invalid nonce');
+
+      // Nonce must not have moved.
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(onchainNonce);
+    });
+
+    it('Should not increment nonce when execute reverts on Invalid nonce', async () => {
+      const { relayAdapt7702, relayAdapt7702Relayer, secondaryAccount, chainID } =
+        await loadFixture(deploy);
+
+      const nonceBefore = (await relayAdapt7702.nonce()).toBigInt();
+      const wrongNonce = nonceBefore + 5n;
+      const actionData = buildEmptyActionData();
+      const signature = await getRelayAdapt7702Signature(
+        secondaryAccount,
+        chainID,
+        [],
+        actionData,
+        wrongNonce,
+      );
+      const serializedActionData = serializeActionData(actionData);
+
+      await expect(
+        executeRelayAdapt(
+          relayAdapt7702Relayer as any,
+          [],
+          serializedActionData,
+          wrongNonce,
+          signature,
+        ),
+      ).to.be.revertedWith('RelayAdapt: Invalid nonce');
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonceBefore);
+    });
+
+    it('Should not increment nonce when execute reverts on Invalid signature', async () => {
+      const {
+        relayAdapt7702,
+        relayAdapt7702Relayer,
+        primaryAccount,
+        secondaryAccount,
+        chainID,
+      } = await loadFixture(deploy);
+
+      const nonce = (await relayAdapt7702.nonce()).toBigInt();
+      const actionData = buildEmptyActionData();
+
+      // Pin the domain to the delegated account so this case isolates signer recovery.
+      const badSignature = await getRelayAdapt7702Signature(
+        primaryAccount,
+        chainID,
+        [],
+        actionData,
+        nonce,
+        secondaryAccount.address,
+      );
+      const serializedActionData = serializeActionData(actionData);
+
+      await expect(
+        executeRelayAdapt(
+          relayAdapt7702Relayer as any,
+          [],
+          serializedActionData,
+          nonce,
+          badSignature,
+        ),
+      ).to.be.revertedWith('RelayAdapt: Invalid signature');
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonce);
+    });
+
+    it('Should reject multicall replay with stale nonce', async () => {
+      const {
+        relayAdapt7702,
+        relayAdapt7702Relayer,
+        secondaryAccount,
+        chainID,
+      } = await loadFixture(deploy);
+
+      const GovernanceStateChangeTargetStub = await ethers.getContractFactory(
+        'GovernanceStateChangeTargetStub',
+      );
+      const target = await GovernanceStateChangeTargetStub.deploy('hello');
+
+      const calls = [
+        {
+          to: target.address,
+          data: target.interface.encodeFunctionData('changeGreeting', ['hi']),
+          value: 0n,
+        },
+      ];
+
+      const nonce = (await relayAdapt7702.nonce()).toBigInt();
+      const signature = await getRelayAdapt7702MulticallSignature(
+        secondaryAccount,
+        chainID,
+        false,
+        calls,
+        nonce,
+      );
+
+      const serializedCalls = calls.map((call) => {
+        const [to, data, value] = serializeCall(call);
+        return { to, data, value };
+      });
+
+      await relayAdapt7702Relayer.multicall(false, serializedCalls, nonce, signature);
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonce + 1n);
+
+      await expect(
+        relayAdapt7702Relayer.multicall(false, serializedCalls, nonce, signature),
+      ).to.be.revertedWith('RelayAdapt: Invalid nonce');
+    });
+
+    it('Should reject multicall signature replayed against execute (typehash isolation)', async () => {
+      const {
+        relayAdapt7702,
+        relayAdapt7702Relayer,
+        secondaryAccount,
+        chainID,
+      } = await loadFixture(deploy);
+
+      const nonce = (await relayAdapt7702.nonce()).toBigInt();
+
+      // Sign a Multicall payload with NO calls and the same shape the execute path
+      // would derive its inner action-data from.
+      // Use the same empty action shape as execute so the failure comes from the
+      // Multicall-vs-Execute signature domain, not the payload contents.
+      const multicallSignature = await getRelayAdapt7702MulticallSignature(
+        secondaryAccount,
+        chainID,
+        false,
+        [],
+        nonce,
+      );
+
+      const actionData = buildEmptyActionData();
+      const serializedActionData = serializeActionData(actionData);
+
+      // Submit to execute — must revert because EXECUTE_TYPEHASH != MULTICALL_TYPEHASH
+      // and because the inner payloadHash domain differs.
+      await expect(
+        executeRelayAdapt(
+          relayAdapt7702Relayer as any,
+          [],
+          serializedActionData,
+          nonce,
+          multicallSignature,
+        ),
+      ).to.be.revertedWith('RelayAdapt: Invalid signature');
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonce);
+    });
+
+    it('Should reject execute signature replayed against multicall (typehash isolation)', async () => {
+      const {
+        relayAdapt7702,
+        relayAdapt7702Relayer,
+        secondaryAccount,
+        chainID,
+      } = await loadFixture(deploy);
+
+      const nonce = (await relayAdapt7702.nonce()).toBigInt();
+      const actionData = buildEmptyActionData();
+
+      const executeSignature = await getRelayAdapt7702Signature(
+        secondaryAccount,
+        chainID,
+        [],
+        actionData,
+        nonce,
+      );
+
+      await expect(
+        relayAdapt7702Relayer.multicall(false, [], nonce, executeSignature),
+      ).to.be.revertedWith('RelayAdapt: Invalid signature');
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonce);
+    });
+
+    it('Should advance nonce when multicall sub-call reverts under requireSuccess=false', async () => {
+      const {
+        relayAdapt7702,
+        relayAdapt7702Relayer,
+        secondaryAccount,
+        chainID,
+      } = await loadFixture(deploy);
+
+      // Target that reverts when receiving ETH.
+      const GovernanceTargetAlphaStub = await ethers.getContractFactory(
+        'GovernanceTargetAlphaStub',
+      );
+      const reverter = await GovernanceTargetAlphaStub.deploy();
+
+      // Mint some ETH to the ephemeral account so the call has value to send.
+      await setBalance(relayAdapt7702.address, '0x16345785D8A0000');
+
+      const calls = [
+        {
+          to: reverter.address,
+          data: '0x',
+          value: 1n,
+        },
+      ];
+
+      const nonce = (await relayAdapt7702.nonce()).toBigInt();
+      const signature = await getRelayAdapt7702MulticallSignature(
+        secondaryAccount,
+        chainID,
+        false,
+        calls,
+        nonce,
+      );
+
+      const serializedCalls = calls.map((call) => {
+        const [to, data, value] = serializeCall(call);
+        return { to, data, value };
+      });
+
+      // Outer tx must succeed (requireSuccess=false swallows inner revert) and
+      // the nonce must increment.
+      // The outer call succeeds because `requireSuccess=false`, but the nonce still advances.
+      await expect(
+        relayAdapt7702Relayer.multicall(false, serializedCalls, nonce, signature),
+      ).to.emit(relayAdapt7702, 'CallError');
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonce + 1n);
+    });
+
+    it('Should expose distinct EXECUTE and MULTICALL typehashes', async () => {
+      const { relayAdapt7702 } = await loadFixture(deploy);
+
+      const executeTypehash = await relayAdapt7702.EXECUTE_TYPEHASH();
+      const multicallTypehash = await relayAdapt7702.MULTICALL_TYPEHASH();
+
+      // Locks the real defense behind execute<->multicall signature isolation.
+      // If a future refactor accidentally collapses these, this test fails
+      // before the typehash-isolation tests above can give a false positive.
+      // This keeps execute and multicall signatures non-interchangeable.
+      expect(executeTypehash).to.not.equal(multicallTypehash);
+    });
+
+    it('Should not increment nonce when multicall reverts on Invalid nonce', async () => {
+      const { relayAdapt7702, relayAdapt7702Relayer, secondaryAccount, chainID } =
+        await loadFixture(deploy);
+
+      const nonceBefore = (await relayAdapt7702.nonce()).toBigInt();
+      const wrongNonce = nonceBefore + 5n;
+      const signature = await getRelayAdapt7702MulticallSignature(
+        secondaryAccount,
+        chainID,
+        false,
+        [],
+        wrongNonce,
+      );
+
+      await expect(
+        relayAdapt7702Relayer.multicall(false, [], wrongNonce, signature),
+      ).to.be.revertedWith('RelayAdapt: Invalid nonce');
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonceBefore);
+    });
+
+    it('Should not increment nonce when multicall reverts on Invalid signature', async () => {
+      const {
+        relayAdapt7702,
+        relayAdapt7702Relayer,
+        primaryAccount,
+        secondaryAccount,
+        chainID,
+      } = await loadFixture(deploy);
+
+      const nonce = (await relayAdapt7702.nonce()).toBigInt();
+
+      // Pin the domain to the delegated account so this case isolates signer recovery.
+      const badSignature = await getRelayAdapt7702MulticallSignature(
+        primaryAccount,
+        chainID,
+        false,
+        [],
+        nonce,
+        secondaryAccount.address,
+      );
+
+      await expect(
+        relayAdapt7702Relayer.multicall(false, [], nonce, badSignature),
+      ).to.be.revertedWith('RelayAdapt: Invalid signature');
+
+      expect((await relayAdapt7702.nonce()).toBigInt()).to.equal(nonce);
+    });
   });
 
 });
