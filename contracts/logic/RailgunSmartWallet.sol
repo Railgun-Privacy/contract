@@ -117,10 +117,15 @@ contract RailgunSmartWallet is RailgunLogic {
         ciphertext
       );
 
+      bool hasUnshield = _transactions[transactionIter].boundParams.unshield != UnshieldType.NONE;
+
       // Create action struct
       txconfigs[transactionIter] = TXConfig({
-        nullifiersCount: uint128(_transactions[transactionIter].nullifiers.length), // Will be less than 2**128 nullifiers
-        commitmentsCount: uint128(_transactions[transactionIter].commitments.length), // Will be less than 2**128 commitments
+        nullifiersCount: uint32(_transactions[transactionIter].nullifiers.length), // Will be less than 2**32 nullifiers
+        commitmentsCount: hasUnshield ?
+          uint32(_transactions[transactionIter].commitments.length - 1) : // Will be less than 2**32 commitments
+          uint32(_transactions[transactionIter].commitments.length), // Will be less than 2**32 commitments
+        hasUnshield: hasUnshield,
         boundParamsHash: boundParamsHash
       });
     }

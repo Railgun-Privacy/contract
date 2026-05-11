@@ -801,6 +801,11 @@ describe('Logic/RailgunSmartWallet', () => {
       transferNotes.outputs.length
     )
     expect(
+      transferTransactionResult.events![1].args!.txconfigs[0].hasUnshield
+    ).to.equal(
+      false
+    )
+    expect(
       transferTransactionResult.events![1].args!.txconfigs[0].boundParamsHash
     ).to.equal(
       arrayToHexString(hashBoundParams(transferTransactionInputs.boundParams), true),
@@ -857,7 +862,12 @@ describe('Logic/RailgunSmartWallet', () => {
     expect(
       unshieldTransactionResult.events![1].args!.txconfigs[0].commitmentsCount
     ).to.equal(
-      unshieldNotes.outputs.length
+      unshieldNotes.outputs.length - 1
+    )
+    expect(
+      unshieldTransactionResult.events![1].args!.txconfigs[0].hasUnshield
+    ).to.equal(
+      true
     )
     expect(
       unshieldTransactionResult.events![1].args!.txconfigs[0].boundParamsHash
