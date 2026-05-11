@@ -25,7 +25,26 @@ contract RailgunSmartWallet is RailgunLogic {
     ShieldCiphertext[] memory shieldCiphertext = new ShieldCiphertext[](_shieldRequests.length);
     uint256[] memory fees = new uint256[](_shieldRequests.length);
 
-    // Emit action event for the batch of transactions
+    // Emit Action event
+    //
+    // Emitted events will be ordered as follows:
+    // [Action, ...ERC---.Transfer / Arbitrary 3rd Party Events, Shield]
+    // This Action event will not have a preceeding Nullified event
+    //
+    // If one of the called ERC--- contracts executes a Railgun transaction it will nest as follows:
+    // [
+    //   Action,
+    //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
+    //   [Action, ...ERC---.Transfer / Arbitrary 3rd Party Events, Shield]
+    //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
+    //   Shield
+    // ]
+    // Railgun transactions might recursively be embedded up to gas limit, and may also be transact() calls
+    //
+    // In the case of recursive actions, the child action should be considered to occur before it's parent
+    // as it's merkle tree update (occuring immediately after the Shield/Transact event) occured first
+    // Sequential actions should be considered to occur in order of appearance.
+    //
     // Shields have no TXConfig, so just emit empty array
     emit Action(msg.sender, new TXConfig[](0));
 
@@ -106,8 +125,39 @@ contract RailgunSmartWallet is RailgunLogic {
       });
     }
 
-    // Emit action event for the batch of transactions
-    // Emit here to guarantee it will be the first event emitted for this action
+    // Emit Action event for the batch of transactions
+    //
+    // Emit here to guarantee it will be emitted immediately after Nullified but before any ERC---.Transfer or Transact
+    //
+    // Emitted events will be ordered as follows:
+    // [
+    //   ...Nullified,
+    //   Action,
+    //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
+    //   Unshield,
+    //   ..ERC---.Transfer / Arbitrary 3rd Party Events,
+    //   Unshield,
+    //   Transact
+    // ]
+    //
+    // If one of the called ERC--- contracts executes a Railgun transaction it will nest as follows:
+    // [
+    //   ...Nullified,
+    //   Action,
+    //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
+    //   Unshield,
+    //   [...Nullified, Action, ...ERC---.Transfer / Arbitrary 3rd Party Events, Transact]
+    //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
+    //   Unshield,
+    //   Transact
+    // ]
+    // Railgun transactions might recursively be embedded up to gas limit, and may also be shield() calls
+    //
+    // In the case of recursive actions, the child action should be considered to occur before it's parent
+    // as it's merkle tree update (occuring immediately after the Shield/Transact event) occured first
+    // Sequential actions should be considered to occur in order of appearance.
+    //
+    // Wallets should use the known ordering of Nullified, Action, and Transact as anchoring points to decode transactions
     emit Action(msg.sender, txconfigs);
 
     // Loop through each transaction and process unshields

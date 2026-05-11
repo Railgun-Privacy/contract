@@ -14,6 +14,7 @@ import { getTokenID, Note, TokenData, TokenType } from '../../helpers/logic/note
 import {
   dummyTransact,
   getFee,
+  hashBoundParams,
   padWithDummyNotes,
   UnshieldType,
 } from '../../helpers/logic/transaction';
@@ -699,5 +700,169 @@ describe('Logic/RailgunSmartWallet', () => {
     await expect(railgunSmartWalletSnarkBypass.transact([unshieldtx])).to.be.revertedWith(
       'RailgunSmartWallet: Invalid Note Value',
     );
+  });
+
+  it("Should emit action events", async function () {
+    const { chainID, secondaryAccount, railgunSmartWalletSnarkBypass, testERC20 } =
+      await loadFixture(deploy);
+
+    // Create merkle tree and wallets
+    const merkletree = await MerkleTree.createTree();
+    const wallet1 = new Wallet(randomBytes(32), randomBytes(32));
+    const wallet2 = new Wallet(randomBytes(32), randomBytes(32));
+
+    // Shield notes
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0n,
+    };
+
+    wallet1.tokens.push(tokenData);
+    wallet2.tokens.push(tokenData);
+
+    const shieldNotes = [
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+      new Note(wallet1.spendingKey, wallet1.viewingKey, 10n ** 18n, randomBytes(16), tokenData, ''),
+    ];
+
+    const shieldTransaction = await railgunSmartWalletSnarkBypass.shield([
+      ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
+    ]);
+
+    // Check action event was emitted
+    // Manually check details instead of using withArgs due to hardhat incosistent BigNumber handling
+    const shieldTransactionResult = await shieldTransaction.wait();
+
+    // Action event should be the first event emitted
+    expect(shieldTransactionResult.events![0].event!).to.equal("Action")
+    expect(
+      shieldTransactionResult.events![0].args!.caller
+    ).to.equal(
+      await railgunSmartWalletSnarkBypass.signer.getAddress()
+    )
+    expect(shieldTransactionResult.events![0].args!.txconfigs.length).to.equal(0)
+
+
+    // Scan transaction
+    await merkletree.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet1.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+    await wallet2.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
+
+    // Transfer tokens between shielded balances
+    const transferNotes = await wallet1.getTestTransactionInputs(
+      merkletree,
+      2,
+      3,
+      false,
+      tokenData,
+      wallet2.spendingKey,
+      wallet2.viewingKey,
+    );
+
+    const transferTransactionInputs = await dummyTransact(
+      merkletree,
+      0n,
+      UnshieldType.NONE,
+      chainID,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      transferNotes.inputs,
+      transferNotes.outputs,
+    );
+
+    const transferTransaction = await railgunSmartWalletSnarkBypass.transact([
+      transferTransactionInputs,
+    ]);
+
+    // Check action event was emitted
+    // Manually check details instead of using withArgs due to hardhat incosistent BigNumber handling
+    const transferTransactionResult = await transferTransaction.wait();
+
+    // Action event should be the second event emitted (first is Nullified)
+    expect(transferTransactionResult.events![1].event!).to.equal("Action")
+    expect(
+      transferTransactionResult.events![1].args!.caller
+    ).to.equal(
+      await railgunSmartWalletSnarkBypass.signer.getAddress()
+    )
+    expect(transferTransactionResult.events![1].args!.txconfigs.length).to.equal(1)
+    expect(
+      transferTransactionResult.events![1].args!.txconfigs[0].nullifiersCount
+    ).to.equal(
+      transferNotes.inputs.length
+    )
+    expect(
+      transferTransactionResult.events![1].args!.txconfigs[0].commitmentsCount
+    ).to.equal(
+      transferNotes.outputs.length
+    )
+    expect(
+      transferTransactionResult.events![1].args!.txconfigs[0].boundParamsHash
+    ).to.equal(
+      arrayToHexString(hashBoundParams(transferTransactionInputs.boundParams), true),
+    )
+
+    // Scan transaction
+    await merkletree.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
+    await wallet1.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
+    await wallet2.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
+
+    // Unshield tokens between shielded balances
+    const unshieldNotes = await wallet2.getTestTransactionInputs(
+      merkletree,
+      2,
+      3,
+      secondaryAccount.address,
+      tokenData,
+      wallet2.spendingKey,
+      wallet2.viewingKey,
+    );
+
+    const unshieldTransactionInputs = await dummyTransact(
+      merkletree,
+      0n,
+      UnshieldType.NORMAL,
+      chainID,
+      ethers.constants.AddressZero,
+      new Uint8Array(32),
+      unshieldNotes.inputs,
+      unshieldNotes.outputs,
+    );
+
+    const unshieldTransaction = await railgunSmartWalletSnarkBypass.transact([
+      unshieldTransactionInputs,
+    ]);
+
+    // Check action event was emitted
+    // Manually check details instead of using withArgs due to hardhat incosistent BigNumber handling
+    const unshieldTransactionResult = await unshieldTransaction.wait();
+
+    // Action event should be the second event emitted (first is Nullified)
+    expect(unshieldTransactionResult.events![1].event!).to.equal("Action")
+    expect(
+      unshieldTransactionResult.events![1].args!.caller
+    ).to.equal(
+      await railgunSmartWalletSnarkBypass.signer.getAddress()
+    )
+    expect(unshieldTransactionResult.events![1].args!.txconfigs.length).to.equal(1)
+    expect(
+      unshieldTransactionResult.events![1].args!.txconfigs[0].nullifiersCount
+    ).to.equal(
+      unshieldNotes.inputs.length
+    )
+    expect(
+      unshieldTransactionResult.events![1].args!.txconfigs[0].commitmentsCount
+    ).to.equal(
+      unshieldNotes.outputs.length
+    )
+    expect(
+      unshieldTransactionResult.events![1].args!.txconfigs[0].boundParamsHash
+    ).to.equal(
+      arrayToHexString(hashBoundParams(unshieldTransactionInputs.boundParams), true),
+    )
   });
 });
