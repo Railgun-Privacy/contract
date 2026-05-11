@@ -258,7 +258,14 @@ describe('Logic/Verifier', () => {
       );
 
       // Check that proof check returns true
-      expect(await verifier.verify(tx)).to.equal(true);
+      expect(
+        await verifier.verify(tx)
+      ).to.deep.equal(
+        [
+          true,
+          ethers.utils.hexlify(hashBoundParams(tx.boundParams))
+        ]
+      );
     }
   });
 

@@ -821,12 +821,13 @@ describe('Logic/RailgunLogic', () => {
       expect(await railgunLogic.validateTransaction(transaction, { gasPrice: 100 })).to.deep.equal([
         true,
         '',
+        arrayToHexString(hashBoundParams(transaction.boundParams), true),
       ]);
 
       // Should return false for transaction without valid snark proof
       expect(
         await railgunLogic.validateTransaction(dummyTransaction, { gasPrice: 100 }),
-      ).to.deep.equal([false, 'Invalid Snark Proof']);
+      ).to.deep.equal([false, 'Invalid Snark Proof', ethers.constants.HashZero]);
     }
   });
 

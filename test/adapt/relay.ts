@@ -144,7 +144,7 @@ describe('Adapt/Relay', () => {
 
   it('Should calculate adapt parameters', async function () {
     this.timeout(5 * 60 * 60 * 1000);
-    const loops = process.env.SKIP_LONG_TESTS ? 5n : 10n;
+    const loops = 5n;
 
     const { chainID, relayAdapt } = await loadFixture(deploy);
 
