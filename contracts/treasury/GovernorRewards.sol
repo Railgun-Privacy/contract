@@ -188,7 +188,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @param _tokens - tokens to stop distributing
    */
   function removeTokens(IERC20[] calldata _tokens) external onlyOwner {
-    // Add tokens to distribution set
+    // Remove tokens from distribution set
     for (uint256 i = 0; i < _tokens.length; i += 1) {
       tokens[_tokens[i]] = false;
     }
@@ -311,6 +311,9 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256 _calcFromInterval = nextEarmarkInterval[_token];
     uint256 _calcToInterval = nextSnapshotPreCalcInterval - 1;
 
+    // Ensure there are intervals to earmark
+    require(_calcFromInterval <= _calcToInterval, "GovernorRewards: No intervals to earmark");
+
     // Get balance from treasury
     uint256 treasuryBalance = _token.balanceOf(address(treasury));
 
@@ -344,26 +347,25 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
 
   /**
    * @notice Prefetches global snapshot data
-   * @param _startingInterval - starting interval to fetch from
    * @param _endingInterval - interval to fetch to
    * @param _hints - off-chain computed indexes of intervals
    */
   function prefetchGlobalSnapshots(
-    uint256 _startingInterval,
     uint256 _endingInterval,
     uint256[] calldata _hints,
     IERC20[] calldata _postProcessTokens
   ) external {
-    uint256 length = _endingInterval - _startingInterval + 1;
+    // Get starting interval from nextSnapshotPreCalcInterval
+    uint256 _startingInterval = nextSnapshotPreCalcInterval;
 
-    require(
-      _startingInterval <= nextSnapshotPreCalcInterval,
-      "GovernorRewards: Starting interval too late"
-    );
+    // Don't allow fetching past the current interval
     require(
       _endingInterval <= currentInterval(),
       "GovernorRewards: Can't prefetch future intervals"
     );
+
+    // Calculate length of intervals being fetched
+    uint256 length = _endingInterval - _startingInterval + 1;
 
     // Fetch snapshots
     uint256[] memory snapshots = fetchGlobalSnapshots(_startingInterval, _endingInterval, _hints);

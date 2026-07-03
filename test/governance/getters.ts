@@ -127,7 +127,6 @@ describe('Governance/Getters', () => {
     await time.increase(governorRewardsInterval * 10);
 
     await governorRewards.prefetchGlobalSnapshots(
-      0,
       10,
       new Array(11).fill(0) as number[],
       distributionTokens.map((token) => token.address),
@@ -170,7 +169,6 @@ describe('Governance/Getters', () => {
     await time.increase(governorRewardsInterval * 10);
 
     await governorRewards.prefetchGlobalSnapshots(
-      0,
       10,
       new Array(11).fill(0) as number[],
       distributionTokens.map((token) => token.address),

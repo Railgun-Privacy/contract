@@ -318,44 +318,29 @@ describe('Treasury/GovernorRewards', () => {
       await time.increase(stakingInterval);
     }
 
-    // Should prefetch in order
-    await expect(
-      governorRewards.prefetchGlobalSnapshots(
-        1,
-        Math.floor(intervals / stakingDistributionIntervalMultiplier),
-        new Array(Math.floor(intervals / stakingDistributionIntervalMultiplier) - 1).fill(
-          0,
-        ) as number[],
-        [],
-      ),
-    ).to.be.revertedWith('GovernorRewards: Starting interval too late');
+    const maxInterval = Math.floor(intervals / stakingDistributionIntervalMultiplier);
 
     // Should not allow prefetching future intervals
     await expect(
       governorRewards.prefetchGlobalSnapshots(
-        0,
-        Math.floor(intervals / stakingDistributionIntervalMultiplier) + 1,
-        new Array(Math.floor(intervals / stakingDistributionIntervalMultiplier) + 2).fill(
-          0,
-        ) as number[],
+        maxInterval + 1,
+        new Array(maxInterval + 2).fill(0) as number[],
         [],
       ),
     ).to.be.revertedWith("GovernorRewards: Can't prefetch future intervals");
 
     // Prefetch global snapshots in batches
-    for (let i = 0; i <= Math.floor(intervals / stakingDistributionIntervalMultiplier); i += 5) {
-      const startingInterval = i;
-      const endingInterval =
-        i + 5 > Math.floor(intervals / stakingDistributionIntervalMultiplier)
-          ? Math.floor(intervals / stakingDistributionIntervalMultiplier)
-          : i + 5;
+    let startingInterval = 0;
+    while (startingInterval <= maxInterval) {
+      const endingInterval = startingInterval + 5 > maxInterval ? maxInterval : startingInterval + 5;
 
       await governorRewards.prefetchGlobalSnapshots(
-        startingInterval,
         endingInterval,
         new Array(endingInterval - startingInterval + 1).fill(0) as number[],
         [],
       );
+
+      startingInterval = endingInterval + 1;
     }
 
     // Scan snapshots
@@ -401,7 +386,6 @@ describe('Treasury/GovernorRewards', () => {
 
     // Prefetch snapshots
     await governorRewards.prefetchGlobalSnapshots(
-      0,
       intervals,
       new Array(intervals + 1).fill(0) as number[],
       [],
@@ -447,11 +431,7 @@ describe('Treasury/GovernorRewards', () => {
       // Multiple calls shouldn't earmark repeatedly
       await expect(
         governorRewards.earmark(distributionTokens[tokenIndex].address),
-      ).to.changeTokenBalances(
-        distributionTokens[tokenIndex],
-        [treasury.address, governorRewards.address],
-        [0, 0],
-      );
+      ).to.be.revertedWith('GovernorRewards: No intervals to earmark');
 
       // Check all earmark values are correct
       await Promise.all(
@@ -474,7 +454,6 @@ describe('Treasury/GovernorRewards', () => {
 
     // Prefetch snapshots
     await governorRewards.prefetchGlobalSnapshots(
-      startingInterval,
       endingInterval,
       new Array(endingInterval - startingInterval + 1).fill(0) as number[],
       [],
@@ -520,8 +499,16 @@ describe('Treasury/GovernorRewards', () => {
   });
 
   it('Should add and remove from earmark list', async () => {
-    const { distributionInterval, distributionTokens, staking, governorRewards } =
-      await loadFixture(deploy);
+    const {
+      distributionInterval,
+      distributionTokens,
+      staking,
+      governorRewards,
+      treasury,
+      basisPoints,
+      intervalBP,
+      stakingDistributionIntervalMultiplier,
+    } = await loadFixture(deploy);
 
     // Stake tokens
     await staking.stake(100);
@@ -530,7 +517,7 @@ describe('Treasury/GovernorRewards', () => {
     await time.increase(distributionInterval);
 
     // Prefetch snapshots
-    await governorRewards.prefetchGlobalSnapshots(0, 1, [0, 0], []);
+    await governorRewards.prefetchGlobalSnapshots(1, [0, 0], []);
 
     // Remove from list
     await governorRewards.removeTokens(distributionTokens.map((token) => token.address));
@@ -543,8 +530,59 @@ describe('Treasury/GovernorRewards', () => {
     // Add to list
     await governorRewards.addTokens(distributionTokens.map((token) => token.address));
 
-    // Earmark should succeed
-    await expect(governorRewards.earmark(distributionTokens[0].address)).to.be.fulfilled;
+    // Re-adding should reset the next earmark interval to the current interval
+    const readdedInterval = Number(await governorRewards.currentInterval());
+    expect(await governorRewards.nextEarmarkInterval(distributionTokens[0].address)).to.equal(
+      readdedInterval,
+    );
+
+    // Scan events in to shadow
+    const governorRewardsShadow = new GovernorRewardsShadow(
+      BigInt(basisPoints),
+      BigInt(intervalBP),
+      stakingDistributionIntervalMultiplier,
+    );
+    await governorRewardsShadow.loadGlobalsSnapshots(staking);
+
+    // Get initial treasury balance
+    const treasuryBalanceBeforeEarmark = (
+      await distributionTokens[0].balanceOf(treasury.address)
+    ).toBigInt();
+
+    // Calculate expected earmark, starting from the interval the token was re-added at
+    const [expectedEarmark] = governorRewardsShadow.calculateEarmarkAmount(
+      treasuryBalanceBeforeEarmark,
+      readdedInterval,
+      readdedInterval,
+    );
+
+    // Earmark should succeed, and only move tokens for the interval since re-adding
+    await expect(
+      governorRewards.earmark(distributionTokens[0].address),
+    ).to.changeTokenBalances(
+      distributionTokens[0],
+      [treasury.address, governorRewards.address],
+      [-expectedEarmark, expectedEarmark],
+    );
+
+    // Intervals before re-adding should never be earmarked
+    await Promise.all(
+      new Array(readdedInterval).fill(0).map(async (x, earmarkIndex) => {
+        expect(
+          await governorRewards.earmarked(distributionTokens[0].address, earmarkIndex),
+        ).to.equal(0);
+      }),
+    );
+
+    // Interval since re-adding should be earmarked correctly
+    expect(
+      await governorRewards.earmarked(distributionTokens[0].address, readdedInterval),
+    ).to.equal(expectedEarmark);
+
+    // Next earmark interval should have moved past the interval just earmarked
+    expect(await governorRewards.nextEarmarkInterval(distributionTokens[0].address)).to.equal(
+      readdedInterval + 1,
+    );
   });
 
   it('Should calculate rewards', async () => {
@@ -577,7 +615,6 @@ describe('Treasury/GovernorRewards', () => {
 
     // Prefetch data and earmark
     await governorRewards.prefetchGlobalSnapshots(
-      0,
       intervals,
       Array(intervals + 1).fill(0) as number[],
       distributionTokens.map((token) => token.address),
@@ -659,7 +696,7 @@ describe('Treasury/GovernorRewards', () => {
     await time.increase(distributionInterval * 10);
 
     // Prefetch data
-    await governorRewards.prefetchGlobalSnapshots(0, 9, Array(10).fill(0) as number[], []);
+    await governorRewards.prefetchGlobalSnapshots(9, Array(10).fill(0) as number[], []);
 
     // Should not be able to claim if not earmarked
     await expect(
