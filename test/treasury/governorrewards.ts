@@ -142,6 +142,23 @@ describe('Treasury/GovernorRewards', () => {
     );
   });
 
+  it('Should set interval BP and emit event only on change', async () => {
+    const { governorRewards, intervalBP } = await loadFixture(deploy);
+
+    // Changing the value should update state and emit an event
+    await expect(governorRewards.setIntervalBP(500))
+      .to.emit(governorRewards, 'IntervalBPChange')
+      .withArgs(intervalBP, 500);
+    expect(await governorRewards.intervalBP()).to.equal(500);
+
+    // Setting the same value again should be a no-op and not emit an event
+    await expect(governorRewards.setIntervalBP(500)).to.not.emit(
+      governorRewards,
+      'IntervalBPChange',
+    );
+    expect(await governorRewards.intervalBP()).to.equal(500);
+  });
+
   it('Should calculate interval numbers', async () => {
     const { stakingInterval, stakingDistributionIntervalMultiplier, governorRewards } =
       await loadFixture(deploy);

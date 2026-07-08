@@ -58,6 +58,11 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256 endInterval
   );
 
+  event IntervalBPChange(
+    uint256 oldIntervalBP,
+    uint256 newIntervalBP
+  );
+
   // Bitmap of claimed intervals
   // Internal types not allowed on public variables so custom getter needs to be created
   // Account -> Token -> IntervalClaimed
@@ -136,7 +141,14 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
    * @param _newIntervalBP - new distribution rate
    */
   function setIntervalBP(uint256 _newIntervalBP) external onlyOwner {
-    intervalBP = _newIntervalBP;
+    // No-op if no change
+    if (intervalBP != _newIntervalBP) {
+      // Emit event
+      emit IntervalBPChange(intervalBP, _newIntervalBP);
+
+      // Make change
+      intervalBP = _newIntervalBP;
+    }
   }
 
   /**
