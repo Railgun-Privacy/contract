@@ -58,6 +58,7 @@ contract GovernorRewards is Initializable, OwnableUpgradeable {
     uint256 endInterval
   );
 
+  // Per-interval basis points changed
   event IntervalBPChange(
     uint256 oldIntervalBP,
     uint256 newIntervalBP
