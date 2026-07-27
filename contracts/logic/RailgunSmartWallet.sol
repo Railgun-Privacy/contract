@@ -157,6 +157,7 @@ contract RailgunSmartWallet is RailgunLogic {
     //   Action,
     //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
     //   [...Nullified, Action, ...ERC---.Transfer / Arbitrary 3rd Party Events, Transact]
+    //   Unshield,
     //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
     //   Unshield,
     //   Transact
