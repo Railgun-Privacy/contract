@@ -62,6 +62,11 @@ contract ArbitrumExecutor is IL2Executor {
   /**
    * @notice Creates new task
    * @param _actions - list of calls to execute for this task
+   * @dev Permissionless and anyone can create a task at any sequential ID - readyTask/executeTask
+   * authorize solely by this numeric ID, not by hashing _actions. The L1 proposal that will call
+   * readyTask(id) MUST be created only after this task has been submitted and confirmed on L2, so
+   * the ID it references is guaranteed to point at the intended actions and can't be claimed by a
+   * front-run.
    */
   function createTask(Action[] calldata _actions) external returns (uint256) {
     uint256 taskID = tasks.length;
