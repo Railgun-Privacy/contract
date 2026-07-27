@@ -56,6 +56,12 @@ contract RailgunSmartWallet is RailgunLogic {
       );
       require(valid, string.concat("RailgunSmartWallet: ", reason));
 
+      // Note token must not be blocklisted
+      require(
+        !TokenBlocklist.tokenBlocklist[_shieldRequests[notesIter].preimage.token.tokenAddress],
+        "RailgunSmartWallet: Unsupported Token"
+      );
+
       // Process shield request and store adjusted note
       (commitments[notesIter], fees[notesIter]) = RailgunLogic.transferTokenIn(
         _shieldRequests[notesIter].preimage
@@ -150,7 +156,6 @@ contract RailgunSmartWallet is RailgunLogic {
     //   ...Nullified,
     //   Action,
     //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
-    //   Unshield,
     //   [...Nullified, Action, ...ERC---.Transfer / Arbitrary 3rd Party Events, Transact]
     //   ...ERC---.Transfer / Arbitrary 3rd Party Events,
     //   Unshield,

@@ -461,13 +461,6 @@ describe('Logic/RailgunLogic', () => {
       false,
       'Invalid Note NPK',
     ]);
-
-    // Check blocklisted token returns false
-    await railgunLogicAdmin.addToBlocklist([validNote.tokenData.tokenAddress]);
-
-    expect(
-      await railgunLogic.validateCommitmentPreimage(await validNote.getCommitmentPreimage()),
-    ).to.deep.equal([false, 'Unsupported Token']);
   });
 
   it('Should sum commitments in a transaction', async () => {

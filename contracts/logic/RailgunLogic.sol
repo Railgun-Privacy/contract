@@ -218,13 +218,9 @@ contract RailgunLogic is Initializable, OwnableUpgradeable, Commitments, TokenBl
    */
   function validateCommitmentPreimage(
     CommitmentPreimage calldata _note
-  ) public view returns (bool, string memory) {
+  ) public pure returns (bool, string memory) {
     // Note must be more than 0
     if (_note.value == 0) return (false, "Invalid Note Value");
-
-    // Note token must not be blocklisted
-    if (TokenBlocklist.tokenBlocklist[_note.token.tokenAddress])
-      return (false, "Unsupported Token");
 
     // Note NPK must be in field
     if (uint256(_note.npk) >= SNARK_SCALAR_FIELD) return (false, "Invalid Note NPK");
