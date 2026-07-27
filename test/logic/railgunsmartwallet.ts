@@ -455,6 +455,30 @@ describe('Logic/RailgunSmartWallet', () => {
     ).to.be.revertedWith('RailgunSmartWallet: Invalid Note Value');
   });
 
+  it('Should reject shields of blocklisted tokens', async () => {
+    const { railgunSmartWallet, railgunSmartWalletAdmin, testERC20 } = await loadFixture(deploy);
+
+    // Shield notes
+    const tokenData: TokenData = {
+      tokenType: TokenType.ERC20,
+      tokenAddress: testERC20.address,
+      tokenSubID: 0n,
+    };
+
+    const shieldNotes = [
+      new Note(randomBytes(32), randomBytes(32), 10n ** 18n, randomBytes(16), tokenData, ''),
+    ];
+
+    // Blocklist the shield token
+    await railgunSmartWalletAdmin.addToBlocklist([testERC20.address]);
+
+    await expect(
+      railgunSmartWallet.shield([
+        ...(await Promise.all(shieldNotes.map((note) => note.encryptForShield()))),
+      ]),
+    ).to.be.revertedWith('RailgunSmartWallet: Unsupported Token');
+  });
+
   it('Should reject invalid transactions', async () => {
     const { chainID, railgunSmartWallet, testERC20 } = await loadFixture(deploy);
 
