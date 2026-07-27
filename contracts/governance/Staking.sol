@@ -458,6 +458,12 @@ contract Staking {
   /**
    * @notice Unlock stake tokens
    * @param _stakeID - Stake to unlock
+   * @dev KNOWN ISSUE: if the stake is currently delegated to another address, call undelegate()
+   * on it BEFORE calling unlock(). This function only snapshots msg.sender, not the stake's
+   * current delegate, before removing voting power from the delegate via moveVotingPower - so
+   * unlocking a delegated stake without undelegating first corrupts the delegate's historical
+   * voting power record. Always check stakes[msg.sender][_stakeID].delegate != msg.sender and
+   * call undelegate(_stakeID) first if so.
    */
 
   function unlock(uint256 _stakeID) public {
