@@ -7,7 +7,6 @@ import type { Contract } from 'ethers';
 
 /**
  * Log data to verify contract
- *
  * @param name - name of contract
  * @param contract - contract object
  * @param constructorArguments - constructor arguments
@@ -42,7 +41,6 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   const RailToken = await ethers.getContractFactory('AdminERC20');
   const TestERC20 = await ethers.getContractFactory('TestERC20');
   const TestERC721 = await ethers.getContractFactory('TestERC721');
-  const RelayAdapt = await ethers.getContractFactory('RelayAdapt');
   const Staking = await ethers.getContractFactory('Staking');
   const TreasuryImplementation = await ethers.getContractFactory('Treasury');
   const Voting = await ethers.getContractFactory('Voting');
@@ -153,10 +151,6 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
   const weth9 = await WETH9.deploy();
   await logVerify('WETH9', weth9, []);
 
-  // Deploy RelayAdapt
-  const relayAdapt = await RelayAdapt.deploy(proxy.address, weth9.address);
-  await logVerify('Relay Adapt', relayAdapt, [proxy.address, weth9.address]);
-
   // Deploy test tokens
   const testERC20 = await TestERC20.deploy();
   await logVerify('Test ERC20', testERC20, []);
@@ -180,6 +174,5 @@ task('deploy:test', 'Creates test environment deployment').setAction(async funct
     treasuryProxy: treasuryProxy.address,
     voting: voting.address,
     weth9: weth9.address,
-    relayAdapt: relayAdapt.address,
   });
 });

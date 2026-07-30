@@ -7,7 +7,6 @@ import { additions } from './abi-additions';
 const defaultContractABIExports = [
   // Logic
   'contracts/logic/RailgunSmartWallet.sol:RailgunSmartWallet',
-  'contracts/adapt/Relay.sol:RelayAdapt',
   // Governance
   'contracts/governance/Getters.sol:Getters',
   'contracts/governance/Staking.sol:Staking',
