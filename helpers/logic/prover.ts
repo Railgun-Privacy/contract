@@ -24,7 +24,6 @@ export interface ProofBundle {
 
 /**
  * Formats javascript proof to solidity proof
- *
  * @param proof - javascript proof
  * @returns solidity proof
  */
@@ -41,7 +40,6 @@ function formatProof(proof: SnarkjsProof): SolidityProof {
 
 /**
  * Generate proof for a circuit
- *
  * @param artifact - circuit artifact
  * @param inputs - circuit inputs
  * @returns proof

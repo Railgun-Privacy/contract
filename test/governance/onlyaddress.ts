@@ -5,7 +5,6 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 describe('Governance/OnlyAddress', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

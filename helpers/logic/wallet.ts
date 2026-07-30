@@ -21,7 +21,6 @@ class Wallet {
 
   /**
    * Railgun Wallet
-   *
    * @param spendingKey - Spending key
    * @param viewingKey - Viewing key
    */
@@ -32,7 +31,6 @@ class Wallet {
 
   /**
    * Gets total balance in wallet
-   *
    * @returns total balance
    */
   get totalBalance(): bigint {
@@ -43,7 +41,6 @@ class Wallet {
 
   /**
    * Scans transaction for commitments and nullifiers
-   *
    * @param transaction - transaction to scan
    * @param contract - contract to parse events from
    * @returns complete
@@ -144,7 +141,6 @@ class Wallet {
 
   /**
    * Get unspent notes
-   *
    * @param merkletree - merkle tree to use as seen nullifiers source
    * @param token - token to get unspent notes for
    * @returns unspent notes
@@ -177,7 +173,6 @@ class Wallet {
 
   /**
    * Gets inputs and outputs for a given test circuit
-   *
    * @param merkletree - merkle tree to use as seen nullifiers source
    * @param inputs - number of inputs
    * @param outputs - number of outputs
@@ -240,7 +235,6 @@ class Wallet {
 
   /**
    * Get balance for token
-   *
    * @param merkletree - merkle tree to use as seen nullifiers source
    * @param token - token to get balance of
    * @returns balance

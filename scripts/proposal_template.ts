@@ -23,7 +23,6 @@ const L2_TASKS: {
 
 /**
  * Log data to verify contract
- *
  * @param name - name of contract
  * @param contract - contract object
  * @param constructorArguments - constructor arguments
@@ -44,7 +43,6 @@ async function logVerify(
 
 /**
  * Run preparation steps
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -58,7 +56,6 @@ async function prep(chainConfig: ChainConfig) {
 
 /**
  * Get proposal calls
- *
  * @param chainConfig - chain config
  * @returns Proposal calls
  */
@@ -94,7 +91,6 @@ async function getProposalCalls(chainConfig: ChainConfig): Promise<Voting.CallSt
 
 /**
  * Test proposal upgrade
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -106,7 +102,6 @@ async function testProposalUpgrade(chainConfig: ChainConfig) {
 
 /**
  * Increase governance token balance for testing
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -121,7 +116,6 @@ async function becomeWhale(chainConfig: ChainConfig) {
 
 /**
  * Stake all rail tokens
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -143,7 +137,6 @@ async function stakeAll(chainConfig: ChainConfig) {
 
 /**
  * Submits proposal
- *
  * @param chainConfig - chain config
  * @param calls - calls
  * @returns proposal ID
@@ -166,7 +159,6 @@ async function submitProposal(
 
 /**
  * Passes proposal in test environment
- *
  * @param chainConfig - chain config
  * @param proposalID - proposal ID to pass
  * @returns complete
@@ -208,7 +200,6 @@ async function passProposal(chainConfig: ChainConfig, proposalID: number) {
 
 /**
  * Readline prompt the user
- *
  * @param question - question to ask
  * @returns answer
  */
@@ -231,7 +222,6 @@ async function prompt(question: string): Promise<string> {
 
 /**
  * Submit proposal on chain
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -250,7 +240,6 @@ async function submit(chainConfig: ChainConfig) {
 
 /**
  * Submits, passes, and runs tests against proposal
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -286,7 +275,6 @@ async function test(chainConfig: ChainConfig) {
 
 /**
  * Deploys proposal to chain where we have admin permissions
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -308,7 +296,6 @@ async function adminDeploy(chainConfig: ChainConfig) {
 
 /**
  * Entrypoint
- *
  * @returns complete
  */
 async function entry() {

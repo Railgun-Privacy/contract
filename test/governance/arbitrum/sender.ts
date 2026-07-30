@@ -13,7 +13,6 @@ import { fromUTF8String, arrayToHexString } from '../../../helpers/global/bytes'
 describe('Governance/Arbitrum/Sender', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

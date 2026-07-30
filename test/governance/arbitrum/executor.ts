@@ -20,7 +20,6 @@ import {
 describe('Governance/Arbitrum/Executor', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

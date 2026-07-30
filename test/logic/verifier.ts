@@ -23,7 +23,6 @@ import { randomBytes } from 'crypto';
 describe('Logic/Verifier', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

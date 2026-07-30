@@ -5,7 +5,6 @@ import { loadFixture, setBalance } from '@nomicfoundation/hardhat-network-helper
 describe('Treasury/Treasury', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

@@ -31,7 +31,6 @@ interface CrossDomainMessengerStub extends Contract {
 describe('Governance/OpStack/Executor', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

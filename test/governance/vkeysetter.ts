@@ -11,7 +11,6 @@ import { getKeys } from '../../helpers/logic/artifacts';
 describe('Governance/VKeySetter', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

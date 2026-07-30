@@ -94,7 +94,6 @@ const hashDictionary: Record<string, string | undefined> = {
 
 /**
  * Gets IPFS hash for artifacts
- *
  * @param nullifiers - nullifier count
  * @param commitments - commitment count
  * @returns IPFS hash or ''

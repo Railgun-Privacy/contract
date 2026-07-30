@@ -16,7 +16,6 @@ export interface ChainArtifactSource {
 
 /**
  * Gets verification key from vkey source
- *
  * @param source - source to fetch from
  * @param nullifiers - nullifier count
  * @param commitments - commitment count
@@ -85,7 +84,6 @@ async function getVerificationKeyFromSource(
 
 /**
  * Compares two vkey sources and finds differences
- *
  * @param left - left side vkey source
  * @param right - right side vkey source
  * @param limit - arbitrary limit for nullifier/commitment counts

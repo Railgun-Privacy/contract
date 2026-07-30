@@ -10,7 +10,6 @@ const NEW_DEPLOYMENTS: Record<string, string> = {};
 
 /**
  * Log data to verify contract
- *
  * @param name - name of contract
  * @param contract - contract object
  * @param constructorArguments - constructor arguments
@@ -31,7 +30,6 @@ async function logVerify(
 
 /**
  * Execute actions
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -45,7 +43,6 @@ async function execute(chainConfig: ChainConfig) {
 
 /**
  * Test actions
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -57,7 +54,6 @@ async function testExecution(chainConfig: ChainConfig) {
 
 /**
  * Readline prompt the user
- *
  * @param question - question to ask
  * @returns answer
  */
@@ -80,7 +76,6 @@ async function prompt(question: string): Promise<string> {
 
 /**
  * Submit proposal on chain
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -91,7 +86,6 @@ async function submit(chainConfig: ChainConfig) {
 
 /**
  * Submits, passes, and runs tests against proposal
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -105,7 +99,6 @@ async function test(chainConfig: ChainConfig) {
 
 /**
  * Entrypoint
- *
  * @returns complete
  */
 async function entry() {

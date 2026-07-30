@@ -50,7 +50,6 @@ export interface ShieldRequest {
 
 /**
  * Gets token ID from token data
- *
  * @param tokenData - token data to get ID from
  * @returns token ID
  */
@@ -77,7 +76,6 @@ function getTokenID(tokenData: TokenData): Uint8Array {
 
 /**
  * Validate Token Data
- *
  * @param tokenData - token data to validate
  * @returns validity
  */
@@ -104,7 +102,6 @@ class Note {
 
   /**
    * Railgun Note
-   *
    * @param spendingKey - spending private key
    * @param viewingKey - viewing key
    * @param value - note value
@@ -137,7 +134,6 @@ class Note {
 
   /**
    * Get note nullifying key
-   *
    * @returns nullifying key
    */
   getNullifyingKey(): Promise<Uint8Array> {
@@ -146,7 +142,6 @@ class Note {
 
   /**
    * Get note spending public key
-   *
    * @returns spending public key
    */
   getSpendingPublicKey(): Promise<[Uint8Array, Uint8Array]> {
@@ -155,7 +150,6 @@ class Note {
 
   /**
    * Get note viewing public key
-   *
    * @returns viewing public key
    */
   getViewingPublicKey(): Promise<Uint8Array> {
@@ -164,7 +158,6 @@ class Note {
 
   /**
    * Get note master public key
-   *
    * @returns master public key
    */
   async getMasterPublicKey(): Promise<Uint8Array> {
@@ -173,7 +166,6 @@ class Note {
 
   /**
    * Get note public key
-   *
    * @returns note public key
    */
   async getNotePublicKey(): Promise<Uint8Array> {
@@ -182,7 +174,6 @@ class Note {
 
   /**
    * Gets token ID from token data
-   *
    * @returns token ID
    */
   getTokenID(): Uint8Array {
@@ -191,7 +182,6 @@ class Note {
 
   /**
    * Get note hash
-   *
    * @returns hash
    */
   async getHash(): Promise<Uint8Array> {
@@ -204,7 +194,6 @@ class Note {
 
   /**
    * Calculate nullifier
-   *
    * @param leafIndex - leaf index of note
    * @returns nullifier
    */
@@ -214,7 +203,6 @@ class Note {
 
   /**
    * Sign a transaction
-   *
    * @param merkleRoot - transaction merkle root
    * @param boundParamsHash - transaction bound parameters hash
    * @param nullifiers - transaction nullifiers
@@ -241,7 +229,6 @@ class Note {
 
   /**
    * Gets commitment preimage
-   *
    * @returns Commitment preimage
    */
   async getCommitmentPreimage(): Promise<CommitmentPreimage> {
@@ -254,7 +241,6 @@ class Note {
 
   /**
    * Encrypts random value for shield
-   *
    * @returns encrypted random bundle
    */
   async encryptForShield(): Promise<ShieldRequest> {
@@ -291,7 +277,6 @@ class Note {
 
   /**
    * Generates encrypted commitment bundle
-   *
    * @param senderViewingPrivateKey - sender's viewing private key
    * @param blind - blind sender from receiver
    * @returns Ciphertext
@@ -363,7 +348,6 @@ class Note {
 
   /**
    * Decrypts shielded note
-   *
    * @param shieldKey - ephemeral key to us ein decryption
    * @param encryptedBundle - encrypted bundle to decrypt
    * @param token - token data
@@ -402,7 +386,6 @@ class Note {
 
   /**
    * Decrypts note from encrypted bundle
-   *
    * @param expectedHash - expected hash of note
    * @param encrypted - encrypted commitment bundle
    * @param viewingKey - viewing private key to try decrypting for
@@ -465,7 +448,6 @@ class UnshieldNote {
 
   /**
    * Railgun Unshield
-   *
    * @param unshieldAddress - address to unshield to
    * @param value - note value
    * @param tokenData - note token data
@@ -483,7 +465,6 @@ class UnshieldNote {
 
   /**
    * Return unshield address as npk
-   *
    * @returns npk
    */
   getNotePublicKey() {
@@ -492,7 +473,6 @@ class UnshieldNote {
 
   /**
    * Gets token ID from token data
-   *
    * @returns token ID
    */
   getTokenID(): Uint8Array {
@@ -501,7 +481,6 @@ class UnshieldNote {
 
   /**
    * Get note hash
-   *
    * @returns hash
    */
   async getHash(): Promise<Uint8Array> {
@@ -514,7 +493,6 @@ class UnshieldNote {
 
   /**
    * Gets commitment preimage
-   *
    * @returns Commitment preimage
    */
   getCommitmentPreimage(): CommitmentPreimage {
@@ -527,7 +505,6 @@ class UnshieldNote {
 
   /**
    * Return dummy ciphertext
-   *
    * @returns Dummy ciphertext
    */
   encrypt(): CommitmentCiphertext {

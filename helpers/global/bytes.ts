@@ -1,6 +1,5 @@
 /**
  * Left pads byte array to length
- *
  * @param byteArray - byte array to pad
  * @param length - length of new array
  * @returns padded array
@@ -15,7 +14,6 @@ function arrayToByteLength(byteArray: Uint8Array, length: number) {
 
 /**
  * Convert typed byte array to bigint
- *
  * @param array - Array to convert
  * @returns bigint
  */
@@ -36,7 +34,6 @@ function arrayToBigInt(array: Uint8Array): bigint {
 
 /**
  * Convert bigint to byte array
- *
  * @param bn - bigint
  * @param length - length of resulting byte array, 0 to return byte length of integer
  * @returns byte array
@@ -59,7 +56,6 @@ function bigIntToArray(bn: bigint, length: number): Uint8Array {
 
 /**
  * Convert byte array to hex string
- *
  * @param array - byte array
  * @param prefix - prefix with 0x
  * @returns hex string
@@ -86,7 +82,6 @@ function arrayToHexString(array: Uint8Array, prefix: boolean) {
 
 /**
  * Convert hex string to byte array
- *
  * @param hexString - hex string
  * @returns byte array
  */
@@ -108,7 +103,6 @@ function hexStringToArray(hexString: string) {
 
 /**
  * Split bytes into array of chunks
- *
  * @param data - data to chunk
  * @param size - size of chunks
  * @returns chunked data
@@ -128,7 +122,6 @@ function chunk(data: Uint8Array, size: number): Uint8Array[] {
 
 /**
  * Combines Uint8Array chunks
- *
  * @param chunks - chunks to combine
  * @returns combined data
  */
@@ -138,7 +131,6 @@ function combine(chunks: Uint8Array[]): Uint8Array {
 
 /**
  * Pads bytes to length
- *
  * @param data - bytes to pad
  * @param length - length to pad to
  * @param side - side to add padding
@@ -162,7 +154,6 @@ const railgunBase37 = {
 
   /**
    * Railgun-base37 encodes text
-   *
    * @param text - text to encode
    * @returns encoded bytes
    */
@@ -194,7 +185,6 @@ const railgunBase37 = {
 
   /**
    * Decodes Railgun-base37 encoded bytes
-   *
    * @param bytes - bytes to decode
    * @returns text
    */
@@ -226,7 +216,6 @@ const railgunBase37 = {
 
 /**
  * Converts utf8 bytes to string
- *
  * @param data - bytes to decode
  * @returns decoded string
  */
@@ -237,7 +226,6 @@ function toUTF8String(data: Uint8Array): string {
 
 /**
  * Converts string to bytes
- *
  * @param string - string to convert to bytes
  * @returns encoded bytes
  */

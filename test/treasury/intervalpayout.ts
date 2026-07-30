@@ -5,7 +5,6 @@ import { loadFixture, setBalance, time } from '@nomicfoundation/hardhat-network-
 describe('Treasury/IntervalPayout', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

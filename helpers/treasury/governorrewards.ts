@@ -24,7 +24,6 @@ class GovernorRewardsShadow {
 
   /**
    * Governor Rewards helper class
-   *
    * @param BASIS_POINTS - basis points in 100%
    * @param intervalBP - basis points per interval
    * @param STAKING_DISTRIBUTION_INTERVAL_MULTIPLIER - distribution intervals per staking interval
@@ -41,7 +40,6 @@ class GovernorRewardsShadow {
 
   /**
    * Convert staking snapshot to distribution snapshot
-   *
    * @param snapshot - staking snapshot
    * @returns distribution snapshot
    */
@@ -51,7 +49,6 @@ class GovernorRewardsShadow {
 
   /**
    * Convert distribution snapshot to staking snapshot
-   *
    * @param snapshot - distribution snapshot
    * @returns staking snapshot
    */
@@ -61,7 +58,6 @@ class GovernorRewardsShadow {
 
   /**
    * Fetches all account snapshots from staking contract
-   *
    * @param account - account to fetch snapshots for
    * @param stakingContract - staking contract to fetch snapshots from
    * @returns complete
@@ -97,7 +93,6 @@ class GovernorRewardsShadow {
 
   /**
    * Fetches all globals snapshots from staking contract
-   *
    * @param stakingContract - staking contract to fetch snapshots from
    * @returns complete
    */
@@ -133,7 +128,6 @@ class GovernorRewardsShadow {
 
   /**
    * Get account snapshot for interval
-   *
    * @param interval - interval to get snapshot for
    * @param account - account to get snapshot for
    * @returns snapshot
@@ -147,7 +141,6 @@ class GovernorRewardsShadow {
 
   /**
    * Get globals snapshot for  interval
-   *
    * @param interval - interval to get snapshot for
    * @returns snapshot
    */
@@ -160,7 +153,6 @@ class GovernorRewardsShadow {
 
   /**
    * Calculates expected earmark numbers
-   *
    * @param treasuryBalance - starting treasury balance
    * @param startingInterval - starting interval
    * @param endingInterval - ending interval
@@ -197,7 +189,6 @@ class GovernorRewardsShadow {
 
   /**
    * Calculates expected rewards
-   *
    * @param governorRewards - governor rewards contract to retrieve earmarks amounts from
    * @param token - token address
    * @param account - address to calculate rewards for

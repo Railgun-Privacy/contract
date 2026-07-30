@@ -62,7 +62,6 @@ const testingSubsetArtifactsConfigs = [
 
 /**
  * Formats vkey for solidity input
- *
  * @param vkey - verification key to format
  * @param artifactsIPFSHash - IPFS hash of circuit artifact
  * @returns formatted vkey
@@ -96,7 +95,6 @@ function formatVKey(vkey: VKey, artifactsIPFSHash: string): SolidityVKey {
 
 /**
  * Check G1 points match
- *
  * @param point1 - point 1
  * @param point2 - point 2
  * @returns points match
@@ -111,7 +109,6 @@ function matchG1Point(point1: Record<string, unknown>, point2: SolidityG1Point) 
 
 /**
  * Check G1 points match
- *
  * @param point1 - point 1
  * @param point2 - point 2
  * @returns points match
@@ -132,7 +129,6 @@ function matchG2Point(point1: Record<string, unknown>, point2: SolidityG2Point) 
 
 /**
  * Formats vkey for solidity event checking
- *
  * @param vkey - verification key to format
  * @param artifactsIPFSHash - IPFS hash of circuit artifact
  * @returns formatted vkey
@@ -185,7 +181,6 @@ function formatVKeyMatcher(vkey: VKey, artifactsIPFSHash: string): EventVKeyMatc
 
 /**
  * Fetches artifact with formatted verification key
- *
  * @param nullifiers - nullifier count
  * @param commitments - commitment count
  * @returns keys
@@ -209,7 +204,6 @@ function getKeys(nullifiers: number, commitments: number): FormattedArtifact {
 
 /**
  * Returns all artifacts available
- *
  * @returns nullifier -\> commitments -\> keys
  */
 function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
@@ -231,7 +225,6 @@ function allArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
 
 /**
  * Returns testing subset artifacts
- *
  * @returns nullifier -\> commitments -\> keys
  */
 function testingSubsetArtifacts(): (undefined | (undefined | FormattedArtifact)[])[] {
@@ -253,7 +246,6 @@ function testingSubsetArtifacts(): (undefined | (undefined | FormattedArtifact)[
 
 /**
  * Loads artifact list into verifier contract
- *
  * @param verifierContract - verifier contract
  * @param artifactList - artifact list to load into contract
  * @returns complete
@@ -275,7 +267,6 @@ const listArtifacts = artifacts.listArtifacts;
 
 /**
  * List only testing subset of artifacts
- *
  * @returns artifacts list
  */
 function listTestingSubsetArtifacts() {

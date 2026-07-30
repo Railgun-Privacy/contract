@@ -8,7 +8,6 @@ import { arrayToBigInt, bigIntToArray, arrayToByteLength } from './bytes';
 
 /**
  * Gets random bytes
- *
  * @param length - random bytes length
  * @returns random bytes
  */
@@ -21,7 +20,6 @@ const poseidonPromise = buildPoseidonOpt();
 const hash = {
   /**
    * Poseidon hash
-   *
    * @param inputs - inputs to hash
    * @returns hash
    */
@@ -40,7 +38,6 @@ const hash = {
 
   /**
    * SHA256 hash
-   *
    * @param input - input to hash
    * @returns hash
    */
@@ -50,7 +47,6 @@ const hash = {
 
   /**
    * SHA512 hash
-   *
    * @param input - input to hash
    * @returns hash
    */
@@ -60,7 +56,6 @@ const hash = {
 
   /**
    * Keccak256 hash
-   *
    * @param input - input to hash
    * @returns hash
    */
@@ -70,7 +65,6 @@ const hash = {
 
   /**
    * Keccak5125 hash
-   *
    * @param input - input to hash
    * @returns hash
    */
@@ -83,7 +77,6 @@ const aes = {
   gcm: {
     /**
      * Encrypt plaintext with AES-GCM-256
-     *
      * @param plaintext - plaintext to encrypt
      * @param key - key to encrypt with
      * @returns encrypted bundle
@@ -107,7 +100,6 @@ const aes = {
 
     /**
      * Decrypt encrypted bundle with AES-GCM-256
-     *
      * @param ciphertext - encrypted bundle to decrypt
      * @param key - key to decrypt with
      * @returns plaintext
@@ -133,7 +125,6 @@ const aes = {
   ctr: {
     /**
      * Encrypt plaintext with AES-GCM-256
-     *
      * @param plaintext - plaintext to encrypt
      * @param key - key to encrypt with
      * @returns encrypted bundle
@@ -153,7 +144,6 @@ const aes = {
 
     /**
      * Decrypt encrypted bundle with AES-GCM-256
-     *
      * @param ciphertext - encrypted bundle to decrypt
      * @param key - key to decrypt with
      * @returns plaintext
@@ -178,7 +168,6 @@ const ed25519 = {
    * Adjust bits to match the pattern xxxxx000...01xxxxxx for little endian and 01xxxxxx...xxxxx000 for big endian
    * This ensures that the bytes are a little endian representation of an integer of the form (2^254 + 8) * x where
    * 0 \< x \<= 2^251 - 1, which can be decoded as an X25519 integer.
-   *
    * @param bytes - bytes to adjust
    * @param endian - what endian to use
    * @returns adjusted bytes
@@ -215,7 +204,6 @@ const ed25519 = {
 
   /**
    * Gets public key for given private key
-   *
    * @param privateKey - private key to get public key for
    * @returns public key
    */
@@ -225,7 +213,6 @@ const ed25519 = {
 
   /**
    * Convert private key to private scalar
-   *
    * @param privateKey - private key to convert
    * @returns private scalar
    */
@@ -246,7 +233,6 @@ const ed25519 = {
 
   /**
    * Generates shared key from private key and counter party public key
-   *
    * @param privateKey - private key value
    * @param publicKey - counter party public key
    * @returns shared key
@@ -267,7 +253,6 @@ const ed25519 = {
 
   /**
    * Converts seed to curve scalar
-   *
    * @param seed - seed to convert
    * @returns scalar
    */
@@ -282,7 +267,6 @@ const ed25519 = {
   railgunKeyExchange: {
     /**
      * Blinds sender and receiver public keys
-     *
      * @param senderViewingPublicKey - Sender's viewing public key
      * @param receiverViewingPublicKey - Receiver's viewing public key
      * @param sharedRandom - random value shared by both parties
@@ -330,7 +314,6 @@ const eddsaPromise = buildEddsa();
 const edBabyJubJub = {
   /**
    * Convert eddsa-babyjubjub private key to public key
-   *
    * @param privateKey - babyjubjub private key
    * @returns public key
    */
@@ -347,7 +330,6 @@ const edBabyJubJub = {
 
   /**
    * Generates a random babyJubJub point
-   *
    * @returns random point
    */
   genRandomPoint(): Promise<Uint8Array> {
@@ -356,7 +338,6 @@ const edBabyJubJub = {
 
   /**
    * Creates eddsa-babyjubjub signature with poseidon hash
-   *
    * @param key - private key
    * @param message - message to sign
    * @returns signature

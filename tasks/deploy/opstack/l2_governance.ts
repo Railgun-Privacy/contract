@@ -4,7 +4,6 @@ import type { Contract } from 'ethers';
 
 /**
  * Log data to verify contract
- *
  * @param name - name of contract
  * @param contract - contract object
  * @param constructorArguments - constructor arguments

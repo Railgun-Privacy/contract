@@ -12,7 +12,6 @@ const NEW_DEPLOYMENTS: Record<string, string> = {};
 
 /**
  * Log data to verify contract
- *
  * @param name - name of contract
  * @param contract - contract object
  * @param constructorArguments - constructor arguments
@@ -33,7 +32,6 @@ async function logVerify(
 
 /**
  * Run preparation steps
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -47,7 +45,6 @@ async function prep(chainConfig: ChainConfig) {
 
 /**
  * Get task calls
- *
  * @param chainConfig - chain config
  * @returns Task calls
  */
@@ -72,7 +69,6 @@ async function getTaskCalls(chainConfig: ChainConfig): Promise<IL2Executor.Actio
 
 /**
  * Test task execution
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -84,7 +80,6 @@ async function testTaskExecution(chainConfig: ChainConfig) {
 
 /**
  * Submit task
- *
  * @param chainConfig - chain config
  * @param calls - calls
  * @returns task ID
@@ -106,7 +101,6 @@ async function submitTask(
 
 /**
  * Runs task in fork mode
- *
  * @param chainConfig - chain config
  * @param calls - calls
  * @returns task ID
@@ -131,7 +125,6 @@ async function runTaskForkMode(
 
 /**
  * Readline prompt the user
- *
  * @param question - question to ask
  * @returns answer
  */
@@ -154,7 +147,6 @@ async function prompt(question: string): Promise<string> {
 
 /**
  * Submit task on chain
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -173,7 +165,6 @@ async function submit(chainConfig: ChainConfig) {
 
 /**
  * Submits, passes, and runs tests against task
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -196,7 +187,6 @@ async function test(chainConfig: ChainConfig) {
 
 /**
  * Deploys task to chain where we have admin permissions
- *
  * @param chainConfig - chain config
  * @returns complete
  */
@@ -218,7 +208,6 @@ async function adminDeploy(chainConfig: ChainConfig) {
 
 /**
  * Entrypoint
- *
  * @returns complete
  */
 async function entry() {

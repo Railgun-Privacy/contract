@@ -10,7 +10,6 @@ import { randomBytes } from 'crypto';
 describe('Logic/Commitments', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

@@ -23,7 +23,6 @@ import { arrayToHexString } from '../../helpers/global/bytes';
 describe('Logic/RailgunSmartWallet', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

@@ -6,7 +6,6 @@ import { GovernorRewardsShadow } from '../../helpers/treasury/governorrewards';
 describe('Treasury/GovernorRewards', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {

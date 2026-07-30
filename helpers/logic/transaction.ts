@@ -93,7 +93,6 @@ const dummyProof: ProofBundle = {
 
 /**
  * Hash bound parameters struct
- *
  * @param boundParams - bound parameters struct
  * @returns hash
  */
@@ -117,7 +116,6 @@ function hashBoundParams(boundParams: BoundParams): Uint8Array {
 
 /**
  * Creates a chai matcher for nullifiers
- *
  * @param nullifiers - nullifiers to match
  * @returns matcher
  */
@@ -139,7 +137,6 @@ function nullifiersMatcher(nullifiers: Uint8Array[]) {
 
 /**
  * Creates a chai matcher for note hashes
- *
  * @param hashes - note hashes to match
  * @returns matcher
  */
@@ -150,7 +147,6 @@ function hashesMatcher(hashes: Uint8Array[]) {
 
 /**
  * Creates a chai matcher for ciphertext
- *
  * @param ciphertextVector - ciphertext to match
  * @returns matcher
  */
@@ -201,7 +197,6 @@ function ciphertextMatcher(ciphertextVector: CommitmentCiphertext[]) {
 
 /**
  * Creates a chai matcher for shield ciphertext
- *
  * @param shieldCiphertext - shield ciphertext to match
  * @returns matcher
  */
@@ -241,7 +236,6 @@ function shieldCiphertextMatcher(shieldCiphertext: ShieldCiphertext[]) {
 
 /**
  * Creates a chai matcher for commitment preimages
- *
  * @param commitmentPreimages - commitment preimage to match
  * @returns matcher
  */
@@ -267,7 +261,6 @@ function commitmentPreimageMatcher(commitmentPreimages: CommitmentPreimage[]) {
 
 /**
  * Creates a chai matcher for token data
- *
  * @param tokenData - token data to match
  * @returns matcher
  */
@@ -283,7 +276,6 @@ function tokenDataMatcher(tokenData: TokenData) {
 
 /**
  * Pads inputs and outputs with dummy notes
- *
  * @param originalBundle - original bundle
  * @param outputsLength - number of outputs to pad to
  * @returns inputs and outputs to use for test
@@ -310,7 +302,6 @@ function padWithDummyNotes(originalBundle: InputOutputBundle, outputsLength: num
 
 /**
  * Formats inputs for submitting to chain
- *
  * @param proof - snark proof
  * @param merkletree - merkle tree to get inclusion proofs from
  * @param minGasPrice - minimum gas price
@@ -380,7 +371,6 @@ async function formatPublicInputs(
 
 /**
  * Formats inputs for prover
- *
  * @param merkletree - merkle tree to get inclusion proofs from
  * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
@@ -480,7 +470,6 @@ async function formatCircuitInputs(
 
 /**
  * Generates transaction with dummy proof
- *
  * @param merkletree - merkle tree to get inclusion proofs from
  * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
@@ -530,7 +519,6 @@ async function dummyTransact(
 
 /**
  * Generates and proves transaction
- *
  * @param merkletree - merkle tree to get inclusion proofs from
  * @param minGasPrice - minimum gas price
  * @param unshield - unshield field
@@ -599,7 +587,6 @@ async function transact(
 
 /**
  * Get base and fee amount
- *
  * @param amount - Amount to calculate for
  * @param isInclusive - Whether the amount passed in is inclusive of the fee
  * @param feeBP - Fee basis points

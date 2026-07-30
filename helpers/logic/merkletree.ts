@@ -30,7 +30,6 @@ class MerkleTree {
 
   /**
    * Merkle Tree
-   *
    * @param treeNumber - merkle tree number
    * @param depth - merkle tree depth
    * @param zeros - zero values for each level of merkle tree
@@ -45,7 +44,6 @@ class MerkleTree {
 
   /**
    * Gets tree root
-   *
    * @returns root
    */
   get root(): Uint8Array {
@@ -54,7 +52,6 @@ class MerkleTree {
 
   /**
    * Gets tree length
-   *
    * @returns length
    */
   get length(): number {
@@ -63,7 +60,6 @@ class MerkleTree {
 
   /**
    * Hashes 2 merkle nodes
-   *
    * @param left - left value to hash
    * @param right - right value to hash
    * @returns hash
@@ -74,7 +70,6 @@ class MerkleTree {
 
   /**
    * Gets zero value for tree
-   *
    * @returns zero value
    */
   static get zeroValue(): Uint8Array {
@@ -86,7 +81,6 @@ class MerkleTree {
 
   /**
    * Gets zero value for each level of a tree
-   *
    * @param depth - depth of tree
    * @returns zero values for each level
    */
@@ -108,7 +102,6 @@ class MerkleTree {
 
   /**
    * Create Merkle Tree
-   *
    * @param treeNumber - tree number
    * @param depth - tree depth
    * @returns tree
@@ -125,7 +118,6 @@ class MerkleTree {
 
   /**
    * Rebuilds tree
-   *
    * @returns complete
    */
   async rebuildSparseTree() {
@@ -145,7 +137,6 @@ class MerkleTree {
 
   /**
    * Inserts leaves into tree
-   *
    * @param leaves - array of leaves to add
    * @param startPosition - position to start inserting leaves from
    * @returns complete
@@ -164,7 +155,6 @@ class MerkleTree {
 
   /**
    * Gets Merkle Proof for element
-   *
    * @param element - element to get proof for
    * @returns proof
    */
@@ -204,7 +194,6 @@ class MerkleTree {
 
   /**
    * Validates merkle proof
-   *
    * @param proof - proof to validate
    * @returns isValid
    */
@@ -234,7 +223,6 @@ class MerkleTree {
 
   /**
    * Scans transaction for commitments and nullifiers
-   *
    * @param transaction - transaction to scan
    * @param contract - contract to parse events from
    * @returns complete

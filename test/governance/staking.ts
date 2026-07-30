@@ -5,7 +5,6 @@ import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 describe('Governance/Staking', () => {
   /**
    * Deploy fixtures
-   *
    * @returns fixtures
    */
   async function deploy() {
