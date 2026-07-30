@@ -19,6 +19,7 @@ import {
   UnshieldType,
 } from '../../helpers/logic/transaction';
 import { arrayToHexString } from '../../helpers/global/bytes';
+import type { ActionEventObject } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 
 describe('Logic/RailgunSmartWallet', () => {
   /**
@@ -725,7 +726,7 @@ describe('Logic/RailgunSmartWallet', () => {
     );
   });
 
-  it("Should emit action events", async function () {
+  it('Should emit action events', async function () {
     const { chainID, secondaryAccount, railgunSmartWalletSnarkBypass, testERC20 } =
       await loadFixture(deploy);
 
@@ -761,14 +762,13 @@ describe('Logic/RailgunSmartWallet', () => {
     const shieldTransactionResult = await shieldTransaction.wait();
 
     // Action event should be the first event emitted
-    expect(shieldTransactionResult.events![0].event!).to.equal("Action")
-    expect(
-      shieldTransactionResult.events![0].args!.caller
-    ).to.equal(
-      await railgunSmartWalletSnarkBypass.signer.getAddress()
-    )
-    expect(shieldTransactionResult.events![0].args!.txconfigs.length).to.equal(0)
-
+    const shieldActionArgs = shieldTransactionResult.events![0]
+      .args as unknown as ActionEventObject;
+    expect(shieldTransactionResult.events![0].event!).to.equal('Action');
+    expect(shieldActionArgs.caller).to.equal(
+      await railgunSmartWalletSnarkBypass.signer.getAddress(),
+    );
+    expect(shieldActionArgs.txconfigs.length).to.equal(0);
 
     // Scan transaction
     await merkletree.scanTX(shieldTransaction, railgunSmartWalletSnarkBypass);
@@ -806,33 +806,19 @@ describe('Logic/RailgunSmartWallet', () => {
     const transferTransactionResult = await transferTransaction.wait();
 
     // Action event should be the second event emitted (first is Nullified)
-    expect(transferTransactionResult.events![1].event!).to.equal("Action")
-    expect(
-      transferTransactionResult.events![1].args!.caller
-    ).to.equal(
-      await railgunSmartWalletSnarkBypass.signer.getAddress()
-    )
-    expect(transferTransactionResult.events![1].args!.txconfigs.length).to.equal(1)
-    expect(
-      transferTransactionResult.events![1].args!.txconfigs[0].nullifiersCount
-    ).to.equal(
-      transferNotes.inputs.length
-    )
-    expect(
-      transferTransactionResult.events![1].args!.txconfigs[0].commitmentsCount
-    ).to.equal(
-      transferNotes.outputs.length
-    )
-    expect(
-      transferTransactionResult.events![1].args!.txconfigs[0].hasUnshield
-    ).to.equal(
-      false
-    )
-    expect(
-      transferTransactionResult.events![1].args!.txconfigs[0].boundParamsHash
-    ).to.equal(
+    const transferActionArgs = transferTransactionResult.events![1]
+      .args as unknown as ActionEventObject;
+    expect(transferTransactionResult.events![1].event!).to.equal('Action');
+    expect(transferActionArgs.caller).to.equal(
+      await railgunSmartWalletSnarkBypass.signer.getAddress(),
+    );
+    expect(transferActionArgs.txconfigs.length).to.equal(1);
+    expect(transferActionArgs.txconfigs[0].nullifiersCount).to.equal(transferNotes.inputs.length);
+    expect(transferActionArgs.txconfigs[0].commitmentsCount).to.equal(transferNotes.outputs.length);
+    expect(transferActionArgs.txconfigs[0].hasUnshield).to.equal(false);
+    expect(transferActionArgs.txconfigs[0].boundParamsHash).to.equal(
       arrayToHexString(hashBoundParams(transferTransactionInputs.boundParams), true),
-    )
+    );
 
     // Scan transaction
     await merkletree.scanTX(transferTransaction, railgunSmartWalletSnarkBypass);
@@ -870,32 +856,20 @@ describe('Logic/RailgunSmartWallet', () => {
     const unshieldTransactionResult = await unshieldTransaction.wait();
 
     // Action event should be the second event emitted (first is Nullified)
-    expect(unshieldTransactionResult.events![1].event!).to.equal("Action")
-    expect(
-      unshieldTransactionResult.events![1].args!.caller
-    ).to.equal(
-      await railgunSmartWalletSnarkBypass.signer.getAddress()
-    )
-    expect(unshieldTransactionResult.events![1].args!.txconfigs.length).to.equal(1)
-    expect(
-      unshieldTransactionResult.events![1].args!.txconfigs[0].nullifiersCount
-    ).to.equal(
-      unshieldNotes.inputs.length
-    )
-    expect(
-      unshieldTransactionResult.events![1].args!.txconfigs[0].commitmentsCount
-    ).to.equal(
-      unshieldNotes.outputs.length - 1
-    )
-    expect(
-      unshieldTransactionResult.events![1].args!.txconfigs[0].hasUnshield
-    ).to.equal(
-      true
-    )
-    expect(
-      unshieldTransactionResult.events![1].args!.txconfigs[0].boundParamsHash
-    ).to.equal(
+    const unshieldActionArgs = unshieldTransactionResult.events![1]
+      .args as unknown as ActionEventObject;
+    expect(unshieldTransactionResult.events![1].event!).to.equal('Action');
+    expect(unshieldActionArgs.caller).to.equal(
+      await railgunSmartWalletSnarkBypass.signer.getAddress(),
+    );
+    expect(unshieldActionArgs.txconfigs.length).to.equal(1);
+    expect(unshieldActionArgs.txconfigs[0].nullifiersCount).to.equal(unshieldNotes.inputs.length);
+    expect(unshieldActionArgs.txconfigs[0].commitmentsCount).to.equal(
+      unshieldNotes.outputs.length - 1,
+    );
+    expect(unshieldActionArgs.txconfigs[0].hasUnshield).to.equal(true);
+    expect(unshieldActionArgs.txconfigs[0].boundParamsHash).to.equal(
       arrayToHexString(hashBoundParams(unshieldTransactionInputs.boundParams), true),
-    )
+    );
   });
 });

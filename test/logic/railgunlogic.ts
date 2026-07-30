@@ -377,7 +377,7 @@ describe('Logic/RailgunLogic', () => {
   });
 
   it('Should validate commitments', async () => {
-    const { railgunLogic, railgunLogicAdmin } = await loadFixture(deploy);
+    const { railgunLogic } = await loadFixture(deploy);
 
     // Check valid ERC20 note returns true
     const validNote = new Note(
