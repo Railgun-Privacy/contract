@@ -1,10 +1,16 @@
 import crypto from 'crypto';
 import * as nobleED25519 from '@noble/ed25519';
-import { sha256 } from '@noble/hashes/sha256';
-import { sha512 } from '@noble/hashes/sha512';
-import { keccak_256, keccak_512 } from '@noble/hashes/sha3';
+import { sha256 as sha256Untyped, sha512 as sha512Untyped } from '@noble/hashes/sha2';
+import { keccak_256 as keccak256Untyped, keccak_512 as keccak512Untyped } from '@noble/hashes/sha3';
 import { buildEddsa, buildPoseidonOpt } from 'circomlibjs';
 import { arrayToBigInt, bigIntToArray, arrayToByteLength } from './bytes';
+
+// Need to manually typecast here due to typescript version mismatches
+type HashFunction = (input: Uint8Array) => Uint8Array;
+const sha256 = sha256Untyped as HashFunction;
+const sha512 = sha512Untyped as HashFunction;
+const keccak256 = keccak256Untyped as HashFunction;
+const keccak512 = keccak512Untyped as HashFunction;
 
 /**
  * Gets random bytes
@@ -60,7 +66,7 @@ const hash = {
    * @returns hash
    */
   keccak256: (input: Uint8Array): Uint8Array => {
-    return keccak_256(input);
+    return keccak256(input);
   },
 
   /**
@@ -69,7 +75,7 @@ const hash = {
    * @returns hash
    */
   keccak512: (input: Uint8Array): Uint8Array => {
-    return keccak_512(input);
+    return keccak512(input);
   },
 };
 
